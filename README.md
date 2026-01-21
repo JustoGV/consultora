@@ -1,36 +1,180 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Consultora Salud - Sistema de Gestión de Discapacidad
 
-## Getting Started
+Sistema web completo desarrollado en Next.js para la gestión de certificados de discapacidad en una consultora de salud.
 
-First, run the development server:
+## 🚀 Características
+
+### Autenticación y Roles
+- **Rol Admin**: Acceso completo al sistema con panel administrativo
+- **Rol Usuario**: Puede cargar y gestionar sus propios certificados
+- Login con credenciales mock (hardcoded por ahora)
+
+### Panel de Administración (Admin)
+- **Dashboard**: Vista general con estadísticas del sistema
+- **Gestión de Pacientes**: Lista y detalles de todos los pacientes
+- **Gestión de Certificados**: Visualización de todos los certificados cargados
+- **Categorías**: CRUD completo de categorías de discapacidad
+- **Nomencladores**: CRUD completo de nomencladores
+- **Configuración**: Ajustes generales del sistema
+
+### Panel de Usuario
+- **Dashboard**: Vista personal con estadísticas
+- **Subir Certificado**: Interfaz para cargar PDFs de certificados de discapacidad
+- **Mis Certificados**: Gestión de certificados personales
+- **Extracción de Datos**: Simulación de extracción automática de datos del PDF
+
+## 🛠️ Tecnologías
+
+- **Framework**: Next.js 14+ (App Router)
+- **Lenguaje**: TypeScript
+- **Estilos**: Tailwind CSS
+- **Iconos**: Heroicons
+- **Estado**: React Context API
+
+## 📦 Instalación
 
 ```bash
+# Instalar dependencias
+npm install
+
+# Ejecutar en modo desarrollo
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+
+# Compilar para producción
+npm run build
+
+# Ejecutar en producción
+npm start
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 🔑 Credenciales de Prueba
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+El sistema cuenta con **3 administradoras distintas**, cada una con su propio conjunto de datos aislados:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### 🏢 Salud Integral SA
+- **Admin**: admin@saludintegral.com / password123
+- **Usuario**: juan@saludintegral.com / password123
 
-## Learn More
+### 🏢 Medicina Total SRL
+- **Admin**: admin@medicinatotal.com / password123
+- **Usuario**: maria@medicinatotal.com / password123
 
-To learn more about Next.js, take a look at the following resources:
+### 🏢 Asistencia Médica Plus
+- **Admin**: admin@asistenciaplus.com / password123
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+**Cada administradora tiene**:
+- ✅ Sus propias categorías
+- ✅ Sus propios nomencladores
+- ✅ Sus propios certificados
+- ✅ Pacientes que pueden estar registrados en múltiples administradoras
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 📁 Estructura del Proyecto
 
-## Deploy on Vercel
+```
+src/
+├── app/
+│   ├── page.tsx                    # Página de login
+│   ├── layout.tsx                  # Layout principal
+│   └── dashboard/
+│       ├── layout.tsx              # Layout del dashboard con sidebar
+│       ├── page.tsx                # Dashboard home
+│       ├── upload/                 # Subir certificados
+│       ├── certificates/           # Lista de certificados
+│       ├── patients/               # Gestión de pacientes (admin)
+│       ├── categories/             # Gestión de categorías (admin)
+│       ├── nomenclators/           # Gestión de nomencladores (admin)
+│       └── settings/               # Configuración (admin)
+├── components/
+│   └── Sidebar.tsx                 # Componente de navegación lateral
+├── contexts/
+│   └── AuthContext.tsx             # Contexto de autenticación
+├── lib/
+│   └── mockData.ts                 # Datos hardcodeados
+└── types/
+    └── index.ts                    # Tipos TypeScript
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## 🎨 Funcionalidades Implementadas
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### ✅ Sistema de Autenticación
+- Login con validación de credenciales
+- Persistencia de sesión en localStorage
+- Redirección automática según rol
+- Protección de rutas
+
+### ✅ Interfaz de Usuario
+- Diseño moderno y profesional
+- Sidebar con navegación contextual según rol
+- Cards informativos con estadísticas
+- Tablas responsivas para gestión de datos
+- Modales para crear/editar registros
+- Formularios validados
+
+### ✅ Gestión de Certificados
+- Carga de archivos PDF
+- Simulación de extracción de datos
+- Visualización de datos extraídos
+- **Búsqueda avanzada con múltiples filtros**:
+  - Búsqueda general (nombre, DNI, tipo de discapacidad)
+  - Filtro por categoría
+  - Filtro por tipo de discapacidad específico
+  - Filtro por rango de fechas
+  - Filtro por nivel de discapacidad (min/max %)
+- Listado de certificados por paciente
+- **Aislamiento de datos por administradora**
+
+### ✅ Panel Administrativo
+- CRUD completo de categorías (por administradora)
+- CRUD completo de nomencladores (por administradora)
+- Vista de pacientes con búsqueda
+- Dashboard con métricas **filtradas por administradora**
+- Configuración del sistema
+- **Gestión multi-administradora**:
+  - Cada administradora tiene sus propias categorías y nomencladores
+  - Los pacientes pueden pertenecer a múltiples administradoras
+  - Los certificados están asociados a una administradora específica
+  - Completo aislamiento de datos entre administradoras
+
+## 🔄 Próximos Pasos (Backend)
+
+- Integrar con base de datos real
+- API para autenticación con JWT
+- OCR real para extracción de datos de PDFs
+- Sistema de notificaciones
+- Reportes y exportación de datos
+- Gestión de usuarios
+- Auditoría y logs
+
+## 🎯 Flujo de Trabajo
+
+1. **Login**: El usuario ingresa con sus credenciales
+2. **Dashboard**: Visualiza su panel según su rol
+3. **Cargar Certificado** (Usuario): Sube un PDF y se extraen los datos
+4. **Gestionar Datos** (Admin): Administra categorías, nomencladores y pacientes
+5. **Visualizar**: Consulta certificados y datos del sistema
+
+## 🌐 Navegación
+
+El servidor de desarrollo se ejecuta en: **http://localhost:3000**
+
+## 📝 Notas
+
+- Todos los datos están hardcodeados en `/src/lib/mockData.ts`
+- La autenticación es simulada (no hay backend real)
+- La extracción de datos del PDF es simulada
+- El sistema está preparado para integración con backend
+
+## 👨‍💻 Desarrollo
+
+El proyecto está configurado para desarrollo con:
+- Hot reload automático
+- TypeScript strict mode
+- ESLint configurado
+- Tailwind CSS optimizado
+
+---
+
+**Versión**: 1.0.0  
+**Fecha**: Enero 2026  
+**Estado**: Desarrollo (Frontend Hardcoded)
+# consultora
