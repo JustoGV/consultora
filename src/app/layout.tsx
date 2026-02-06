@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Consultora Salud - Gestión de Discapacidad",
+  title: "Consultora Salud",
   description: "Sistema de gestión de certificados de discapacidad",
 };
 

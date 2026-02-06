@@ -1,140 +1,225 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import Image from 'next/image';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
+import { AxiosError } from 'axios';
+import { keepAliveService } from '@/lib/keepAlive';
+import { 
+  ArrowRightIcon
+} from '@heroicons/react/24/outline';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [loadingMessage, setLoadingMessage] = useState('Conectando...');
   const { login } = useAuth();
   const router = useRouter();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Limpiar localStorage al montar
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const userJson = localStorage.getItem('auth_user');
+      if (userJson === 'undefined' || userJson === 'null') {
+        localStorage.removeItem('auth_user');
+        localStorage.removeItem('token');
+      }
+
+      // Iniciar keep-alive service
+      if (!keepAliveService.isActive()) {
+        keepAliveService.start();
+      }
+    }
+  }, []);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setLoading(true);
+    setLoadingMessage('Autenticando...');
 
-    const success = login(email, password);
-    
-    if (success) {
-      router.push('/dashboard');
-    } else {
-      setError('Credenciales inválidas. Por favor, verifica tu email y contraseña.');
+    try {
+      console.log('🔐 Login: Intentando login con:', { email });
+      const success = await login(email, password);
+      
+      if (success) {
+        setLoadingMessage('¡Acceso concedido!');
+        router.push('/dashboard');
+      } else {
+        setError('Credenciales inválidas. Por favor, verifica tu email y contraseña.');
+      }
+    } catch (err) {
+      const error = err as AxiosError;
+      console.error('❌ Login error:', error);
+      
+      if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
+        setError('Tiempo de espera agotado. Por favor, intenta nuevamente.');
+      } else if (error.response?.status === 401) {
+        setError('Email o contraseña incorrectos. Verifica tus credenciales.');
+      } else if (error.response?.status === 404) {
+        setError('El endpoint de login no existe. Verifica la configuración del backend.');
+      } else if (!error.response) {
+        setError('No se pudo conectar con el servidor. Verifica tu conexión a internet.');
+      } else {
+        setError(`Error del servidor (${error.response?.status}). Intenta de nuevo.`);
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleQuickLogin = (userEmail: string) => {
+  const handleQuickLogin = async (userEmail: string, userPassword: string) => {
     setEmail(userEmail);
-    setPassword('password123');
+    setPassword(userPassword);
+    setError('');
+    setLoading(true);
+    setLoadingMessage('Autenticando...');
+
+    try {
+      const success = await login(userEmail, userPassword);
+      if (success) {
+        setLoadingMessage('¡Acceso concedido!');
+        router.push('/dashboard');
+      }
+    } catch {
+      setError('Error de conexión. Por favor, verifica tus credenciales e intenta nuevamente.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-blue-100">
-      <div className="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-md">
-        <div className="text-center mb-8">
-          <div className="bg-blue-600 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
+    <div className="min-h-screen bg-[#4A5EB5] flex items-center justify-center p-8">
+      {/* Main Card */}
+      <div className="w-full max-w-5xl bg-white rounded-lg shadow-2xl overflow-hidden grid md:grid-cols-2">
+        
+        {/* Left side - Illustration */}
+        <div className="bg-[#A4D0ED] p-12 flex items-center justify-center">
+          <div className="relative w-full max-w-md h-80">
+            <Image 
+              src="https://st4.depositphotos.com/6940196/29282/v/450/depositphotos_292822068-stock-illustration-the-working-environment-on-the.jpg"
+              alt="Working Environment"
+              fill
+              className="object-contain"
+              priority
+            />
           </div>
-          <h1 className="text-3xl font-bold text-blue-900 mb-2">Consultora Salud</h1>
-          <p className="text-gray-600">Sistema de Gestión de Discapacidad</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-              Email
-            </label>
-            <input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
-              placeholder="usuario@ejemplo.com"
-              required
-            />
+        {/* Right side - Login form */}
+        <div className="p-12 flex flex-col justify-center bg-white">
+          
+          <div className="mb-8">
+            <h2 className="text-2xl font-bold text-gray-800 mb-2">Login to Dashboard</h2>
           </div>
 
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
-              Contraseña
-            </label>
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
-              placeholder="••••••••"
-              required
-            />
-          </div>
-
-          {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
-              {error}
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div>
+              <label htmlFor="email" className="block text-xs font-semibold text-gray-600 mb-2 uppercase tracking-wider">
+                Username/Email address
+              </label>
+              <input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-md focus:border-blue-600 focus:outline-none transition-colors text-gray-800"
+                placeholder=""
+                required
+              />
             </div>
-          )}
 
-          <button
-            type="submit"
-            className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
-          >
-            Iniciar Sesión
-          </button>
-        </form>
+            <div>
+              <label htmlFor="password" className="block text-xs font-semibold text-gray-600 mb-2 uppercase tracking-wider">
+                Password
+              </label>
+              <input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-md focus:border-blue-600 focus:outline-none transition-colors text-gray-800"
+                placeholder=""
+                required
+              />
+            </div>
 
-        <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-100">
-          <p className="text-sm font-semibold text-gray-700 mb-3">Acceso rápido:</p>
-          <div className="space-y-2">
-            <button
-              type="button"
-              onClick={() => handleQuickLogin('admin@consultora.com')}
-              className="w-full text-left px-4 py-2 bg-white border border-blue-200 rounded-lg hover:bg-blue-50 transition-colors"
-            >
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium text-gray-900 text-sm">Administrador General</p>
-                  <p className="text-xs text-gray-600">admin@consultora.com</p>
-                </div>
-                <span className="text-xs bg-blue-600 text-white px-2 py-1 rounded">Admin</span>
+            <div className="flex items-center justify-between text-xs">
+              <label className="flex items-center text-gray-600">
+                <input type="checkbox" className="mr-2 w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500" />
+                Remember me
+              </label>
+            </div>
+
+            {error && (
+              <div className="bg-red-50 border-l-4 border-red-500 p-3 animate-shake">
+                <p className="text-sm text-red-700">{error}</p>
               </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-[#002B7A] hover:bg-[#001F5C] text-white font-bold py-3 px-4 rounded-full transition-colors disabled:opacity-50 uppercase text-sm tracking-wider flex items-center justify-center gap-2"
+            >
+              {loading ? (
+                <>
+                  <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  <span>{loadingMessage}</span>
+                </>
+              ) : (
+                'Login'
+              )}
             </button>
+
+            <div className="text-center mt-4">
+              <a href="#" className="text-sm text-blue-600 hover:text-blue-800">
+                Don&apos;t have an account? Sign up
+              </a>
+            </div>
+          </form>
+
+          <div className="mt-8 pt-6 border-t border-gray-200">
+            <p className="text-xs font-semibold text-gray-500 mb-4 uppercase tracking-wider">🚀 Demo Access</p>
             
+            {/* Superadmin */}
             <button
               type="button"
-              onClick={() => handleQuickLogin('juan@saludintegral.com')}
-              className="w-full text-left px-4 py-2 bg-white border border-green-200 rounded-lg hover:bg-green-50 transition-colors"
+              onClick={() => handleQuickLogin('consultora@admin.com', 'consultora123')}
+              disabled={loading}
+              className="group w-full p-3 bg-purple-50 border border-purple-200 rounded-lg hover:bg-purple-100 hover:border-purple-300 transition-all text-left mb-3"
             >
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="font-medium text-gray-900 text-sm">Salud Integral SA - Usuario</p>
-                  <p className="text-xs text-gray-600">juan@saludintegral.com</p>
+                  <p className="font-semibold text-gray-800 text-sm">🛡️ Superadmin</p>
+                  <p className="text-xs text-gray-600">consultora@admin.com</p>
                 </div>
-                <span className="text-xs bg-green-600 text-white px-2 py-1 rounded">Usuario</span>
+                <ArrowRightIcon className="w-4 h-4 text-purple-600 group-hover:translate-x-1 transition-transform" />
               </div>
             </button>
 
+            {/* Admin */}
             <button
               type="button"
-              onClick={() => handleQuickLogin('maria@medicinatotal.com')}
-              className="w-full text-left px-4 py-2 bg-white border border-green-200 rounded-lg hover:bg-green-50 transition-colors"
+              onClick={() => handleQuickLogin('admin@jerarquicos.com', 'jerarquicos123')}
+              disabled={loading}
+              className="group w-full p-3 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 hover:border-blue-300 transition-all text-left"
             >
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="font-medium text-gray-900 text-sm">Medicina Total SRL - Usuario</p>
-                  <p className="text-xs text-gray-600">maria@medicinatotal.com</p>
+                  <p className="font-semibold text-gray-800 text-sm">👑 Admin</p>
+                  <p className="text-xs text-gray-600">admin@jerarquicos.com</p>
                 </div>
-                <span className="text-xs bg-green-600 text-white px-2 py-1 rounded">Usuario</span>
+                <ArrowRightIcon className="w-4 h-4 text-blue-600 group-hover:translate-x-1 transition-transform" />
               </div>
             </button>
           </div>
-          <p className="text-xs text-gray-500 mt-3 text-center">
-            Contraseña para todos: <span className="font-mono font-semibold">password123</span>
-          </p>
         </div>
       </div>
     </div>

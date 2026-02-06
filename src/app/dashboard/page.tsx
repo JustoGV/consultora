@@ -1,174 +1,267 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { mockPatients, mockCategories, mockNomenclators } from '@/lib/mockData';
+import { afiliadosService } from '@/services/afiliadosService';
+import { certificadosDiscapacidadService } from '@/services/certificadosDiscapacidadService';
 import {
   UsersIcon,
   DocumentTextIcon,
   ClipboardDocumentListIcon,
-  ChartBarIcon
+  ChartBarIcon,
+  ArrowTrendingUpIcon,
+  CheckCircleIcon
 } from '@heroicons/react/24/outline';
+import { Afiliado, CertificadoDiscapacidad } from '@/types';
 
 export default function DashboardPage() {
   const { user, isAdmin } = useAuth();
+  const [loading, setLoading] = useState(true);
+  const [afiliados, setAfiliados] = useState<Afiliado[]>([]);
+  const [certificados, setCertificados] = useState<CertificadoDiscapacidad[]>([]);
 
-  // Filtrar datos por administradora del usuario actual
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      const [afiliadosData, certificadosData] = await Promise.all([
+        afiliadosService.getAll(),
+        certificadosDiscapacidadService.getAll(),
+      ]);
+      setAfiliados(afiliadosData);
+      setCertificados(certificadosData);
+    } catch (error) {
+      console.error('Error al cargar datos del dashboard:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Calcular estadísticas
   const administradoraStats = useMemo(() => {
     if (!user) return { patients: 0, certificates: 0, categories: 0, nomenclators: 0 };
 
-    // Global admin sees all data
-    if (user.administradoraId === 'global') {
-      const patients = mockPatients;
-      const certificates = mockPatients.flatMap(p => p.certificates);
-      const categories = mockCategories.filter(c => c.administradoraId === 'global');
-      const nomenclators = mockNomenclators.filter(n => n.administradoraId === 'global');
-      return {
-        patients: patients.length,
-        certificates: certificates.length,
-        categories: categories.length,
-        nomenclators: nomenclators.length
-      };
-    }
-
-    const patients = mockPatients.filter(p => p.administradoras.includes(user.administradoraId));
-    const certificates = mockPatients.flatMap(p => p.certificates).filter(c => c.administradoraId === user.administradoraId);
-    const categories = mockCategories.filter(c => c.administradoraId === user.administradoraId || c.administradoraId === 'global');
-    const nomenclators = mockNomenclators.filter(n => n.administradoraId === user.administradoraId || n.administradoraId === 'global');
-
     return {
-      patients: patients.length,
-      certificates: certificates.length,
-      categories: categories.length,
-      nomenclators: nomenclators.length
+      patients: afiliados.length,
+      certificates: certificados.length,
+      categories: 0, // TODO: Conectar con API de categorías
+      nomenclators: 0, // TODO: Conectar con API de nomencladores
     };
-  }, [user]);
+  }, [user, afiliados, certificados]);
 
   const stats = isAdmin ? [
     {
-      name: 'Total Pacientes',
+      name: 'Pacientes Registrados',
       value: administradoraStats.patients,
       icon: UsersIcon,
-      color: 'bg-blue-500'
+      change: '+12.5%',
+      trend: 'up' as const,
+      description: 'vs mes anterior',
+      color: '#4680ff',
+      bgColor: 'bg-blue-50'
     },
     {
-      name: 'Certificados Activos',
+      name: 'Certificados Vigentes',
       value: administradoraStats.certificates,
       icon: DocumentTextIcon,
-      color: 'bg-green-500'
+      change: '+8.2%',
+      trend: 'up' as const,
+      description: 'activos en sistema',
+      color: '#2ed8b6',
+      bgColor: 'bg-teal-50'
     },
     {
-      name: 'Categorías',
+      name: 'Categorías Activas',
       value: administradoraStats.categories,
       icon: ClipboardDocumentListIcon,
-      color: 'bg-purple-500'
+      change: '0%',
+      trend: 'neutral' as const,
+      description: 'clasificaciones',
+      color: '#6c757d',
+      bgColor: 'bg-gray-100'
     },
     {
       name: 'Nomencladores',
       value: administradoraStats.nomenclators,
       icon: ChartBarIcon,
-      color: 'bg-orange-500'
+      change: '+3.1%',
+      trend: 'up' as const,
+      description: 'en configuración',
+      color: '#ffb64d',
+      bgColor: 'bg-orange-50'
     },
   ] : [
     {
-      name: 'Mis Certificados',
+      name: 'Certificados Asignados',
       value: administradoraStats.certificates,
       icon: DocumentTextIcon,
-      color: 'bg-blue-500'
+      change: 'Actualizado',
+      trend: 'neutral' as const,
+      description: 'tu cuenta',
+      color: '#4680ff',
+      bgColor: 'bg-blue-50'
     },
     {
-      name: 'Pacientes Asignados',
+      name: 'Pacientes en Cartera',
       value: administradoraStats.patients,
       icon: UsersIcon,
-      color: 'bg-green-500'
+      change: 'Vigente',
+      trend: 'neutral' as const,
+      description: 'bajo tu gestión',
+      color: '#2ed8b6',
+      bgColor: 'bg-teal-50'
     },
   ];
 
   return (
-    <div>
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">
-          Bienvenido, {user?.name}
-        </h1>
-        <p className="text-gray-600 mt-2">{user?.administradoraName}</p>
-        <p className="text-gray-600 mt-2">
-          {isAdmin 
-            ? 'Panel de administración del sistema' 
-            : 'Gestiona tus certificados de discapacidad'}
-        </p>
+    <div className="space-y-8">
+      {/* Header Moderno */}
+      <div className="relative">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-4xl font-black bg-gradient-to-r from-slate-700 via-slate-800 to-slate-900 bg-clip-text text-transparent">
+              Dashboard
+            </h1>
+            <p className="text-gray-600 mt-2 flex items-center gap-2">
+              {isAdmin 
+                ? (
+                  <>
+                    <span className="inline-flex items-center px-3 py-1 rounded-full bg-gradient-to-r from-blue-600 to-indigo-700 text-white text-xs font-bold uppercase tracking-wide shadow-lg">
+                      Admin
+                    </span>
+                    <span className="font-medium">Vista Completa del Sistema</span>
+                  </>
+                )
+                : (
+                  <>
+                    <span className="inline-flex items-center px-3 py-1 rounded-full bg-gradient-to-r from-slate-600 to-slate-800 text-white text-xs font-bold uppercase tracking-wide shadow-lg">
+                      Usuario
+                    </span>
+                    <span className="font-medium">Mis Certificaciones</span>
+                  </>
+                )}
+            </p>
+          </div>
+          <div className="text-right">
+            <p className="text-sm text-gray-500">Bienvenido/a,</p>
+            <p className="text-xl font-bold text-gray-900">{user?.nombre}</p>
+          </div>
+        </div>
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      {/* Loading State */}
+      {loading ? (
+        <div className="flex justify-center items-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        </div>
+      ) : (
+        <>
+          {/* KPIs Grid - Diseño Elegante */}
+          <div className={`grid grid-cols-1 ${isAdmin ? 'md:grid-cols-2 lg:grid-cols-4' : 'md:grid-cols-2'} gap-4`}>
         {stats.map((stat) => {
           const Icon = stat.icon;
+          
           return (
-            <div
-              key={stat.name}
-              className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-shadow"
-            >
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-gray-600 text-sm font-medium">{stat.name}</p>
-                  <p className="text-3xl font-bold text-gray-900 mt-2">{stat.value}</p>
+            <div key={stat.name} className="bg-white rounded-lg p-5 shadow-sm hover:shadow-md transition-shadow">
+              <div className="flex items-center justify-between mb-4">
+                <div className={`p-2.5 ${stat.bgColor} rounded-lg`}>
+                  <Icon className="w-6 h-6" style={{ color: stat.color }} />
                 </div>
-                <div className={`${stat.color} p-3 rounded-lg`}>
-                  <Icon className="w-6 h-6 text-white" />
-                </div>
+                {stat.trend === 'up' && (
+                  <div className="flex items-center gap-1 text-teal-600 bg-teal-50 px-2.5 py-1 rounded-md">
+                    <ArrowTrendingUpIcon className="w-3.5 h-3.5" />
+                    <span className="text-xs font-semibold">{stat.change}</span>
+                  </div>
+                )}
+                {stat.trend === 'neutral' && (
+                  <div className="flex items-center gap-1 text-gray-600 bg-gray-100 px-2.5 py-1 rounded-md">
+                    <CheckCircleIcon className="w-3.5 h-3.5" />
+                    <span className="text-xs font-semibold">{stat.change}</span>
+                  </div>
+                )}
               </div>
+              <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">{stat.name}</p>
+              <p className="text-3xl font-bold text-gray-900">{stat.value}</p>
+              <p className="text-xs text-gray-400 mt-2">{stat.description}</p>
             </div>
           );
         })}
       </div>
 
-      {/* Recent Activity */}
-      <div className="bg-white rounded-xl shadow-md p-6">
-        <h2 className="text-xl font-bold text-gray-900 mb-4">Actividad Reciente</h2>
-        <div className="space-y-4">
+      {/* Actividad Reciente - Diseño Moderno */}
+      <div className="bg-white rounded-2xl shadow-xl p-6 border border-gray-100">
+        <div className="mb-6">
+          <h2 className="text-2xl font-bold text-gray-900">Actividad Reciente</h2>
+          <p className="text-gray-500 mt-1">Últimas acciones en el sistema</p>
+        </div>
+        <div className="space-y-3">
           {isAdmin ? (
             <>
-              <div className="flex items-center justify-between py-3 border-b">
-                <div>
-                  <p className="font-medium text-gray-900">Nuevo certificado cargado</p>
-                  <p className="text-sm text-gray-600">María González - Certificado de discapacidad motriz</p>
+              <div className="flex items-center gap-4 p-4 rounded-xl hover:bg-gray-50 transition-all group border-l-4 border-l-transparent hover:border-l-blue-500">
+                <div className="p-3 bg-gradient-to-br from-blue-500 to-blue-700 rounded-xl group-hover:scale-110 transition-transform">
+                  <CheckCircleIcon className="w-6 h-6 text-white" />
                 </div>
-                <span className="text-sm text-gray-500">Hace 2 horas</span>
+                <div className="flex-1">
+                  <p className="font-bold text-gray-900">Certificado procesado exitosamente</p>
+                  <p className="text-sm text-gray-600">María González - Discapacidad motriz certificada</p>
+                </div>
+                <span className="text-sm text-gray-500 font-semibold">Hace 2h</span>
               </div>
-              <div className="flex items-center justify-between py-3 border-b">
-                <div>
-                  <p className="font-medium text-gray-900">Categoría actualizada</p>
-                  <p className="text-sm text-gray-600">Discapacidad Sensorial - Descripción modificada</p>
+              
+              <div className="flex items-center gap-4 p-4 rounded-xl hover:bg-gray-50 transition-all group border-l-4 border-l-transparent hover:border-l-emerald-500">
+                <div className="p-3 bg-gradient-to-br from-emerald-500 to-emerald-700 rounded-xl group-hover:scale-110 transition-transform">
+                  <DocumentTextIcon className="w-6 h-6 text-white" />
                 </div>
-                <span className="text-sm text-gray-500">Hace 5 horas</span>
+                <div className="flex-1">
+                  <p className="font-bold text-gray-900">Actualización de categoría</p>
+                  <p className="text-sm text-gray-600">Discapacidad Sensorial - Parámetros modificados</p>
+                </div>
+                <span className="text-sm text-gray-500 font-semibold">Hace 5h</span>
               </div>
-              <div className="flex items-center justify-between py-3">
-                <div>
-                  <p className="font-medium text-gray-900">Nuevo nomenclador agregado</p>
-                  <p className="text-sm text-gray-600">NOM-005 - Prótesis de miembro inferior</p>
+              
+              <div className="flex items-center gap-4 p-4 rounded-xl hover:bg-gray-50 transition-all group border-l-4 border-l-transparent hover:border-l-indigo-500">
+                <div className="p-3 bg-gradient-to-br from-indigo-500 to-indigo-700 rounded-xl group-hover:scale-110 transition-transform">
+                  <ClipboardDocumentListIcon className="w-6 h-6 text-white" />
                 </div>
-                <span className="text-sm text-gray-500">Ayer</span>
+                <div className="flex-1">
+                  <p className="font-bold text-gray-900">Nomenclador agregado</p>
+                  <p className="text-sm text-gray-600">NOM-005 - Prótesis de miembro inferior configurada</p>
+                </div>
+                <span className="text-sm text-gray-500 font-semibold">Ayer</span>
               </div>
             </>
           ) : (
             <>
-              <div className="flex items-center justify-between py-3 border-b">
-                <div>
-                  <p className="font-medium text-gray-900">Certificado cargado</p>
-                  <p className="text-sm text-gray-600">Tu certificado ha sido procesado exitosamente</p>
+              <div className="flex items-center gap-4 p-4 rounded-xl hover:bg-gray-50 transition-all group border-l-4 border-l-transparent hover:border-l-blue-500">
+                <div className="p-3 bg-gradient-to-br from-blue-500 to-blue-700 rounded-xl group-hover:scale-110 transition-transform">
+                  <CheckCircleIcon className="w-6 h-6 text-white" />
                 </div>
-                <span className="text-sm text-gray-500">Hace 1 día</span>
+                <div className="flex-1">
+                  <p className="font-bold text-gray-900">Certificado procesado</p>
+                  <p className="text-sm text-gray-600">Documentación validada y archivada correctamente</p>
+                </div>
+                <span className="text-sm text-gray-500 font-semibold">Hace 1 día</span>
               </div>
-              <div className="flex items-center justify-between py-3">
-                <div>
-                  <p className="font-medium text-gray-900">Cuenta creada</p>
-                  <p className="text-sm text-gray-600">Bienvenido al sistema de gestión</p>
+              
+              <div className="flex items-center gap-4 p-4 rounded-xl hover:bg-gray-50 transition-all group border-l-4 border-l-transparent hover:border-l-emerald-500">
+                <div className="p-3 bg-gradient-to-br from-emerald-500 to-emerald-700 rounded-xl group-hover:scale-110 transition-transform">
+                  <UsersIcon className="w-6 h-6 text-white" />
                 </div>
-                <span className="text-sm text-gray-500">Hace 3 días</span>
+                <div className="flex-1">
+                  <p className="font-bold text-gray-900">Acceso al sistema</p>
+                  <p className="text-sm text-gray-600">Inicio de sesión exitoso en la plataforma</p>
+                </div>
+                <span className="text-sm text-gray-500 font-semibold">Hace 3 días</span>
               </div>
             </>
           )}
         </div>
       </div>
+        </>
+      )}
     </div>
   );
 }

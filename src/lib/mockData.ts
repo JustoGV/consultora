@@ -1,168 +1,37 @@
-import { User, Category, Nomenclator, Patient, CertificateData, Administradora } from '@/types';
+import { User, Categoria, Nomenclador, Patient, CertificateData, Administradora } from '@/types';
 
-// Mock Administradoras
+// Mock Administradoras (temporal - serán del API)
 export const mockAdministradoras: Administradora[] = [
   {
     id: 'adm-1',
-    name: 'Salud Integral SA',
-    cuit: '30-12345678-9',
-    address: 'Av. Corrientes 1234, CABA',
-    phone: '+54 11 4444-5555',
-    email: 'contacto@saludintegral.com',
-    createdAt: '2023-01-15'
+    nombre: 'Salud Integral SA',
+    codigo: 'SI-001',
+    descripcion: 'Obra social principal',
+    activo: true,
+    createdAt: '2023-01-15',
+    updatedAt: '2023-01-15'
   },
   {
     id: 'adm-2',
-    name: 'Medicina Total SRL',
-    cuit: '30-87654321-0',
-    address: 'Av. Santa Fe 5678, CABA',
-    phone: '+54 11 5555-6666',
-    email: 'info@medicinatotal.com',
-    createdAt: '2023-03-20'
-  },
-  {
-    id: 'adm-3',
-    name: 'Asistencia Médica Plus',
-    cuit: '30-11223344-5',
-    address: 'Av. Libertador 9012, CABA',
-    phone: '+54 11 6666-7777',
-    email: 'contacto@asistenciaplus.com',
-    createdAt: '2023-06-10'
+    nombre: 'Medicina Total SRL',
+    codigo: 'MT-002',
+    descripcion: 'Prepaga médica',
+    activo: true,
+    createdAt: '2023-03-20',
+    updatedAt: '2023-03-20'
   }
 ];
 
-// Mock users - Un admin global y usuarios por administradora
-export const mockUsers: User[] = [
-  {
-    id: '1',
-    name: 'Administrador General',
-    email: 'admin@consultora.com',
-    role: 'admin',
-    administradoraId: 'global',
-    administradoraName: 'Administración General',
-    avatar: 'https://ui-avatars.com/api/?name=Admin+Global&background=0D8ABC&color=fff'
-  },
-  {
-    id: '2',
-    name: 'Juan Pérez',
-    email: 'juan@saludintegral.com',
-    role: 'user',
-    administradoraId: 'adm-1',
-    administradoraName: 'Salud Integral SA',
-    avatar: 'https://ui-avatars.com/api/?name=Juan+Perez&background=22c55e&color=fff'
-  },
-  {
-    id: '3',
-    name: 'María López',
-    email: 'maria@medicinatotal.com',
-    role: 'user',
-    administradoraId: 'adm-2',
-    administradoraName: 'Medicina Total SRL',
-    avatar: 'https://ui-avatars.com/api/?name=Maria+Lopez&background=22c55e&color=fff'
-  }
-];
+// Mock users - TEMPORAL (el backend maneja auth real)
+export const mockUsers: User[] = [];
 
-// Mock categories - Cada administradora tiene sus propias categorías
-export const mockCategories: Category[] = [
-  // Categorías globales administradas por el Admin Global
-  {
-    id: '1',
-    name: 'Discapacidad Motriz',
-    description: 'Afecciones relacionadas con la movilidad y el sistema motor',
-    code: 'DM-001',
-    administradoraId: 'global'
-  },
-  {
-    id: '2',
-    name: 'Discapacidad Sensorial',
-    description: 'Afecciones relacionadas con los sentidos (visual, auditiva)',
-    code: 'DS-002',
-    administradoraId: 'global'
-  },
-  {
-    id: '3',
-    name: 'Discapacidad Mental',
-    description: 'Afecciones relacionadas con la salud mental',
-    code: 'DM-003',
-    administradoraId: 'global'
-  },
-  {
-    id: '4',
-    name: 'Discapacidad Intelectual',
-    description: 'Afecciones relacionadas con el desarrollo cognitivo',
-    code: 'DI-004',
-    administradoraId: 'global'
-  },
-  {
-    id: '5',
-    name: 'Discapacidad Visceral',
-    description: 'Afecciones relacionadas con órganos internos',
-    code: 'DV-005',
-    administradoraId: 'global'
-  },
-  {
-    id: '6',
-    name: 'Discapacidad Motriz (Alternativa)',
-    description: 'Otra versión de categoría motriz',
-    code: 'DM-006',
-    administradoraId: 'global'
-  }
-];
+// Mock categories - TEMPORAL (vendrán del API)
+export const mockCategories: Categoria[] = [];
 
-// Mock nomenclators - Cada administradora tiene sus propios nomencladores
-export const mockNomenclators: Nomenclator[] = [
-  // Nomencladores globales administrados por el Admin Global
-  {
-    id: '1',
-    code: 'NOM-001',
-    description: 'Silla de ruedas manual estándar',
-    category: 'Discapacidad Motriz',
-    price: 150000,
-    administradoraId: 'global'
-  },
-  {
-    id: '2',
-    code: 'NOM-002',
-    description: 'Silla de ruedas eléctrica',
-    category: 'Discapacidad Motriz',
-    price: 450000,
-    administradoraId: 'global'
-  },
-  {
-    id: '3',
-    code: 'NOM-003',
-    description: 'Audífono digital',
-    category: 'Discapacidad Sensorial',
-    price: 80000,
-    administradoraId: 'global'
-  },
-  {
-    id: '4',
-    code: 'NOM-004',
-    description: 'Bastón blanco para personas ciegas',
-    category: 'Discapacidad Sensorial',
-    price: 5000,
-    administradoraId: 'global'
-  },
-  {
-    id: '5',
-    code: 'NOM-005',
-    description: 'Prótesis de miembro inferior',
-    category: 'Discapacidad Motriz',
-    price: 300000,
-    administradoraId: 'global'
-  },
-  {
-    id: '6',
-    code: 'NOM-006',
-    description: 'Andador ortopédico',
-    category: 'Discapacidad Motriz',
-    price: 45000,
-    administradoraId: 'global'
-  }
-];
+// Mock nomenclators - TEMPORAL (vendrán del API)
+export const mockNomenclators: Nomenclador[] = [];
 
-// Mock patients - Un paciente puede tener certificados de múltiples administradoras
+// Mock patients - Datos de ejemplo ampliados
 export const mockPatients: Patient[] = [
   {
     id: '1',
@@ -173,53 +42,29 @@ export const mockPatients: Patient[] = [
     email: 'maria.gonzalez@example.com',
     phone: '+54 11 1234-5678',
     address: 'Av. Corrientes 1234, CABA',
-    administradoras: ['adm-1', 'adm-2'], // Paciente atendido por 2 administradoras
-    certificates: [
-      {
-        id: 'cert-1',
-        patientId: '1',
-        administradoraId: 'adm-1', // Certificado de Salud Integral SA
-        uploadDate: '2024-01-15',
-        fileName: 'certificado_discapacidad_maria.pdf',
-        fileUrl: '/uploads/cert-1.pdf',
-        extractedData: {
-          patientName: 'María González',
-          documentNumber: '12345678',
-          dateOfBirth: '1985-03-15',
-          gender: 'Femenino',
-          disability: 'Paraplejia',
-          disabilityLevel: '76%',
-          category: 'Discapacidad Motriz',
-          nomenclator: 'NOM-002',
-          issueDate: '2024-01-10',
-          expiryDate: '2026-01-10',
-          certifyingDoctor: 'Dr. Carlos Ramírez',
-          observations: 'Requiere silla de ruedas eléctrica y adaptaciones en el hogar'
-        }
-      },
-      {
-        id: 'cert-3',
-        patientId: '1',
-        administradoraId: 'adm-2', // Otro certificado de Medicina Total SRL
-        uploadDate: '2024-03-10',
-        fileName: 'certificado_discapacidad_maria_2.pdf',
-        fileUrl: '/uploads/cert-3.pdf',
-        extractedData: {
-          patientName: 'María González',
-          documentNumber: '12345678',
-          dateOfBirth: '1985-03-15',
-          gender: 'Femenino',
-          disability: 'Paraplejia',
-          disabilityLevel: '76%',
-          category: 'Discapacidad Intelectual',
-          nomenclator: 'NOM-005',
-          issueDate: '2024-03-05',
-          expiryDate: '2026-03-05',
-          certifyingDoctor: 'Dr. Pedro López',
-          observations: 'Requiere prótesis de miembro inferior'
-        }
+    administradoras: ['adm-1'],
+    certificates: [{
+      id: 'cert-1',
+      patientId: '1',
+      administradoraId: 'adm-1',
+      uploadDate: '2024-01-15',
+      fileName: 'certificado_maria.pdf',
+      fileUrl: '/uploads/cert-1.pdf',
+      extractedData: {
+        patientName: 'María González',
+        documentNumber: '12345678',
+        dateOfBirth: '1985-03-15',
+        gender: 'Femenino',
+        disability: 'Paraplejia',
+        disabilityLevel: '76%',
+        category: 'Discapacidad Motriz',
+        nomenclator: 'NOM-002',
+        issueDate: '2024-01-10',
+        expiryDate: '2026-01-10',
+        certifyingDoctor: 'Dr. Carlos Ramírez',
+        observations: 'Requiere silla de ruedas eléctrica'
       }
-    ]
+    }]
   },
   {
     id: '2',
@@ -230,82 +75,231 @@ export const mockPatients: Patient[] = [
     email: 'roberto.fernandez@example.com',
     phone: '+54 11 8765-4321',
     address: 'Calle Falsa 123, CABA',
-    administradoras: ['adm-1'], // Solo atendido por Salud Integral SA
-    certificates: [
-      {
-        id: 'cert-2',
-        patientId: '2',
-        administradoraId: 'adm-1',
-        uploadDate: '2024-02-20',
-        fileName: 'certificado_discapacidad_roberto.pdf',
-        fileUrl: '/uploads/cert-2.pdf',
-        extractedData: {
-          patientName: 'Roberto Fernández',
-          documentNumber: '87654321',
-          dateOfBirth: '1978-07-22',
-          gender: 'Masculino',
-          disability: 'Hipoacusia bilateral severa',
-          disabilityLevel: '65%',
-          category: 'Discapacidad Sensorial',
-          nomenclator: 'NOM-003',
-          issueDate: '2024-02-15',
-          expiryDate: '2026-02-15',
-          certifyingDoctor: 'Dra. Ana Martínez',
-          observations: 'Requiere audífonos digitales bilaterales'
-        }
+    administradoras: ['adm-1'],
+    certificates: [{
+      id: 'cert-2',
+      patientId: '2',
+      administradoraId: 'adm-1',
+      uploadDate: '2024-02-20',
+      fileName: 'certificado_roberto.pdf',
+      fileUrl: '/uploads/cert-2.pdf',
+      extractedData: {
+        patientName: 'Roberto Fernández',
+        documentNumber: '87654321',
+        dateOfBirth: '1978-07-22',
+        gender: 'Masculino',
+        disability: 'Hipoacusia bilateral severa',
+        disabilityLevel: '65%',
+        category: 'Discapacidad Sensorial',
+        nomenclator: 'NOM-003',
+        issueDate: '2024-02-15',
+        expiryDate: '2026-02-15',
+        certifyingDoctor: 'Dra. Ana Martínez',
+        observations: 'Requiere audífonos bilaterales'
       }
-    ]
+    }]
   },
   {
     id: '3',
-    name: 'Laura Sánchez',
-    documentNumber: '45678912',
+    name: 'Ana López',
+    documentNumber: '23456789',
     dateOfBirth: '1992-11-08',
     gender: 'Femenino',
-    email: 'laura.sanchez@example.com',
-    phone: '+54 11 4567-8912',
-    address: 'Av. Santa Fe 5678, CABA',
-    administradoras: ['adm-2', 'adm-3'], // Atendida por 2 administradoras diferentes
-    certificates: [
-      {
-        id: 'cert-4',
-        patientId: '3',
-        administradoraId: 'adm-3',
-        uploadDate: '2024-04-01',
-        fileName: 'certificado_discapacidad_laura.pdf',
-        fileUrl: '/uploads/cert-4.pdf',
-        extractedData: {
-          patientName: 'Laura Sánchez',
-          documentNumber: '45678912',
-          dateOfBirth: '1992-11-08',
-          gender: 'Femenino',
-          disability: 'Artritis reumatoide',
-          disabilityLevel: '45%',
-          category: 'Discapacidad Motriz',
-          nomenclator: 'NOM-006',
-          issueDate: '2024-03-28',
-          expiryDate: '2026-03-28',
-          certifyingDoctor: 'Dr. Juan Gómez',
-          observations: 'Requiere andador ortopédico'
-        }
+    email: 'ana.lopez@example.com',
+    phone: '+54 11 2345-6789',
+    address: 'Av. Santa Fe 2500, CABA',
+    administradoras: ['adm-1'],
+    certificates: [{
+      id: 'cert-3',
+      patientId: '3',
+      administradoraId: 'adm-1',
+      uploadDate: '2023-12-10',
+      fileName: 'certificado_ana.pdf',
+      fileUrl: '/uploads/cert-3.pdf',
+      extractedData: {
+        patientName: 'Ana López',
+        documentNumber: '23456789',
+        dateOfBirth: '1992-11-08',
+        gender: 'Femenino',
+        disability: 'Síndrome de Down',
+        disabilityLevel: '85%',
+        category: 'Discapacidad Mental',
+        nomenclator: 'NOM-001',
+        issueDate: '2023-12-01',
+        expiryDate: '2025-12-01',
+        certifyingDoctor: 'Dr. Juan Pérez',
+        observations: 'Acompañamiento terapéutico necesario'
       }
-    ]
+    }]
   },
   {
     id: '4',
-    name: 'Carlos Rodríguez',
-    documentNumber: '23456789',
-    dateOfBirth: '1990-05-12',
+    name: 'Carlos Ruiz',
+    documentNumber: '34567890',
+    dateOfBirth: '1965-05-20',
     gender: 'Masculino',
-    email: 'carlos.rodriguez@example.com',
-    phone: '+54 11 2345-6789',
-    address: 'Av. Libertador 3456, CABA',
-    administradoras: ['adm-3'], // Solo atendido por Asistencia Médica Plus
-    certificates: []
+    email: 'carlos.ruiz@example.com',
+    phone: '+54 11 3456-7890',
+    address: 'Calle Florida 800, CABA',
+    administradoras: ['adm-2'],
+    certificates: [{
+      id: 'cert-4',
+      patientId: '4',
+      administradoraId: 'adm-2',
+      uploadDate: '2024-01-05',
+      fileName: 'certificado_carlos.pdf',
+      fileUrl: '/uploads/cert-4.pdf',
+      extractedData: {
+        patientName: 'Carlos Ruiz',
+        documentNumber: '34567890',
+        dateOfBirth: '1965-05-20',
+        gender: 'Masculino',
+        disability: 'Ceguera bilateral',
+        disabilityLevel: '95%',
+        category: 'Discapacidad Sensorial',
+        nomenclator: 'NOM-004',
+        issueDate: '2024-01-01',
+        expiryDate: '2026-01-01',
+        certifyingDoctor: 'Dra. Laura Sánchez',
+        observations: 'Bastón blanco y perro guía'
+      }
+    }]
+  },
+  {
+    id: '5',
+    name: 'Sofía Martínez',
+    documentNumber: '45678901',
+    dateOfBirth: '2005-09-12',
+    gender: 'Femenino',
+    email: 'sofia.martinez@example.com',
+    phone: '+54 11 4567-8901',
+    address: 'Av. Belgrano 1500, CABA',
+    administradoras: ['adm-1'],
+    certificates: [{
+      id: 'cert-5',
+      patientId: '5',
+      administradoraId: 'adm-1',
+      uploadDate: '2024-02-28',
+      fileName: 'certificado_sofia.pdf',
+      fileUrl: '/uploads/cert-5.pdf',
+      extractedData: {
+        patientName: 'Sofía Martínez',
+        documentNumber: '45678901',
+        dateOfBirth: '2005-09-12',
+        gender: 'Femenino',
+        disability: 'Parálisis cerebral',
+        disabilityLevel: '70%',
+        category: 'Discapacidad Motriz',
+        nomenclator: 'NOM-002',
+        issueDate: '2024-02-20',
+        expiryDate: '2026-02-20',
+        certifyingDoctor: 'Dr. Roberto García',
+        observations: 'Terapia física semanal requerida'
+      }
+    }]
+  },
+  {
+    id: '6',
+    name: 'Diego Rodríguez',
+    documentNumber: '56789012',
+    dateOfBirth: '1988-04-30',
+    gender: 'Masculino',
+    email: 'diego.rodriguez@example.com',
+    phone: '+54 11 5678-9012',
+    address: 'Calle Lavalle 600, CABA',
+    administradoras: ['adm-2'],
+    certificates: [{
+      id: 'cert-6',
+      patientId: '6',
+      administradoraId: 'adm-2',
+      uploadDate: '2023-11-15',
+      fileName: 'certificado_diego.pdf',
+      fileUrl: '/uploads/cert-6.pdf',
+      extractedData: {
+        patientName: 'Diego Rodríguez',
+        documentNumber: '56789012',
+        dateOfBirth: '1988-04-30',
+        gender: 'Masculino',
+        disability: 'Esquizofrenia',
+        disabilityLevel: '55%',
+        category: 'Discapacidad Mental',
+        nomenclator: 'NOM-005',
+        issueDate: '2023-11-01',
+        expiryDate: '2024-11-01',
+        certifyingDoctor: 'Dra. María Fernández',
+        observations: 'Tratamiento psiquiátrico continuo'
+      }
+    }]
+  },
+  {
+    id: '7',
+    name: 'Laura Díaz',
+    documentNumber: '67890123',
+    dateOfBirth: '1970-12-25',
+    gender: 'Femenino',
+    email: 'laura.diaz@example.com',
+    phone: '+54 11 6789-0123',
+    address: 'Av. 9 de Julio 1000, CABA',
+    administradoras: ['adm-1'],
+    certificates: [{
+      id: 'cert-7',
+      patientId: '7',
+      administradoraId: 'adm-1',
+      uploadDate: '2024-01-20',
+      fileName: 'certificado_laura.pdf',
+      fileUrl: '/uploads/cert-7.pdf',
+      extractedData: {
+        patientName: 'Laura Díaz',
+        documentNumber: '67890123',
+        dateOfBirth: '1970-12-25',
+        gender: 'Femenino',
+        disability: 'Amputación miembro inferior',
+        disabilityLevel: '80%',
+        category: 'Discapacidad Motriz',
+        nomenclator: 'NOM-002',
+        issueDate: '2024-01-15',
+        expiryDate: '2026-01-15',
+        certifyingDoctor: 'Dr. Miguel Torres',
+        observations: 'Prótesis de pierna derecha'
+      }
+    }]
+  },
+  {
+    id: '8',
+    name: 'Pedro Sánchez',
+    documentNumber: '78901234',
+    dateOfBirth: '2010-08-18',
+    gender: 'Masculino',
+    email: 'pedro.sanchez@example.com',
+    phone: '+54 11 7890-1234',
+    address: 'Calle Maipú 400, CABA',
+    administradoras: ['adm-1'],
+    certificates: [{
+      id: 'cert-8',
+      patientId: '8',
+      administradoraId: 'adm-1',
+      uploadDate: '2024-02-10',
+      fileName: 'certificado_pedro.pdf',
+      fileUrl: '/uploads/cert-8.pdf',
+      extractedData: {
+        patientName: 'Pedro Sánchez',
+        documentNumber: '78901234',
+        dateOfBirth: '2010-08-18',
+        gender: 'Masculino',
+        disability: 'Autismo',
+        disabilityLevel: '60%',
+        category: 'Discapacidad Mental',
+        nomenclator: 'NOM-001',
+        issueDate: '2024-02-05',
+        expiryDate: '2026-02-05',
+        certifyingDoctor: 'Dra. Silvia Romero',
+        observations: 'Integración escolar con apoyo'
+      }
+    }]
   }
 ];
 
-// Mock certificate data for simulation
+// Mock certificate data template
 export const mockCertificateData: CertificateData = {
   patientName: '',
   documentNumber: '',

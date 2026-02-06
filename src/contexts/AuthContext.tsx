@@ -1,62 +1,63 @@
 'use client';
 
-import { createContext, useContext, useState, ReactNode } from 'react';
+import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { User } from '@/types';
-import { mockUsers } from '@/lib/mockData';
+import { authService } from '@/services/authService';
 
 interface AuthContextType {
   user: User | null;
-  login: (email: string, password: string) => boolean;
+  login: (email: string, password: string) => Promise<boolean>;
   logout: () => void;
-  isAdmin: boolean;
+  isAdmin: boolean; // true si es 'superadmin' o 'admin'
+  isSuperAdmin: boolean; // true solo si es 'superadmin'
+  loading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(() => {
-    // Solo acceder a localStorage en el cliente
-    if (typeof window === 'undefined') {
-      return null;
-    }
-    
-    const storedUser = localStorage.getItem('currentUser');
-    if (storedUser) {
-      try {
-        return JSON.parse(storedUser);
-      } catch {
-        localStorage.removeItem('currentUser');
-        return null;
-      }
-    }
-    return null;
-  });
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
 
-  const login = (email: string, password: string): boolean => {
-    const foundUser = mockUsers.find(u => u.email === email);
-    
-    if (foundUser && password === 'password123') {
-      setUser(foundUser);
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('currentUser', JSON.stringify(foundUser));
-      }
-      return true;
+  // Cargar usuario desde localStorage al montar
+  useEffect(() => {
+    const currentUser = authService.getCurrentUser();
+    if (currentUser && authService.isAuthenticated()) {
+      setUser(currentUser);
     }
-    
-    return false;
+    setLoading(false);
+  }, []);
+
+  const login = async (email: string, password: string): Promise<boolean> => {
+    try {
+      setLoading(true);
+      console.log('🔐 AuthContext: Iniciando login...', email);
+      const response = await authService.login({ email, password });
+      console.log('✅ AuthContext: Login exitoso, usuario:', response.usuario);
+      setUser(response.usuario); // Backend devuelve 'usuario'
+      console.log('✅ AuthContext: Estado de usuario actualizado');
+      return true;
+    } catch (error) {
+      console.error('❌ AuthContext: Error en login:', error);
+      return false;
+    } finally {
+      setLoading(false);
+    }
   };
 
   const logout = () => {
+    authService.logout();
     setUser(null);
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('currentUser');
-    }
   };
 
-  const isAdmin = user?.role === 'admin';
+  // isAdmin: true si es 'superadmin' o 'admin' (ambos tienen acceso a features de admin)
+  const isAdmin = user?.rol === 'superadmin' || user?.rol === 'admin';
+  
+  // isSuperAdmin: true solo si es 'superadmin' (acceso global a todas las administradoras)
+  const isSuperAdmin = user?.rol === 'superadmin';
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, isAdmin }}>
+    <AuthContext.Provider value={{ user, login, logout, isAdmin, isSuperAdmin, loading }}>
       {children}
     </AuthContext.Provider>
   );
