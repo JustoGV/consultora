@@ -26,7 +26,7 @@ import {
 export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, logout, isAdmin, isSuperAdmin } = useAuth();
+  const { logout, isAdmin, isSuperAdmin } = useAuth();
 
   const handleLogout = () => {
     logout();
@@ -58,6 +58,8 @@ export default function Sidebar() {
     { name: 'Tipos de Discapacidad', href: '/dashboard/tipo-discapacidad', icon: AdjustmentsHorizontalIcon, section: 'catalogos' },
     { name: 'Categorías', href: '/dashboard/categories', icon: ClipboardDocumentListIcon, section: 'catalogos' },
     { name: 'Nomencladores', href: '/dashboard/nomenclators', icon: ChartBarIcon, section: 'catalogos' },
+  { name: 'Servicios', href: '/dashboard/servicios', icon: AdjustmentsHorizontalIcon, section: 'catalogos' },
+  { name: 'Orientación Prestacional', href: '/dashboard/orientacion-prestacional', icon: LinkIcon, section: 'catalogos' },
     
     { name: 'Configuración', href: '/dashboard/settings', icon: CogIcon, section: 'config' },
   ];
@@ -79,6 +81,8 @@ export default function Sidebar() {
     { name: 'Tipos de Discapacidad', href: '/dashboard/tipo-discapacidad', icon: AdjustmentsHorizontalIcon, section: 'catalogos' },
     { name: 'Categorías', href: '/dashboard/categories', icon: ClipboardDocumentListIcon, section: 'catalogos' },
     { name: 'Nomencladores', href: '/dashboard/nomenclators', icon: ChartBarIcon, section: 'catalogos' },
+  { name: 'Servicios', href: '/dashboard/servicios', icon: AdjustmentsHorizontalIcon, section: 'catalogos' },
+  { name: 'Orientación Prestacional', href: '/dashboard/orientacion-prestacional', icon: LinkIcon, section: 'catalogos' },
     
     { name: 'Configuración', href: '/dashboard/settings', icon: CogIcon, section: 'config' },
   ];

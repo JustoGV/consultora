@@ -2,10 +2,17 @@
 
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { CertificadoDiscapacidad, CreateCertificadoDiscapacidadDto, Afiliado, TipoDiscapacidad } from '@/types';
+import {
+  CertificadoDiscapacidad,
+  CreateCertificadoDiscapacidadDto,
+  Afiliado,
+  TipoDiscapacidad,
+  OrientacionPrestacional
+} from '@/types';
 import { certificadosDiscapacidadService } from '@/services/certificadosDiscapacidadService';
 import { afiliadosService } from '@/services/afiliadosService';
 import { tipoDiscapacidadService } from '@/services/tipoDiscapacidadService';
+import { orientacionPrestacionalService } from '@/services/orientacionPrestacionalService';
 import { PencilIcon, TrashIcon, PlusIcon, XMarkIcon, DocumentTextIcon } from '@heroicons/react/24/outline';
 import SearchableSelect from '@/components/SearchableSelect';
 import Pagination from '@/components/Pagination';
@@ -16,11 +23,13 @@ export default function CertificadosDiscapacidadPage() {
   const [certificados, setCertificados] = useState<CertificadoDiscapacidad[]>([]);
   const [afiliados, setAfiliados] = useState<Afiliado[]>([]);
   const [tiposDiscapacidad, setTiposDiscapacidad] = useState<TipoDiscapacidad[]>([]);
+  const [orientaciones, setOrientaciones] = useState<OrientacionPrestacional[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCertificado, setEditingCertificado] = useState<CertificadoDiscapacidad | null>(null);
   const [saving, setSaving] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedOrientacionId, setSelectedOrientacionId] = useState('');
 
   const [formData, setFormData] = useState<CreateCertificadoDiscapacidadDto>({
     numeroCertificado: '',
@@ -38,17 +47,25 @@ export default function CertificadosDiscapacidadPage() {
     loadData();
   }, []);
 
+  useEffect(() => {
+    if (user?.administradoraId) {
+      setFormData((prev) => ({ ...prev, administradoraId: user.administradoraId || '' }));
+    }
+  }, [user?.administradoraId]);
+
   const loadData = async () => {
     try {
       setLoading(true);
-      const [certificadosData, afiliadosData, tiposData] = await Promise.all([
+      const [certificadosData, afiliadosData, tiposData, orientacionesData] = await Promise.all([
         certificadosDiscapacidadService.getAll(),
         afiliadosService.getAll(),
         tipoDiscapacidadService.getAll(),
+        orientacionPrestacionalService.getAll(),
       ]);
       setCertificados(certificadosData);
       setAfiliados(afiliadosData);
       setTiposDiscapacidad(tiposData);
+      setOrientaciones(orientacionesData);
     } catch (error) {
       console.error('Error al cargar datos:', error);
       alert('Error al cargar datos');
@@ -71,6 +88,7 @@ export default function CertificadosDiscapacidadPage() {
         administradoraId: certificado.administradoraId,
         activo: certificado.activo,
       });
+      setSelectedOrientacionId('');
     } else {
       setEditingCertificado(null);
       setFormData({
@@ -84,6 +102,7 @@ export default function CertificadosDiscapacidadPage() {
         administradoraId: user?.administradoraId || '',
         activo: true,
       });
+      setSelectedOrientacionId('');
     }
     setIsModalOpen(true);
   };
@@ -101,13 +120,28 @@ export default function CertificadosDiscapacidadPage() {
       return;
     }
 
+    if (!formData.administradoraId) {
+      alert('No se pudo determinar la administradora del usuario');
+      return;
+    }
+
     try {
       setSaving(true);
 
+      const payload = {
+        ...formData,
+        administradoraId: formData.administradoraId || user?.administradoraId || ''
+      };
+
       if (editingCertificado) {
-        await certificadosDiscapacidadService.update(editingCertificado.id, formData);
+        await certificadosDiscapacidadService.update(editingCertificado.id, payload);
       } else {
-        await certificadosDiscapacidadService.create(formData);
+        const created = await certificadosDiscapacidadService.create(payload);
+        if (selectedOrientacionId) {
+          await orientacionPrestacionalService.addCertificado(selectedOrientacionId, {
+            certificadoDiscapacidadId: created.id
+          });
+        }
       }
 
       await loadData();
@@ -174,6 +208,10 @@ export default function CertificadosDiscapacidadPage() {
   const tipoDiscapacidadOptions = tiposDiscapacidad.map(tipo => ({
     value: tipo.id,
     label: tipo.nombre
+  }));
+  const orientacionOptions = orientaciones.map((orientacion) => ({
+    value: orientacion.id,
+    label: orientacion.titulo
   }));
 
   return (
@@ -339,6 +377,16 @@ export default function CertificadosDiscapacidadPage() {
                     onChange={(value) => setFormData({ ...formData, tipoDiscapacidadId: value })}
                     placeholder="Seleccionar tipo..."
                     required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-neutral-700 mb-1">Orientación Prestacional</label>
+                  <SearchableSelect
+                    options={orientacionOptions}
+                    value={selectedOrientacionId}
+                    onChange={setSelectedOrientacionId}
+                    placeholder="Seleccionar orientación..."
                   />
                 </div>
 

@@ -207,7 +207,7 @@ export default function LoginPage() {
             {/* Admin */}
             <button
               type="button"
-              onClick={() => handleQuickLogin('admin@jerarquicos.com', 'jerarquicos123')}
+              onClick={() => handleQuickLogin('admin@jerarquicos.com', 'password123')}
               disabled={loading}
               className="group w-full p-3 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 hover:border-blue-300 transition-all text-left"
             >

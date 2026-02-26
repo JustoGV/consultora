@@ -5,81 +5,129 @@
 export type UserRole = 'superadmin' | 'admin' | 'user';
 
 // ============================================
-// SISTEMA DE ALERTAS CLÍNICAS
+// MÓDULO DE ALERTAS
+// ============================================
+
+export type PrioridadAlerta = 'CRITICA' | 'ALTA' | 'MEDIA' | 'BAJA' | 'INFO';
+
+export type EstadoAlerta = 'PENDIENTE' | 'VISTA' | 'RESUELTA' | 'DESCARTADA';
+
+export type EntidadOrigenAlerta =
+  | 'certificados_discapacidad'
+  | 'orientaciones_prestacionales'
+  | 'afiliados';
+
+export interface CodigoAlerta {
+  id: string;
+  codigo: number;
+  descripcion: string;
+  prioridad: PrioridadAlerta;
+  validezHoras: number | null;
+  mensajePlantilla: string;
+  activo: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Alerta {
+  id: string;
+  codigoAlertaId: string;
+  codigoAlerta: CodigoAlerta;
+  afiliadoId: string;
+  afiliado: Afiliado;
+  titulo: string;
+  mensaje: string;
+  prioridad: PrioridadAlerta;
+  estado: EstadoAlerta;
+  entidadOrigen: EntidadOrigenAlerta;
+  entidadOrigenId: string;
+  fechaObjetivo: string | null;
+  resueltaPorId: string | null;
+  resueltaPor?: User | null;
+  resueltaEn: string | null;
+  validaHasta: string | null;
+  administradoraId: string;
+  administradora: Administradora;
+  activo: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DashboardAlertas {
+  total: number;
+  pendientes: number;
+  vistas: number;
+  resueltas: number;
+  descartadas: number;
+  porPrioridad: {
+    critica: number;
+    alta: number;
+    media: number;
+    baja: number;
+    info: number;
+  };
+}
+
+export interface AlertasQueryParams {
+  estado?: EstadoAlerta;
+  prioridad?: PrioridadAlerta;
+  afiliadoId?: string;
+  codigoNumerico?: number;
+}
+
+// ============================================
+// ALERTAS CLÍNICAS (UI/MOCK)
 // ============================================
 
 export type AlertLevel = 'info' | 'warning' | 'critical';
-export type MetricStatus = 'normal' | 'warning' | 'critical';
 
-export interface MetricRange {
-  normal: { min: number; max: number };
-  warning: { min: number; max: number };
-  critical: { min: number; max: number };
-}
+export type AlertUserType = UserRole;
 
 export interface ClinicalMetric {
   id: string;
   patientId: string;
-  metricType: string; // ej: 'presion_arterial', 'glucosa', 'peso', etc.
+  metricType: string;
   value: number;
   unit: string;
-  status: MetricStatus;
+  status: 'normal' | 'warning' | 'critical';
   timestamp: string;
-  registeredBy: string; // ID del usuario que registró
+  registeredBy: string;
   notes?: string;
+}
+
+export interface AlertRelatedPerson {
+  id: string;
+  nombre: string;
+}
+
+export interface AlertAction {
+  fecha: string;
+  descripcion: string;
+  usuarioId: string;
 }
 
 export interface Alert {
   id: string;
-  tipoUsuario: UserRole;
+  tipoUsuario: AlertUserType;
   nivelGravedad: AlertLevel;
+  administradoraId: string;
   titulo: string;
   descripcion: string;
-  administradoraId: string; // ID de la administradora
-  paciente?: {
-    id: string;
-    nombre: string;
-    documentNumber?: string;
-  };
-  adminRelacionado?: {
-    id: string;
-    nombre: string;
-  };
   fecha: string;
   accionSugerida: string;
-  metricaRelacionada?: string; // ID de la métrica
+  metricaRelacionada: string;
   activa: boolean;
   escalada: boolean;
   motivoEscalamiento?: string;
-  accionTomada?: {
-    fecha: string;
-    descripcion: string;
-    usuarioId: string;
-  };
+  paciente?: AlertRelatedPerson;
+  adminRelacionado?: AlertRelatedPerson;
+  accionTomada?: AlertAction;
   createdAt: string;
   updatedAt?: string;
 }
 
-export interface AlertGenerationRule {
-  metricType: string;
-  ranges: MetricRange;
-  evaluationFrequency: 'immediate' | 'daily' | 'weekly';
-  escalationThreshold: number; // horas sin acción
-}
-
-export interface CreateAlertDto {
-  tipoUsuario: UserRole;
-  nivelGravedad: AlertLevel;
-  titulo: string;
-  descripcion: string;
-  pacienteId?: string;
-  adminRelacionadoId?: string;
-  accionSugerida: string;
-  metricaRelacionadaId?: string;
-}
-
 export interface AlertFilters {
-  tipoUsuario?: UserRole;
+  tipoUsuario?: AlertUserType;
   nivelGravedad?: AlertLevel;
   activa?: boolean;
   escalada?: boolean;
@@ -164,68 +212,113 @@ export interface UpdateAdministradoraDto {
 
 export interface Nomenclador {
   id: string;
-  nombre: string;
-  categoriaId: string;
+  codigoPrestacion: string;
+  costoUnitario: string;
+  costoEtapa1: string;
+  costoEtapa2: string;
+  costoEtapa3: string;
+  fechaVigenciaActual: string;
+  fechaVigenciaEtapa1: string;
+  fechaVigenciaEtapa2: string;
+  fechaVigenciaEtapa3: string;
+  unidadMedida: string;
+  porcentajeAumentoTotal: string;
   administradoraId: string;
-  codigoPrestacion?: string;
-  descripcion?: string;
-  porcentajeAumentoTotal?: number;
   activo: boolean;
   createdAt: string;
   updatedAt: string;
-  deletedAt?: string | null;
-  categoria?: Categoria;
-  administradora?: Administradora;
 }
 
 export interface CreateNomencladorDto {
-  nombre: string;
-  categoriaId: string;
+  costoUnitario: number;
+  costoEtapa1: number;
+  costoEtapa2: number;
+  costoEtapa3: number;
+  fechaVigenciaActual: string;
+  fechaVigenciaEtapa1: string;
+  fechaVigenciaEtapa2: string;
+  fechaVigenciaEtapa3: string;
+  unidadMedida: string;
   administradoraId: string;
-  codigoPrestacion?: string;
-  descripcion?: string;
-  porcentajeAumentoTotal?: number;
 }
 
 export interface UpdateNomencladorDto {
-  nombre?: string;
-  categoriaId?: string;
-  administradoraId?: string;
-  codigoPrestacion?: string;
-  descripcion?: string;
-  porcentajeAumentoTotal?: number;
+  costoUnitario?: number;
+  costoEtapa1?: number;
+  costoEtapa2?: number;
+  costoEtapa3?: number;
+  fechaVigenciaActual?: string;
+  fechaVigenciaEtapa1?: string;
+  fechaVigenciaEtapa2?: string;
+  fechaVigenciaEtapa3?: string;
+  unidadMedida?: string;
+  activo?: boolean;
 }
 
-export type EtapaValor = 'vigente' | 'etapa1' | 'etapa2' | 'etapa3';
-
-export interface ValorNomenclador {
+export interface Servicio {
   id: string;
+  titulo: string;
+  categoriaId: string;
+  categoria?: Categoria;
   nomencladorId: string;
-  valor: number;
-  fechaVigencia: string;
-  etapa: EtapaValor;
-  descripcion?: string;
+  nomenclador?: Nomenclador;
+  administradoraId: string;
+  orientaciones?: OrientacionPrestacional[];
   activo: boolean;
   createdAt: string;
   updatedAt: string;
-  deletedAt?: string | null;
-  nomenclador?: Nomenclador;
 }
 
-export interface CreateValorNomencladorDto {
+export interface CreateServicioDto {
+  titulo: string;
+  categoriaId: string;
   nomencladorId: string;
-  valor: number;
-  fechaVigencia: string;
-  etapa?: EtapaValor;
-  descripcion?: string;
 }
 
-export interface UpdateValorNomencladorDto {
+export interface UpdateServicioDto {
+  titulo?: string;
+  categoriaId?: string;
   nomencladorId?: string;
-  valor?: number;
-  fechaVigencia?: string;
-  etapa?: EtapaValor;
-  descripcion?: string;
+  activo?: boolean;
+}
+
+export type PrioridadOrientacion = 'ALTA' | 'MEDIA' | 'BAJA';
+
+export interface OrientacionPrestacional {
+  id: string;
+  titulo: string;
+  edadDesde: number | null;
+  edadHasta: number | null;
+  prioridad: PrioridadOrientacion;
+  administradoraId: string;
+  servicios?: Servicio[];
+  certificados?: CertificadoDiscapacidad[];
+  activo: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateOrientacionPrestacionalDto {
+  titulo: string;
+  edadDesde?: number;
+  edadHasta?: number;
+  prioridad: PrioridadOrientacion;
+}
+
+export interface UpdateOrientacionPrestacionalDto {
+  titulo?: string;
+  edadDesde?: number;
+  edadHasta?: number;
+  prioridad?: PrioridadOrientacion;
+  activo?: boolean;
+}
+
+export interface AddServicioDto {
+  servicioId: string;
+}
+
+export interface AddCertificadoDto {
+  certificadoDiscapacidadId: string;
 }
 
 export interface DisabilityCertificate {

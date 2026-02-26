@@ -196,6 +196,11 @@ export default function AfiliadosPage() {
     label: ec.nombre
   }));
 
+  const sexoOptions = [
+    { value: 'M', label: 'Masculino' },
+    { value: 'F', label: 'Femenino' }
+  ];
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -372,15 +377,13 @@ export default function AfiliadosPage() {
 
                   <div>
                     <label className="block text-sm font-medium text-neutral-700 mb-1">Sexo *</label>
-                    <select
+                    <SearchableSelect
+                      options={sexoOptions}
                       value={formData.sexo}
-                      onChange={(e) => setFormData({ ...formData, sexo: e.target.value })}
-                      className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                      onChange={(value) => setFormData({ ...formData, sexo: value })}
+                      placeholder="Seleccionar sexo..."
                       required
-                    >
-                      <option value="M">Masculino</option>
-                      <option value="F">Femenino</option>
-                    </select>
+                    />
                   </div>
 
                   <div>

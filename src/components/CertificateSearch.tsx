@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { MagnifyingGlassIcon, FunnelIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import SearchableSelect from '@/components/SearchableSelect';
 
 export interface SearchFilters {
   searchTerm: string;
@@ -95,16 +96,15 @@ export default function CertificateSearch({ onSearch, categories }: CertificateS
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Categoría
             </label>
-            <select
+            <SearchableSelect
+              options={[
+                { value: '', label: 'Todas las categorías' },
+                ...categories.map((cat) => ({ value: cat, label: cat }))
+              ]}
               value={filters.category}
-              onChange={(e) => handleInputChange('category', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
-            >
-              <option value="">Todas las categorías</option>
-              {categories.map((cat) => (
-                <option key={cat} value={cat}>{cat}</option>
-              ))}
-            </select>
+              onChange={(value) => handleInputChange('category', value)}
+              placeholder="Todas las categorías"
+            />
           </div>
 
           <div>

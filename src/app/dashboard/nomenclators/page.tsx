@@ -3,35 +3,34 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { nomencladorService } from '@/services/nomencladorService';
-import { categoriaService } from '@/services/categoriaService';
-import { Nomenclador, Categoria, CreateNomencladorDto } from '@/types';
+import { Nomenclador, CreateNomencladorDto } from '@/types';
 import { 
   PlusIcon, 
   PencilIcon, 
   TrashIcon, 
   MagnifyingGlassIcon,
-  FunnelIcon,
-  ChevronDownIcon,
   XMarkIcon
 } from '@heroicons/react/24/outline';
 
 export default function NomenclatorsPage() {
-  const { isSuperAdmin, user } = useAuth();
+  const { isSuperAdmin, isAdmin, user } = useAuth();
   const [nomencladores, setNomencladores] = useState<Nomenclador[]>([]);
-  const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCategoria, setSelectedCategoria] = useState<string>('');
-  const [showFilters, setShowFilters] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingNomenclador, setEditingNomenclador] = useState<Nomenclador | null>(null);
   const [formData, setFormData] = useState<CreateNomencladorDto>({
-    nombre: '',
-    descripcion: '',
-    codigoPrestacion: '',
-    categoriaId: '',
-    administradoraId: user?.administradoraId || 'global'
+    costoUnitario: 0,
+    costoEtapa1: 0,
+    costoEtapa2: 0,
+    costoEtapa3: 0,
+    fechaVigenciaActual: '',
+    fechaVigenciaEtapa1: '',
+    fechaVigenciaEtapa2: '',
+    fechaVigenciaEtapa3: '',
+    unidadMedida: '',
+    administradoraId: user?.administradoraId || ''
   });
   const [saving, setSaving] = useState(false);
 
@@ -44,13 +43,8 @@ export default function NomenclatorsPage() {
       setLoading(true);
       setError('');
       
-      const [nomencladoresData, categoriasData] = await Promise.all([
-        nomencladorService.getAll(),
-        categoriaService.getAll()
-      ]);
-      
+      const nomencladoresData = await nomencladorService.getAll();
       setNomencladores(nomencladoresData);
-      setCategorias(categoriasData);
     } catch (err) {
       console.error('Error al cargar datos:', err);
       setError('Error al cargar los nomencladores. Por favor, intenta nuevamente.');
@@ -75,20 +69,30 @@ export default function NomenclatorsPage() {
     if (nomenclador) {
       setEditingNomenclador(nomenclador);
       setFormData({
-        nombre: nomenclador.nombre,
-        descripcion: nomenclador.descripcion || '',
-        codigoPrestacion: nomenclador.codigoPrestacion || '',
-        categoriaId: nomenclador.categoriaId,
+        costoUnitario: Number(nomenclador.costoUnitario),
+        costoEtapa1: Number(nomenclador.costoEtapa1),
+        costoEtapa2: Number(nomenclador.costoEtapa2),
+        costoEtapa3: Number(nomenclador.costoEtapa3),
+        fechaVigenciaActual: nomenclador.fechaVigenciaActual,
+        fechaVigenciaEtapa1: nomenclador.fechaVigenciaEtapa1,
+        fechaVigenciaEtapa2: nomenclador.fechaVigenciaEtapa2,
+        fechaVigenciaEtapa3: nomenclador.fechaVigenciaEtapa3,
+        unidadMedida: nomenclador.unidadMedida,
         administradoraId: nomenclador.administradoraId
       });
     } else {
       setEditingNomenclador(null);
       setFormData({
-        nombre: '',
-        descripcion: '',
-        codigoPrestacion: '',
-        categoriaId: categorias.length > 0 ? categorias[0].id : '',
-        administradoraId: user?.administradoraId || 'global'
+        costoUnitario: 0,
+        costoEtapa1: 0,
+        costoEtapa2: 0,
+        costoEtapa3: 0,
+        fechaVigenciaActual: '',
+        fechaVigenciaEtapa1: '',
+        fechaVigenciaEtapa2: '',
+        fechaVigenciaEtapa3: '',
+        unidadMedida: '',
+        administradoraId: user?.administradoraId || ''
       });
     }
     setIsModalOpen(true);
@@ -98,11 +102,16 @@ export default function NomenclatorsPage() {
     setIsModalOpen(false);
     setEditingNomenclador(null);
     setFormData({
-      nombre: '',
-      descripcion: '',
-      codigoPrestacion: '',
-      categoriaId: '',
-      administradoraId: user?.administradoraId || 'global'
+      costoUnitario: 0,
+      costoEtapa1: 0,
+      costoEtapa2: 0,
+      costoEtapa3: 0,
+      fechaVigenciaActual: '',
+      fechaVigenciaEtapa1: '',
+      fechaVigenciaEtapa2: '',
+      fechaVigenciaEtapa3: '',
+      unidadMedida: '',
+      administradoraId: user?.administradoraId || ''
     });
   };
 
@@ -126,20 +135,12 @@ export default function NomenclatorsPage() {
     }
   };
 
-  const getCategoriaName = (categoriaId: string) => {
-    const categoria = categorias.find(c => c.id === categoriaId);
-    return categoria?.nombre || 'Sin categoría';
-  };
-
   const filteredNomencladores = nomencladores.filter(nom => {
-    const matchesSearch = 
-      nom.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      nom.codigoPrestacion?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      nom.descripcion?.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesCategoria = !selectedCategoria || nom.categoriaId === selectedCategoria;
-    
-    return matchesSearch && matchesCategoria;
+    const search = searchTerm.toLowerCase();
+    return (
+      nom.codigoPrestacion.toLowerCase().includes(search) ||
+      nom.unidadMedida.toLowerCase().includes(search)
+    );
   });
 
   return (
@@ -151,10 +152,10 @@ export default function NomenclatorsPage() {
             Nomencladores
           </h1>
           <p className="text-neutral-600 mt-2">
-            {isSuperAdmin ? 'Gestión global de nomencladores' : 'Consulta de nomencladores (solo lectura)'}
+            {(isSuperAdmin || isAdmin) ? 'Gestión de nomencladores' : 'Consulta de nomencladores (solo lectura)'}
           </p>
         </div>
-        {isSuperAdmin && (
+        {(isSuperAdmin || isAdmin) && (
           <button 
             onClick={() => handleOpenModal()}
             className="btn-primary flex items-center gap-2"
@@ -165,66 +166,18 @@ export default function NomenclatorsPage() {
         )}
       </div>
 
-      {/* Buscador y Filtros */}
-      <div className="premium-card p-4 space-y-4">
-        <div className="flex gap-4">
-          <div className="flex-1 relative">
-            <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400" />
-            <input
-              type="text"
-              placeholder="Buscar por nombre, código o descripción..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-            />
-          </div>
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className={`px-4 py-2 rounded-lg border-2 transition-all flex items-center gap-2 ${
-              showFilters 
-                ? 'bg-primary-50 border-primary-500 text-primary-700' 
-                : 'border-neutral-300 text-neutral-700 hover:border-primary-400'
-            }`}
-          >
-            <FunnelIcon className="w-5 h-5" />
-            Filtros
-            <ChevronDownIcon className={`w-4 h-4 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
-          </button>
+      {/* Buscador */}
+      <div className="premium-card p-4">
+        <div className="relative">
+          <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400" />
+          <input
+            type="text"
+            placeholder="Buscar por código o unidad de medida..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+          />
         </div>
-
-        {/* Panel de Filtros */}
-        {showFilters && (
-          <div className="pt-4 border-t border-neutral-200 fade-in">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-neutral-700 mb-2">
-                  Categoría
-                </label>
-                <select
-                  value={selectedCategoria}
-                  onChange={(e) => setSelectedCategoria(e.target.value)}
-                  className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                >
-                  <option value="">Todas las categorías</option>
-                  {categorias.map(cat => (
-                    <option key={cat.id} value={cat.id}>{cat.nombre}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="flex items-end">
-                <button
-                  onClick={() => {
-                    setSearchTerm('');
-                    setSelectedCategoria('');
-                  }}
-                  className="px-4 py-2 text-sm text-neutral-600 hover:text-neutral-900 transition-colors"
-                >
-                  Limpiar filtros
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Error */}
@@ -243,7 +196,7 @@ export default function NomenclatorsPage() {
       ) : (
         <>
           {/* Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="premium-card p-6 bg-gradient-to-br from-blue-50 to-blue-100">
               <p className="text-sm font-medium text-blue-800">Total Nomencladores</p>
               <p className="text-3xl font-bold text-blue-900 mt-2">{nomencladores.length}</p>
@@ -253,10 +206,6 @@ export default function NomenclatorsPage() {
               <p className="text-3xl font-bold text-green-900 mt-2">
                 {nomencladores.filter(n => n.activo).length}
               </p>
-            </div>
-            <div className="premium-card p-6 bg-gradient-to-br from-purple-50 to-purple-100">
-              <p className="text-sm font-medium text-purple-800">Categorías</p>
-              <p className="text-3xl font-bold text-purple-900 mt-2">{categorias.length}</p>
             </div>
             <div className="premium-card p-6 bg-gradient-to-br from-amber-50 to-amber-100">
               <p className="text-sm font-medium text-amber-800">Resultados</p>
@@ -279,13 +228,19 @@ export default function NomenclatorsPage() {
                         Código
                       </th>
                       <th className="px-6 py-4 text-left text-xs font-semibold text-neutral-700 uppercase tracking-wider">
-                        Nombre
+                        Unidad
                       </th>
                       <th className="px-6 py-4 text-left text-xs font-semibold text-neutral-700 uppercase tracking-wider">
-                        Categoría
+                        Costo Actual
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-neutral-700 uppercase tracking-wider">
+                        Costo Etapa 3
                       </th>
                       <th className="px-6 py-4 text-left text-xs font-semibold text-neutral-700 uppercase tracking-wider">
                         % Aumento
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-neutral-700 uppercase tracking-wider">
+                        Vigencia Actual
                       </th>
                       <th className="px-6 py-4 text-left text-xs font-semibold text-neutral-700 uppercase tracking-wider">
                         Estado
@@ -298,32 +253,25 @@ export default function NomenclatorsPage() {
                   <tbody className="divide-y divide-neutral-200">
                     {filteredNomencladores.map((nomenclador) => (
                       <tr key={nomenclador.id} className="hover:bg-neutral-50 transition-colors">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-neutral-900">
+                          {nomenclador.codigoPrestacion}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-neutral-600">
+                          {nomenclador.unidadMedida}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-neutral-600">
+                          ${parseFloat(nomenclador.costoUnitario).toLocaleString('es-AR')}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-neutral-600">
+                          ${parseFloat(nomenclador.costoEtapa3).toLocaleString('es-AR')}
+                        </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <span className="text-sm font-mono text-neutral-900">
-                            {nomenclador.codigoPrestacion || '-'}
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
+                            {parseFloat(nomenclador.porcentajeAumentoTotal).toFixed(2)}%
                           </span>
                         </td>
-                        <td className="px-6 py-4">
-                          <div>
-                            <p className="text-sm font-medium text-neutral-900">{nomenclador.nombre}</p>
-                            {nomenclador.descripcion && (
-                              <p className="text-xs text-neutral-500 mt-1">{nomenclador.descripcion}</p>
-                            )}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary-100 text-primary-800">
-                            {getCategoriaName(nomenclador.categoriaId)}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          {nomenclador.porcentajeAumentoTotal ? (
-                            <span className="text-sm font-semibold text-green-600">
-                              +{nomenclador.porcentajeAumentoTotal}%
-                            </span>
-                          ) : (
-                            <span className="text-sm text-neutral-400">-</span>
-                          )}
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-neutral-600">
+                          {new Date(nomenclador.fechaVigenciaActual).toLocaleDateString('es-AR')}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
@@ -335,7 +283,7 @@ export default function NomenclatorsPage() {
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-right">
-                          {isSuperAdmin ? (
+                          {(isSuperAdmin || isAdmin) ? (
                             <div className="flex gap-2 justify-end">
                               <button 
                                 onClick={() => handleOpenModal(nomenclador)}
@@ -383,80 +331,135 @@ export default function NomenclatorsPage() {
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label htmlFor="nombre" className="block text-sm font-medium text-gray-700 mb-2">
-                    Nombre *
+                  <label htmlFor="unidadMedida" className="block text-sm font-medium text-gray-700 mb-2">
+                    Unidad de Medida *
                   </label>
                   <input
-                    id="nombre"
+                    id="unidadMedida"
                     type="text"
-                    value={formData.nombre}
-                    onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
+                    value={formData.unidadMedida}
+                    onChange={(e) => setFormData({ ...formData, unidadMedida: e.target.value })}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                     required
-                    placeholder="Ej: Consulta médica"
+                    placeholder="Ej: hora, sesión"
                   />
                 </div>
 
                 <div>
-                  <label htmlFor="codigoPrestacion" className="block text-sm font-medium text-gray-700 mb-2">
-                    Código de Prestación
+                  <label htmlFor="costoUnitario" className="block text-sm font-medium text-gray-700 mb-2">
+                    Costo Unitario *
                   </label>
                   <input
-                    id="codigoPrestacion"
-                    type="text"
-                    value={formData.codigoPrestacion}
-                    onChange={(e) => setFormData({ ...formData, codigoPrestacion: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                    placeholder="Ej: 420101"
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="categoriaId" className="block text-sm font-medium text-gray-700 mb-2">
-                    Categoría *
-                  </label>
-                  <select
-                    id="categoriaId"
-                    value={formData.categoriaId}
-                    onChange={(e) => setFormData({ ...formData, categoriaId: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                    required
-                  >
-                    <option value="">Seleccionar categoría</option>
-                    {categorias.map(cat => (
-                      <option key={cat.id} value={cat.id}>{cat.nombre}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label htmlFor="porcentajeAumentoTotal" className="block text-sm font-medium text-gray-700 mb-2">
-                    % Aumento Total
-                  </label>
-                  <input
-                    id="porcentajeAumentoTotal"
+                    id="costoUnitario"
                     type="number"
                     step="0.01"
-                    value={formData.porcentajeAumentoTotal || ''}
-                    onChange={(e) => setFormData({ ...formData, porcentajeAumentoTotal: parseFloat(e.target.value) || undefined })}
+                    value={formData.costoUnitario}
+                    onChange={(e) => setFormData({ ...formData, costoUnitario: Number(e.target.value) })}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                    placeholder="Ej: 15.50"
+                    required
                   />
                 </div>
-              </div>
 
-              <div>
-                <label htmlFor="descripcion" className="block text-sm font-medium text-gray-700 mb-2">
-                  Descripción
-                </label>
-                <textarea
-                  id="descripcion"
-                  value={formData.descripcion}
-                  onChange={(e) => setFormData({ ...formData, descripcion: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                  rows={3}
-                  placeholder="Descripción opcional..."
-                />
+                <div>
+                  <label htmlFor="costoEtapa1" className="block text-sm font-medium text-gray-700 mb-2">
+                    Costo Etapa 1 *
+                  </label>
+                  <input
+                    id="costoEtapa1"
+                    type="number"
+                    step="0.01"
+                    value={formData.costoEtapa1}
+                    onChange={(e) => setFormData({ ...formData, costoEtapa1: Number(e.target.value) })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="costoEtapa2" className="block text-sm font-medium text-gray-700 mb-2">
+                    Costo Etapa 2 *
+                  </label>
+                  <input
+                    id="costoEtapa2"
+                    type="number"
+                    step="0.01"
+                    value={formData.costoEtapa2}
+                    onChange={(e) => setFormData({ ...formData, costoEtapa2: Number(e.target.value) })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="costoEtapa3" className="block text-sm font-medium text-gray-700 mb-2">
+                    Costo Etapa 3 *
+                  </label>
+                  <input
+                    id="costoEtapa3"
+                    type="number"
+                    step="0.01"
+                    value={formData.costoEtapa3}
+                    onChange={(e) => setFormData({ ...formData, costoEtapa3: Number(e.target.value) })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="fechaVigenciaActual" className="block text-sm font-medium text-gray-700 mb-2">
+                    Vigencia Actual *
+                  </label>
+                  <input
+                    id="fechaVigenciaActual"
+                    type="date"
+                    value={formData.fechaVigenciaActual}
+                    onChange={(e) => setFormData({ ...formData, fechaVigenciaActual: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="fechaVigenciaEtapa1" className="block text-sm font-medium text-gray-700 mb-2">
+                    Vigencia Etapa 1 *
+                  </label>
+                  <input
+                    id="fechaVigenciaEtapa1"
+                    type="date"
+                    value={formData.fechaVigenciaEtapa1}
+                    onChange={(e) => setFormData({ ...formData, fechaVigenciaEtapa1: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="fechaVigenciaEtapa2" className="block text-sm font-medium text-gray-700 mb-2">
+                    Vigencia Etapa 2 *
+                  </label>
+                  <input
+                    id="fechaVigenciaEtapa2"
+                    type="date"
+                    value={formData.fechaVigenciaEtapa2}
+                    onChange={(e) => setFormData({ ...formData, fechaVigenciaEtapa2: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="fechaVigenciaEtapa3" className="block text-sm font-medium text-gray-700 mb-2">
+                    Vigencia Etapa 3 *
+                  </label>
+                  <input
+                    id="fechaVigenciaEtapa3"
+                    type="date"
+                    value={formData.fechaVigenciaEtapa3}
+                    onChange={(e) => setFormData({ ...formData, fechaVigenciaEtapa3: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    required
+                  />
+                </div>
               </div>
 
               <div className="flex gap-3 pt-4">

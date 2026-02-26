@@ -7,6 +7,7 @@ import { personaTercerosService } from '@/services/personaTercerosService';
 import { afiliadosService } from '@/services/afiliadosService';
 import { tercerosVinculadoService } from '@/services/tercerosVinculadoService';
 import { PencilIcon, TrashIcon, PlusIcon, XMarkIcon, LinkIcon } from '@heroicons/react/24/outline';
+import SearchableSelect from '@/components/SearchableSelect';
 
 export default function PersonaTercerosPage() {
   const { user } = useAuth();
@@ -141,6 +142,26 @@ export default function PersonaTercerosPage() {
     );
   });
 
+  const afiliadoOptions = afiliados.map((afiliado) => ({
+    value: afiliado.id,
+    label: `${afiliado.apellido}, ${afiliado.nombre} - ${afiliado.dni}`
+  }));
+
+  const terceroOptions = terceros.map((tercero) => ({
+    value: tercero.id,
+    label: `${tercero.apellido}, ${tercero.nombre} - ${tercero.dni}`
+  }));
+
+  const tipoRelacionOptions = [
+    { value: 'Padre/Madre', label: 'Padre/Madre' },
+    { value: 'Hijo/Hija', label: 'Hijo/Hija' },
+    { value: 'Cónyuge', label: 'Cónyuge' },
+    { value: 'Hermano/Hermana', label: 'Hermano/Hermana' },
+    { value: 'Tutor', label: 'Tutor' },
+    { value: 'Curador', label: 'Curador' },
+    { value: 'Otro', label: 'Otro' }
+  ];
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -256,55 +277,35 @@ export default function PersonaTercerosPage() {
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
               <div>
                 <label className="block text-sm font-medium text-neutral-700 mb-1">Afiliado *</label>
-                <select
+                <SearchableSelect
+                  options={[{ value: '', label: 'Seleccionar afiliado...' }, ...afiliadoOptions]}
                   value={formData.afiliadoId}
-                  onChange={(e) => setFormData({ ...formData, afiliadoId: e.target.value })}
-                  className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                  onChange={(value) => setFormData({ ...formData, afiliadoId: value })}
+                  placeholder="Seleccionar afiliado..."
                   required
-                >
-                  <option value="">Seleccionar afiliado...</option>
-                  {afiliados.map((afiliado) => (
-                    <option key={afiliado.id} value={afiliado.id}>
-                      {afiliado.apellido}, {afiliado.nombre} - {afiliado.dni}
-                    </option>
-                  ))}
-                </select>
+                />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-neutral-700 mb-1">Tercero Vinculado *</label>
-                <select
+                <SearchableSelect
+                  options={[{ value: '', label: 'Seleccionar tercero...' }, ...terceroOptions]}
                   value={formData.tercerosVinculadoId}
-                  onChange={(e) => setFormData({ ...formData, tercerosVinculadoId: e.target.value })}
-                  className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                  onChange={(value) => setFormData({ ...formData, tercerosVinculadoId: value })}
+                  placeholder="Seleccionar tercero..."
                   required
-                >
-                  <option value="">Seleccionar tercero...</option>
-                  {terceros.map((tercero) => (
-                    <option key={tercero.id} value={tercero.id}>
-                      {tercero.apellido}, {tercero.nombre} - {tercero.dni}
-                    </option>
-                  ))}
-                </select>
+                />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-neutral-700 mb-1">Tipo de Relación *</label>
-                <select
+                <SearchableSelect
+                  options={[{ value: '', label: 'Seleccionar tipo...' }, ...tipoRelacionOptions]}
                   value={formData.tipoRelacion}
-                  onChange={(e) => setFormData({ ...formData, tipoRelacion: e.target.value })}
-                  className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                  onChange={(value) => setFormData({ ...formData, tipoRelacion: value })}
+                  placeholder="Seleccionar tipo..."
                   required
-                >
-                  <option value="">Seleccionar tipo...</option>
-                  <option value="Padre/Madre">Padre/Madre</option>
-                  <option value="Hijo/Hija">Hijo/Hija</option>
-                  <option value="Cónyuge">Cónyuge</option>
-                  <option value="Hermano/Hermana">Hermano/Hermana</option>
-                  <option value="Tutor">Tutor</option>
-                  <option value="Curador">Curador</option>
-                  <option value="Otro">Otro</option>
-                </select>
+                />
               </div>
 
               <div>

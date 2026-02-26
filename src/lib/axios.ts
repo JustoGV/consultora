@@ -1,7 +1,11 @@
 import axios from 'axios';
 
+const useProdApi = process.env.NEXT_PUBLIC_USE_PROD_API !== 'false';
+const prodBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const localBaseUrl = process.env.NEXT_PUBLIC_LOCAL_API_URL || 'http://localhost:3001';
+
 const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000',
+  baseURL: useProdApi ? prodBaseUrl : localBaseUrl,
   timeout: Number(process.env.NEXT_PUBLIC_API_TIMEOUT) || 60000, // 60 segundos para dar tiempo al backend a despertar
   headers: {
     'Content-Type': 'application/json',

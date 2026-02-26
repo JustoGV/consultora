@@ -1,6 +1,7 @@
 'use client';
 
 import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
+import SearchableSelect from '@/components/SearchableSelect';
 
 interface PaginationProps {
   currentPage: number;
@@ -21,6 +22,10 @@ export default function Pagination({
 }: PaginationProps) {
   const startItem = (currentPage - 1) * itemsPerPage + 1;
   const endItem = Math.min(currentPage * itemsPerPage, totalItems);
+  const perPageOptions = [10, 25, 50, 100].map((value) => ({
+    value: String(value),
+    label: String(value)
+  }));
 
   const getPageNumbers = () => {
     const pages: (number | string)[] = [];
@@ -73,17 +78,14 @@ export default function Pagination({
             <label htmlFor="itemsPerPage" className="text-sm text-gray-700">
               Por página:
             </label>
-            <select
-              id="itemsPerPage"
-              value={itemsPerPage}
-              onChange={(e) => onItemsPerPageChange(Number(e.target.value))}
-              className="px-2 py-1 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value={10}>10</option>
-              <option value={25}>25</option>
-              <option value={50}>50</option>
-              <option value={100}>100</option>
-            </select>
+            <div className="min-w-[120px]">
+              <SearchableSelect
+                options={perPageOptions}
+                value={String(itemsPerPage)}
+                onChange={(value) => onItemsPerPageChange(Number(value))}
+                placeholder="Items"
+              />
+            </div>
           </div>
         )}
       </div>

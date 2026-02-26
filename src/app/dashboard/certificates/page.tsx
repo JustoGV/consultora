@@ -19,6 +19,7 @@ export default function CertificatesPage() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [certificados, setCertificados] = useState<CertificadoConAfiliado[]>([]);
+  const [selectedCertificate, setSelectedCertificate] = useState<CertificadoConAfiliado | null>(null);
   const [searchFilters, setSearchFilters] = useState<SearchFilters>({
     searchTerm: '',
     category: '',
@@ -60,6 +61,14 @@ export default function CertificatesPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleOpenDetail = (certificate: CertificadoConAfiliado) => {
+    setSelectedCertificate(certificate);
+  };
+
+  const handleCloseDetail = () => {
+    setSelectedCertificate(null);
   };
 
   // Filtrar certificados
@@ -202,7 +211,10 @@ export default function CertificatesPage() {
                   </div>
 
                   <div className="ml-4">
-                    <button className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-700 transition-colors cursor-pointer">
+                    <button
+                      onClick={() => handleOpenDetail(certificate)}
+                      className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-700 transition-colors cursor-pointer"
+                    >
                       Ver Detalle
                     </button>
                   </div>
@@ -223,6 +235,72 @@ export default function CertificatesPage() {
             </div>
           )}
         </>
+      )}
+
+      {selectedCertificate && (
+        <div className="fixed inset-0 bg-white/40 backdrop-blur-lg flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-6 border-b bg-white">
+              <h3 className="text-xl font-semibold text-neutral-900">Detalle del Certificado</h3>
+              <button
+                onClick={handleCloseDetail}
+                className="text-neutral-400 hover:text-neutral-600 cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="p-6 space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <p className="text-xs text-gray-600">Afiliado</p>
+                  <p className="font-medium text-gray-900">{selectedCertificate.afiliadoNombre}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-600">DNI</p>
+                  <p className="font-medium text-gray-900">{selectedCertificate.afiliadoDni}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-600">N° Certificado</p>
+                  <p className="font-medium text-gray-900">{selectedCertificate.numeroCertificado}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-600">Tipo de Discapacidad</p>
+                  <p className="font-medium text-gray-900">{selectedCertificate.tipoDiscapacidadNombre}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-600">Grado</p>
+                  <p className="font-medium text-gray-900">{selectedCertificate.grado}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-600">Fecha de Emisión</p>
+                  <p className="font-medium text-gray-900">
+                    {selectedCertificate.fechaEmision ? new Date(selectedCertificate.fechaEmision).toLocaleDateString('es-AR') : 'N/A'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-600">Vencimiento</p>
+                  <p className="font-medium text-gray-900">
+                    {selectedCertificate.fechaVencimiento
+                      ? new Date(selectedCertificate.fechaVencimiento).toLocaleDateString('es-AR')
+                      : 'Sin vencimiento'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-600">Estado</p>
+                  <p className="font-medium text-gray-900">{selectedCertificate.activo ? 'Activo' : 'Inactivo'}</p>
+                </div>
+              </div>
+
+              {selectedCertificate.observaciones && (
+                <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                  <p className="text-xs text-gray-600 mb-1">Observaciones</p>
+                  <p className="text-sm text-gray-900">{selectedCertificate.observaciones}</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

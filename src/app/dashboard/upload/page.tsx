@@ -9,6 +9,7 @@ import { estadoCivilService } from '@/services/estadoCivilService';
 import { tipoDiscapacidadService } from '@/services/tipoDiscapacidadService';
 import { CheckCircleIcon, DocumentPlusIcon } from '@heroicons/react/24/outline';
 import { useRouter } from 'next/navigation';
+import SearchableSelect from '@/components/SearchableSelect';
 
 export default function UploadPage() {
   const { user } = useAuth();
@@ -80,6 +81,28 @@ export default function UploadPage() {
     }
     return age;
   };
+
+  const sexoOptions = [
+    { value: 'M', label: 'Masculino' },
+    { value: 'F', label: 'Femenino' }
+  ];
+
+  const estadoCivilOptions = estadosCiviles.map((estado) => ({
+    value: estado.id,
+    label: estado.nombre
+  }));
+
+  const tipoDiscapacidadOptions = tiposDiscapacidad.map((tipo) => ({
+    value: tipo.id,
+    label: tipo.nombre
+  }));
+
+  const gradoOptions = [
+    { value: 'Leve', label: 'Leve' },
+    { value: 'Moderado', label: 'Moderado' },
+    { value: 'Severo', label: 'Severo' },
+    { value: 'Muy Severo', label: 'Muy Severo' }
+  ];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -218,31 +241,23 @@ export default function UploadPage() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Sexo *</label>
-                <select
+                <SearchableSelect
+                  options={sexoOptions}
                   value={afiliadoData.sexo}
-                  onChange={(e) => setAfiliadoData({ ...afiliadoData, sexo: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  onChange={(value) => setAfiliadoData({ ...afiliadoData, sexo: value })}
+                  placeholder="Seleccionar sexo..."
                   required
-                >
-                  <option value="M">Masculino</option>
-                  <option value="F">Femenino</option>
-                </select>
+                />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Estado Civil</label>
-                <select
-                  value={afiliadoData.estadoCivilId}
-                  onChange={(e) => setAfiliadoData({ ...afiliadoData, estadoCivilId: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">Seleccionar...</option>
-                  {estadosCiviles.map((ec) => (
-                    <option key={ec.id} value={ec.id}>
-                      {ec.nombre}
-                    </option>
-                  ))}
-                </select>
+                <SearchableSelect
+                  options={[{ value: '', label: 'Seleccionar...' }, ...estadoCivilOptions]}
+                  value={afiliadoData.estadoCivilId || ''}
+                  onChange={(value) => setAfiliadoData({ ...afiliadoData, estadoCivilId: value })}
+                  placeholder="Seleccionar estado civil..."
+                />
               </div>
             </div>
           </div>
@@ -395,35 +410,24 @@ export default function UploadPage() {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Tipo de Discapacidad *</label>
-              <select
+              <SearchableSelect
+                options={[{ value: '', label: 'Seleccionar tipo...' }, ...tipoDiscapacidadOptions]}
                 value={certificadoData.tipoDiscapacidadId}
-                onChange={(e) => setCertificadoData({ ...certificadoData, tipoDiscapacidadId: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                onChange={(value) => setCertificadoData({ ...certificadoData, tipoDiscapacidadId: value })}
+                placeholder="Seleccionar tipo..."
                 required
-              >
-                <option value="">Seleccionar tipo...</option>
-                {tiposDiscapacidad.map((tipo) => (
-                  <option key={tipo.id} value={tipo.id}>
-                    {tipo.nombre}
-                  </option>
-                ))}
-              </select>
+              />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Grado *</label>
-              <select
+              <SearchableSelect
+                options={[{ value: '', label: 'Seleccionar grado...' }, ...gradoOptions]}
                 value={certificadoData.grado}
-                onChange={(e) => setCertificadoData({ ...certificadoData, grado: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                onChange={(value) => setCertificadoData({ ...certificadoData, grado: value })}
+                placeholder="Seleccionar grado..."
                 required
-              >
-                <option value="">Seleccionar grado...</option>
-                <option value="Leve">Leve</option>
-                <option value="Moderado">Moderado</option>
-                <option value="Severo">Severo</option>
-                <option value="Muy Severo">Muy Severo</option>
-              </select>
+              />
             </div>
 
             <div>
