@@ -31,6 +31,8 @@ export default function OrientacionPrestacionalPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingOrientacion, setEditingOrientacion] = useState<OrientacionPrestacional | null>(null);
   const [selectedServicioId, setSelectedServicioId] = useState('');
+  const [selectedServicioNoNomId, setSelectedServicioNoNomId] = useState('');
+  const [todasEdades, setTodasEdades] = useState(false);
 
   const [formData, setFormData] = useState<CreateOrientacionPrestacionalDto>({
     titulo: '',
@@ -69,6 +71,8 @@ export default function OrientacionPrestacionalPage() {
   const handleOpenModal = (orientacion?: OrientacionPrestacional) => {
     if (orientacion) {
       setEditingOrientacion(orientacion);
+      const sinEdades = orientacion.edadDesde == null && orientacion.edadHasta == null;
+      setTodasEdades(sinEdades);
       setFormData({
         titulo: orientacion.titulo,
         edadDesde: orientacion.edadDesde ?? undefined,
@@ -77,6 +81,7 @@ export default function OrientacionPrestacionalPage() {
       });
     } else {
       setEditingOrientacion(null);
+      setTodasEdades(false);
       setFormData({
         titulo: '',
         edadDesde: undefined,
@@ -85,6 +90,7 @@ export default function OrientacionPrestacionalPage() {
       });
     }
   setSelectedServicioId('');
+  setSelectedServicioNoNomId('');
     setIsModalOpen(true);
   };
 
@@ -148,6 +154,19 @@ export default function OrientacionPrestacionalPage() {
     }
   };
 
+  const handleAddServicioNoNom = async () => {
+    if (!editingOrientacion || !selectedServicioNoNomId) return;
+
+    try {
+      await orientacionPrestacionalService.addServicio(editingOrientacion.id, { servicioId: selectedServicioNoNomId });
+      await loadData();
+      setSelectedServicioNoNomId('');
+    } catch (error) {
+      console.error('Error al agregar servicio:', error);
+      alert('Error al agregar servicio');
+    }
+  };
+
   const handleRemoveServicio = async (servicioId: string) => {
     if (!editingOrientacion) return;
 
@@ -176,10 +195,19 @@ export default function OrientacionPrestacionalPage() {
     handleItemsPerPageChange
   } = usePagination({ items: filteredOrientaciones, itemsPerPage: 10 });
 
-  const servicioOptions = servicios.map((servicio) => ({
-    value: servicio.id,
-    label: `${servicio.titulo} (${servicio.nomenclador?.codigoPrestacion || 'N/A'})`
-  }));
+  const servicioNomOptions = servicios
+    .filter(s => s.nomencladorId || s.tipoServicio === 'NOMENCLADO')
+    .map((servicio) => ({
+      value: servicio.id,
+      label: `${servicio.titulo} (${servicio.nomenclador?.codigoPrestacion || 'N/A'})`
+    }));
+
+  const servicioNoNomOptions = servicios
+    .filter(s => !s.nomencladorId && s.tipoServicio !== 'NOMENCLADO')
+    .map((servicio) => ({
+      value: servicio.id,
+      label: servicio.titulo
+    }));
 
   return (
     <div className="space-y-6">
@@ -222,8 +250,7 @@ export default function OrientacionPrestacionalPage() {
               <thead className="bg-neutral-50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase">Título</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase">Edad Desde</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase">Edad Hasta</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase">Rango de Edad</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase">Prioridad</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase">Servicios</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase">Certificados</th>
@@ -235,10 +262,14 @@ export default function OrientacionPrestacionalPage() {
                   <tr key={orientacion.id} className="hover:bg-neutral-50">
                     <td className="px-6 py-4 text-sm text-neutral-900">{orientacion.titulo}</td>
                     <td className="px-6 py-4 text-sm text-neutral-600">
-                      {orientacion.edadDesde ?? '-'}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-neutral-600">
-                      {orientacion.edadHasta ?? '-'}
+                      {orientacion.edadDesde == null && orientacion.edadHasta == null
+                        ? <span className="text-neutral-400 italic">Todas las edades</span>
+                        : orientacion.edadDesde != null && orientacion.edadHasta == null
+                        ? `≥ ${orientacion.edadDesde} años`
+                        : orientacion.edadDesde == null && orientacion.edadHasta != null
+                        ? `Hasta ${orientacion.edadHasta} años`
+                        : `${orientacion.edadDesde} – ${orientacion.edadHasta} años`
+                      }
                     </td>
                     <td className="px-6 py-4 text-sm text-neutral-600">{orientacion.prioridad}</td>
                     <td className="px-6 py-4 text-sm text-neutral-600">
@@ -317,29 +348,62 @@ export default function OrientacionPrestacionalPage() {
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-neutral-700 mb-1">Edad Desde</label>
+              <div>
+                <div className="flex items-center gap-2 mb-3">
                   <input
-                    type="number"
-                    value={formData.edadDesde ?? ''}
-                    onChange={(e) => setFormData({ ...formData, edadDesde: e.target.value ? Number(e.target.value) : undefined })}
-                    className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-                    min={0}
-                    max={120}
+                    type="checkbox"
+                    id="todasEdades"
+                    checked={todasEdades}
+                    onChange={(e) => {
+                      setTodasEdades(e.target.checked);
+                      if (e.target.checked) {
+                        setFormData({ ...formData, edadDesde: undefined, edadHasta: undefined });
+                      }
+                    }}
+                    className="w-4 h-4 text-primary-600 border-neutral-300 rounded focus:ring-primary-500"
                   />
+                  <label htmlFor="todasEdades" className="text-sm font-medium text-neutral-700">
+                    Aplica para todas las edades
+                  </label>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-neutral-700 mb-1">Edad Hasta</label>
-                  <input
-                    type="number"
-                    value={formData.edadHasta ?? ''}
-                    onChange={(e) => setFormData({ ...formData, edadHasta: e.target.value ? Number(e.target.value) : undefined })}
-                    className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-                    min={0}
-                    max={120}
-                  />
-                </div>
+                {!todasEdades && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-neutral-700 mb-1">
+                        Edad Desde <span className="text-neutral-400 font-normal">(opcional)</span>
+                      </label>
+                      <input
+                        type="number"
+                        value={formData.edadDesde ?? ''}
+                        onChange={(e) => setFormData({ ...formData, edadDesde: e.target.value ? Number(e.target.value) : undefined })}
+                        className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                        min={0}
+                        max={120}
+                        placeholder="Sin límite inferior"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-neutral-700 mb-1">
+                        Edad Límite / Hasta <span className="text-neutral-400 font-normal">(opcional)</span>
+                      </label>
+                      <input
+                        type="number"
+                        value={formData.edadHasta ?? ''}
+                        onChange={(e) => setFormData({ ...formData, edadHasta: e.target.value ? Number(e.target.value) : undefined })}
+                        className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                        min={0}
+                        max={120}
+                        placeholder="Sin límite superior"
+                      />
+                      <p className="text-xs text-neutral-400 mt-1">
+                        Definir una edad límite permite generar alertas cuando el afiliado supera ese umbral.
+                      </p>
+                    </div>
+                  </div>
+                )}
+                {todasEdades && (
+                  <p className="text-sm text-neutral-500 italic">No se aplicarán restricciones de edad.</p>
+                )}
               </div>
 
               <div>
@@ -354,15 +418,19 @@ export default function OrientacionPrestacionalPage() {
               </div>
 
               <div className="space-y-6">
+                {/* -- Servicios Nomenclados -- */}
                 <div>
-                  <h4 className="text-lg font-semibold text-neutral-800 mb-3">Servicios Asociados</h4>
+                  <h4 className="text-base font-semibold text-neutral-800 mb-3 flex items-center gap-2">
+                    <span className="inline-flex px-2 py-0.5 text-xs bg-blue-100 text-blue-700 rounded-full">Nomenclados</span>
+                    Servicios Nomenclados
+                  </h4>
                   <div className="flex gap-3">
                     <div className="flex-1">
                       <SearchableSelect
-                        options={servicioOptions}
+                        options={servicioNomOptions}
                         value={selectedServicioId}
                         onChange={setSelectedServicioId}
-                        placeholder="Seleccionar servicio..."
+                        placeholder="Seleccionar servicio nomenclado..."
                       />
                     </div>
                     {editingOrientacion && (
@@ -380,28 +448,80 @@ export default function OrientacionPrestacionalPage() {
                   )}
                   {editingOrientacion && (
                     <div className="mt-3 space-y-2">
-                      {editingOrientacion.servicios?.map((servicio) => (
-                        <div key={servicio.id} className="flex items-center justify-between p-3 bg-neutral-50 rounded-lg">
-                          <div>
-                            <p className="text-sm font-medium text-neutral-900">{servicio.titulo}</p>
-                            <p className="text-xs text-neutral-500">{servicio.nomenclador?.codigoPrestacion}</p>
+                      {editingOrientacion.servicios
+                        ?.filter(s => s.nomencladorId || s.tipoServicio === 'NOMENCLADO')
+                        .map((servicio) => (
+                          <div key={servicio.id} className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+                            <div>
+                              <p className="text-sm font-medium text-neutral-900">{servicio.titulo}</p>
+                              <p className="text-xs text-neutral-500">{servicio.nomenclador?.codigoPrestacion}</p>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveServicio(servicio.id)}
+                              className="text-red-600 hover:text-red-800 text-sm"
+                            >
+                              Quitar
+                            </button>
                           </div>
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveServicio(servicio.id)}
-                            className="text-red-600 hover:text-red-800 text-sm"
-                          >
-                            Quitar
-                          </button>
-                        </div>
-                      ))}
-                      {(!editingOrientacion.servicios || editingOrientacion.servicios.length === 0) && (
-                        <p className="text-sm text-neutral-500">No hay servicios asociados</p>
+                        ))}
+                      {editingOrientacion.servicios?.filter(s => s.nomencladorId || s.tipoServicio === 'NOMENCLADO').length === 0 && (
+                        <p className="text-sm text-neutral-500">Sin servicios nomenclados asociados</p>
                       )}
                     </div>
                   )}
                 </div>
 
+                {/* -- Servicios No Nomenclados -- */}
+                <div>
+                  <h4 className="text-base font-semibold text-neutral-800 mb-3 flex items-center gap-2">
+                    <span className="inline-flex px-2 py-0.5 text-xs bg-purple-100 text-purple-700 rounded-full">No nomenclados</span>
+                    Servicios No Nomenclados
+                  </h4>
+                  <div className="flex gap-3">
+                    <div className="flex-1">
+                      <SearchableSelect
+                        options={servicioNoNomOptions}
+                        value={selectedServicioNoNomId}
+                        onChange={setSelectedServicioNoNomId}
+                        placeholder="Seleccionar servicio no nomenclado..."
+                      />
+                    </div>
+                    {editingOrientacion && (
+                      <button
+                        type="button"
+                        onClick={handleAddServicioNoNom}
+                        className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 cursor-pointer"
+                      >
+                        Agregar
+                      </button>
+                    )}
+                  </div>
+                  {!editingOrientacion && (
+                    <p className="text-xs text-neutral-500 mt-2">Se asociará al guardar la orientación.</p>
+                  )}
+                  {editingOrientacion && (
+                    <div className="mt-3 space-y-2">
+                      {editingOrientacion.servicios
+                        ?.filter(s => !s.nomencladorId && s.tipoServicio !== 'NOMENCLADO')
+                        .map((servicio) => (
+                          <div key={servicio.id} className="flex items-center justify-between p-3 bg-purple-50 rounded-lg">
+                            <p className="text-sm font-medium text-neutral-900">{servicio.titulo}</p>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveServicio(servicio.id)}
+                              className="text-red-600 hover:text-red-800 text-sm"
+                            >
+                              Quitar
+                            </button>
+                          </div>
+                        ))}
+                      {editingOrientacion.servicios?.filter(s => !s.nomencladorId && s.tipoServicio !== 'NOMENCLADO').length === 0 && (
+                        <p className="text-sm text-neutral-500">Sin servicios no nomenclados asociados</p>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div className="flex gap-3 pt-6 border-t mt-6">

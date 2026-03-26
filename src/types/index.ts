@@ -255,13 +255,16 @@ export interface UpdateNomencladorDto {
   activo?: boolean;
 }
 
+export type TipoServicio = 'NOMENCLADO' | 'NO_NOMENCLADO';
+
 export interface Servicio {
   id: string;
   titulo: string;
   categoriaId: string;
   categoria?: Categoria;
-  nomencladorId: string;
+  nomencladorId?: string;
   nomenclador?: Nomenclador;
+  tipoServicio?: TipoServicio;
   administradoraId: string;
   orientaciones?: OrientacionPrestacional[];
   activo: boolean;
@@ -272,13 +275,15 @@ export interface Servicio {
 export interface CreateServicioDto {
   titulo: string;
   categoriaId: string;
-  nomencladorId: string;
+  nomencladorId?: string;
+  tipoServicio?: TipoServicio;
 }
 
 export interface UpdateServicioDto {
   titulo?: string;
   categoriaId?: string;
   nomencladorId?: string;
+  tipoServicio?: TipoServicio;
   activo?: boolean;
 }
 
@@ -534,6 +539,24 @@ export interface UpdateAfiliadoDto {
 }
 
 // Certificados de Discapacidad
+export type NivelAlertaCertificado = 'BAJO' | 'MEDIO' | 'ALTO' | 'CRITICO';
+
+export interface Diagnostico {
+  id: string;
+  codigo: string;
+  nombre: string;
+  descripcion?: string;
+  activo: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface CreateDiagnosticoDto {
+  codigo: string;
+  nombre: string;
+  descripcion?: string;
+}
+
 export interface CertificadoDiscapacidad {
   id: string;
   numeroCertificado: string;
@@ -544,7 +567,11 @@ export interface CertificadoDiscapacidad {
   afiliadoId: string;
   afiliado?: Afiliado;
   tipoDiscapacidadId: string;
+  tipoDiscapacidadIds?: string[];
   tipoDiscapacidad?: TipoDiscapacidad;
+  diagnosticoId?: string;
+  diagnostico?: Diagnostico;
+  nivelAlerta?: NivelAlertaCertificado;
   administradoraId: string;
   administradora?: Administradora;
   activo: boolean;
@@ -557,9 +584,11 @@ export interface CreateCertificadoDiscapacidadDto {
   fechaEmision: string;
   fechaVencimiento?: string;
   grado: string;
-  observaciones?: string;
   afiliadoId: string;
   tipoDiscapacidadId: string;
+  tipoDiscapacidadIds?: string[];
+  diagnosticoId?: string;
+  nivelAlerta?: NivelAlertaCertificado;
   administradoraId: string;
   activo?: boolean;
 }
@@ -569,9 +598,11 @@ export interface UpdateCertificadoDiscapacidadDto {
   fechaEmision?: string;
   fechaVencimiento?: string;
   grado?: string;
-  observaciones?: string;
   afiliadoId?: string;
   tipoDiscapacidadId?: string;
+  tipoDiscapacidadIds?: string[];
+  diagnosticoId?: string;
+  nivelAlerta?: NivelAlertaCertificado;
   activo?: boolean;
 }
 

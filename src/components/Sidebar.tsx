@@ -52,14 +52,13 @@ export default function Sidebar() {
     
     { name: 'Certificados Discapacidad', href: '/dashboard/certificados-discapacidad', icon: DocumentTextIcon, section: 'certificados' },
     { name: 'Certificados', href: '/dashboard/certificates', icon: FolderOpenIcon, section: 'certificados' },
-    { name: 'Pacientes', href: '/dashboard/patients', icon: UsersIcon, section: 'certificados' },
     
     { name: 'Estado Civil', href: '/dashboard/estado-civil', icon: HeartIcon, section: 'catalogos' },
     { name: 'Tipos de Discapacidad', href: '/dashboard/tipo-discapacidad', icon: AdjustmentsHorizontalIcon, section: 'catalogos' },
     { name: 'Categorías', href: '/dashboard/categories', icon: ClipboardDocumentListIcon, section: 'catalogos' },
     { name: 'Nomencladores', href: '/dashboard/nomenclators', icon: ChartBarIcon, section: 'catalogos' },
-  { name: 'Servicios', href: '/dashboard/servicios', icon: AdjustmentsHorizontalIcon, section: 'catalogos' },
-  { name: 'Orientación Prestacional', href: '/dashboard/orientacion-prestacional', icon: LinkIcon, section: 'catalogos' },
+    { name: 'Servicios', href: '/dashboard/servicios', icon: AdjustmentsHorizontalIcon, section: 'catalogos' },
+    { name: 'Orientación Prestacional', href: '/dashboard/orientacion-prestacional', icon: LinkIcon, section: 'catalogos' },
     
     { name: 'Configuración', href: '/dashboard/settings', icon: CogIcon, section: 'config' },
   ];
@@ -75,14 +74,13 @@ export default function Sidebar() {
     
     { name: 'Certificados Discapacidad', href: '/dashboard/certificados-discapacidad', icon: DocumentTextIcon, section: 'certificados' },
     { name: 'Certificados', href: '/dashboard/certificates', icon: FolderOpenIcon, section: 'certificados' },
-    { name: 'Pacientes', href: '/dashboard/patients', icon: UsersIcon, section: 'certificados' },
     
     { name: 'Estado Civil', href: '/dashboard/estado-civil', icon: HeartIcon, section: 'catalogos' },
     { name: 'Tipos de Discapacidad', href: '/dashboard/tipo-discapacidad', icon: AdjustmentsHorizontalIcon, section: 'catalogos' },
     { name: 'Categorías', href: '/dashboard/categories', icon: ClipboardDocumentListIcon, section: 'catalogos' },
     { name: 'Nomencladores', href: '/dashboard/nomenclators', icon: ChartBarIcon, section: 'catalogos' },
-  { name: 'Servicios', href: '/dashboard/servicios', icon: AdjustmentsHorizontalIcon, section: 'catalogos' },
-  { name: 'Orientación Prestacional', href: '/dashboard/orientacion-prestacional', icon: LinkIcon, section: 'catalogos' },
+    { name: 'Servicios', href: '/dashboard/servicios', icon: AdjustmentsHorizontalIcon, section: 'catalogos' },
+    { name: 'Orientación Prestacional', href: '/dashboard/orientacion-prestacional', icon: LinkIcon, section: 'catalogos' },
     
     { name: 'Configuración', href: '/dashboard/settings', icon: CogIcon, section: 'config' },
   ];

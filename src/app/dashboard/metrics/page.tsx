@@ -81,10 +81,10 @@ export default function MetricsPage() {
             Aún no hay pacientes registrados para mostrar métricas.
           </p>
           <Link
-            href="/dashboard/patients"
+            href="/dashboard/afiliados"
             className="inline-flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
           >
-            Ver Pacientes
+            Ver Afiliados
           </Link>
         </div>
       )}

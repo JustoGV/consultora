@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { Servicio, Categoria, Nomenclador, CreateServicioDto } from '@/types';
+import { Servicio, Categoria, Nomenclador, CreateServicioDto, TipoServicio } from '@/types';
 import { serviciosService } from '@/services/serviciosService';
 import { categoriaService } from '@/services/categoriaService';
 import { nomencladorService } from '@/services/nomencladorService';
@@ -25,7 +25,8 @@ export default function ServiciosPage() {
   const [formData, setFormData] = useState<CreateServicioDto>({
     titulo: '',
     categoriaId: '',
-    nomencladorId: ''
+    nomencladorId: '',
+    tipoServicio: 'NOMENCLADO',
   });
 
   useEffect(() => {
@@ -54,17 +55,20 @@ export default function ServiciosPage() {
   const handleOpenModal = (servicio?: Servicio) => {
     if (servicio) {
       setEditingServicio(servicio);
+      const tipo: TipoServicio = servicio.tipoServicio ?? (servicio.nomencladorId ? 'NOMENCLADO' : 'NO_NOMENCLADO');
       setFormData({
         titulo: servicio.titulo,
         categoriaId: servicio.categoriaId,
-        nomencladorId: servicio.nomencladorId
+        nomencladorId: servicio.nomencladorId || '',
+        tipoServicio: tipo,
       });
     } else {
       setEditingServicio(null);
       setFormData({
         titulo: '',
         categoriaId: '',
-        nomencladorId: ''
+        nomencladorId: '',
+        tipoServicio: 'NOMENCLADO',
       });
     }
     setIsModalOpen(true);
@@ -77,7 +81,7 @@ export default function ServiciosPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.titulo || !formData.categoriaId || !formData.nomencladorId) {
+    if (!formData.titulo || !formData.categoriaId || (formData.tipoServicio === 'NOMENCLADO' && !formData.nomencladorId)) {
       alert('Por favor complete los campos requeridos');
       return;
     }
@@ -181,6 +185,7 @@ export default function ServiciosPage() {
               <thead className="bg-neutral-50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase">Título</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase">Tipo</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase">Categoría</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase">Nomenclador</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase">Estado</th>
@@ -191,6 +196,18 @@ export default function ServiciosPage() {
                 {paginatedServicios.map((servicio) => (
                   <tr key={servicio.id} className="hover:bg-neutral-50">
                     <td className="px-6 py-4 text-sm text-neutral-900">{servicio.titulo}</td>
+                    <td className="px-6 py-4 text-sm">
+                      {(() => {
+                        const tipo = servicio.tipoServicio ?? (servicio.nomencladorId ? 'NOMENCLADO' : 'NO_NOMENCLADO');
+                        return (
+                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                            tipo === 'NOMENCLADO' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'
+                          }`}>
+                            {tipo === 'NOMENCLADO' ? 'Nomenclado' : 'No nomenclado'}
+                          </span>
+                        );
+                      })()}
+                    </td>
                     <td className="px-6 py-4 text-sm text-neutral-600">{servicio.categoria?.nombre || '-'}</td>
                     <td className="px-6 py-4 text-sm text-neutral-600">
                       {servicio.nomenclador?.codigoPrestacion || '-'}
@@ -263,6 +280,34 @@ export default function ServiciosPage() {
 
             <form onSubmit={handleSubmit} className="p-6 space-y-6">
               <div>
+                <label className="block text-sm font-medium text-neutral-700 mb-2">Tipo de Servicio *</label>
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, tipoServicio: 'NOMENCLADO', nomencladorId: '' })}
+                    className={`flex-1 py-2 px-4 rounded-lg border text-sm font-medium transition-colors ${
+                      formData.tipoServicio === 'NOMENCLADO'
+                        ? 'bg-blue-600 text-white border-blue-600'
+                        : 'bg-white text-neutral-600 border-neutral-300 hover:bg-neutral-50'
+                    }`}
+                  >
+                    Nomenclado
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, tipoServicio: 'NO_NOMENCLADO', nomencladorId: '' })}
+                    className={`flex-1 py-2 px-4 rounded-lg border text-sm font-medium transition-colors ${
+                      formData.tipoServicio === 'NO_NOMENCLADO'
+                        ? 'bg-purple-600 text-white border-purple-600'
+                        : 'bg-white text-neutral-600 border-neutral-300 hover:bg-neutral-50'
+                    }`}
+                  >
+                    No nomenclado
+                  </button>
+                </div>
+              </div>
+
+              <div>
                 <label className="block text-sm font-medium text-neutral-700 mb-1">Título *</label>
                 <input
                   type="text"
@@ -285,16 +330,18 @@ export default function ServiciosPage() {
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-neutral-700 mb-1">Nomenclador *</label>
-                <SearchableSelect
-                  options={nomencladorOptions}
-                  value={formData.nomencladorId}
-                  onChange={(value) => setFormData({ ...formData, nomencladorId: value })}
-                  placeholder="Seleccionar nomenclador..."
-                  required
-                />
-              </div>
+              {formData.tipoServicio === 'NOMENCLADO' && (
+                <div>
+                  <label className="block text-sm font-medium text-neutral-700 mb-1">Nomenclador *</label>
+                  <SearchableSelect
+                    options={nomencladorOptions}
+                    value={formData.nomencladorId || ''}
+                    onChange={(value) => setFormData({ ...formData, nomencladorId: value })}
+                    placeholder="Seleccionar nomenclador..."
+                    required
+                  />
+                </div>
+              )}
 
               <div className="flex gap-3 pt-6 border-t mt-6">
                 <button

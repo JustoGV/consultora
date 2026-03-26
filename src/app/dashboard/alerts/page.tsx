@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { alertasService } from '@/services/alertasService';
 import {
   Alerta,
-  AlertasQueryParams,
   CodigoAlerta,
   DashboardAlertas,
   EstadoAlerta,
@@ -13,8 +12,11 @@ import {
 import {
   BellIcon,
   CheckCircleIcon,
+  ChevronDownIcon,
+  ChevronUpIcon,
   ClockIcon,
   ExclamationTriangleIcon,
+  LightBulbIcon,
   XCircleIcon
 } from '@heroicons/react/24/outline';
 import SearchableSelect from '@/components/SearchableSelect';
@@ -35,8 +37,6 @@ const prioridadOptions: { value: PrioridadAlerta | 'ALL'; label: string }[] = [
   { value: 'BAJA', label: 'Baja' },
   { value: 'INFO', label: 'Info' }
 ];
-
-const codigoDefaultOptions = [{ value: 'ALL', label: 'Todos' }];
 
 const prioridadColorMap: Record<PrioridadAlerta, string> = {
   CRITICA: 'bg-red-100 text-red-700 border-red-200',
@@ -63,8 +63,47 @@ const formatDate = (value?: string) => {
   });
 };
 
+function getSolucionesForAlerta(alerta: Alerta): string[] {
+  const soluciones: string[] = [];
+  const desc = (alerta.codigoAlerta?.descripcion || '').toLowerCase();
+  const titulo = alerta.titulo.toLowerCase();
+  const mensaje = alerta.mensaje.toLowerCase();
+  const plantilla = alerta.codigoAlerta?.mensajePlantilla;
+  if (plantilla) soluciones.push(plantilla);
+
+  if (desc.includes('vencimiento') || desc.includes('vencido') || titulo.includes('vencimiento') || titulo.includes('vencido')) {
+    soluciones.push('Solicitar al afiliado la documentación para renovar el certificado.');
+    soluciones.push('Contactar al médico certificante para gestionar la renovación.');
+  }
+  if (desc.includes('certificado') || titulo.includes('certificado')) {
+    soluciones.push('Verificar el estado del certificado en el historial del afiliado.');
+  }
+  if (desc.includes('afiliado') || desc.includes('contacto') || titulo.includes('afiliado')) {
+    soluciones.push('Actualizar los datos de contacto del afiliado.');
+    soluciones.push('Verificar que el afiliado esté al corriente con la documentación.');
+  }
+  if (desc.includes('prestacion') || desc.includes('servicio') || titulo.includes('prestacion')) {
+    soluciones.push('Revisar las orientaciones prestacionales asignadas al afiliado.');
+    soluciones.push('Verificar que los servicios correspondientes estén activos.');
+  }
+  if (alerta.prioridad === 'CRITICA' || alerta.prioridad === 'ALTA') {
+    soluciones.push('Escalar la situación al supervisor o responsable de la administradora.');
+    soluciones.push('Registrar la intervención una vez resuelta para el historial.');
+  }
+  if (desc.includes('edad') || mensaje.includes('edad') || titulo.includes('edad')) {
+    soluciones.push('Verificar si el afiliado sigue dentro del rango etario habilitado.');
+    soluciones.push('Revisar las orientaciones prestacionales que aplican según la nueva edad.');
+  }
+  if (soluciones.length <= 1) {
+    soluciones.push('Revisar la información del afiliado y confirmar que esté actualizada.');
+    soluciones.push('Contactar al afiliado para informar la situación y coordinar una solución.');
+  }
+  // deduplicate and limit
+  return [...new Set(soluciones)].slice(0, 5);
+}
+
 export default function AlertsPage() {
-  const [alertas, setAlertas] = useState<Alerta[]>([]);
+  const [allAlertas, setAllAlertas] = useState<Alerta[]>([]);
   const [codigos, setCodigos] = useState<CodigoAlerta[]>([]);
   const [dashboard, setDashboard] = useState<DashboardAlertas | null>(null);
   const [loading, setLoading] = useState(true);
@@ -73,6 +112,7 @@ export default function AlertsPage() {
   const [estado, setEstado] = useState<EstadoAlerta | 'ALL'>('ALL');
   const [prioridad, setPrioridad] = useState<PrioridadAlerta | 'ALL'>('ALL');
   const [codigoNumerico, setCodigoNumerico] = useState<'ALL' | string>('ALL');
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const loadData = async () => {
     try {
@@ -83,7 +123,7 @@ export default function AlertsPage() {
         alertasService.getCodigos()
       ]);
       setDashboard(dashboardData);
-      setAlertas(alertasData);
+      setAllAlertas(alertasData);
       setCodigos(codigosData);
     } catch (error) {
       console.error('Error al cargar alertas:', error);
@@ -96,40 +136,25 @@ export default function AlertsPage() {
     loadData();
   }, []);
 
-  useEffect(() => {
-    const params: AlertasQueryParams = {};
-    if (estado !== 'ALL') params.estado = estado;
-    if (prioridad !== 'ALL') params.prioridad = prioridad;
-    if (codigoNumerico !== 'ALL' && codigoNumerico !== '') {
-      params.codigoNumerico = Number(codigoNumerico);
-    }
-
-    const fetchFiltered = async () => {
-      try {
-        setLoading(true);
-        const data = await alertasService.getAlertas(params);
-        setAlertas(data);
-      } catch (error) {
-        console.error('Error al filtrar alertas:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchFiltered();
-  }, [estado, prioridad, codigoNumerico]);
-
   const filteredAlertas = useMemo(() => {
-    if (!searchTerm) return alertas;
-    const term = searchTerm.toLowerCase();
-    return alertas.filter((alerta) =>
-      alerta.titulo.toLowerCase().includes(term) ||
-      alerta.mensaje.toLowerCase().includes(term) ||
-      alerta.afiliado?.nombre?.toLowerCase().includes(term) ||
-      alerta.afiliado?.apellido?.toLowerCase().includes(term) ||
-      alerta.afiliado?.dni?.toLowerCase().includes(term)
-    );
-  }, [alertas, searchTerm]);
+    return allAlertas.filter((alerta) => {
+      if (estado !== 'ALL' && alerta.estado !== estado) return false;
+      if (prioridad !== 'ALL' && alerta.prioridad !== prioridad) return false;
+      if (codigoNumerico !== 'ALL' && String(alerta.codigoAlerta?.codigo) !== codigoNumerico) return false;
+      if (searchTerm) {
+        const term = searchTerm.toLowerCase();
+        const fullName = `${alerta.afiliado?.nombre ?? ''} ${alerta.afiliado?.apellido ?? ''}`.toLowerCase();
+        const matches =
+          alerta.titulo.toLowerCase().includes(term) ||
+          alerta.mensaje.toLowerCase().includes(term) ||
+          fullName.includes(term) ||
+          (alerta.afiliado?.dni ?? '').toLowerCase().includes(term) ||
+          (alerta.codigoAlerta?.descripcion ?? '').toLowerCase().includes(term);
+        if (!matches) return false;
+      }
+      return true;
+    });
+  }, [allAlertas, searchTerm, estado, prioridad, codigoNumerico]);
 
   const handleVista = async (id: string) => {
     try {
@@ -166,6 +191,11 @@ export default function AlertsPage() {
       setLoadingAction(false);
     }
   };
+
+  const codigoOptions = [
+    { value: 'ALL', label: 'Todos' },
+    ...codigos.map((c) => ({ value: String(c.codigo), label: `${c.codigo} - ${c.descripcion}` }))
+  ];
 
   return (
     <div className="space-y-6">
@@ -244,12 +274,7 @@ export default function AlertsPage() {
             <label className="text-sm font-medium text-neutral-700">Código</label>
             <div className="mt-2">
               <SearchableSelect
-                options={codigoDefaultOptions.concat(
-                  codigos.map((codigo) => ({
-                    value: String(codigo.codigo),
-                    label: `${codigo.codigo} - ${codigo.descripcion}`
-                  }))
-                )}
+                options={codigoOptions}
                 value={codigoNumerico}
                 onChange={setCodigoNumerico}
                 placeholder="Seleccionar código..."
@@ -301,97 +326,141 @@ export default function AlertsPage() {
                   </td>
                 </tr>
               ) : (
-                filteredAlertas.map((alerta) => (
-                  <tr key={alerta.id}>
-                    <td className="px-4 py-4">
-                      <div className="flex items-start gap-3">
-                        <div className="mt-1">
-                          {alerta.prioridad === 'CRITICA' ? (
-                            <ExclamationTriangleIcon className="h-5 w-5 text-red-500" />
-                          ) : (
-                            <BellIcon className="h-5 w-5 text-neutral-400" />
-                          )}
-                        </div>
-                        <div>
-                          <p className="font-medium text-neutral-900">{alerta.titulo}</p>
-                          <p className="text-sm text-neutral-600 mt-1 line-clamp-2">
-                            {alerta.mensaje}
-                          </p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-4 py-4 text-sm text-neutral-700">
-                      <div>
-                        <p className="font-medium text-neutral-800">
-                          {alerta.afiliado
-                            ? `${alerta.afiliado.nombre} ${alerta.afiliado.apellido}`
-                            : 'Sin afiliado'}
-                        </p>
-                        {alerta.afiliado?.dni && (
-                          <p className="text-xs text-neutral-500">DNI {alerta.afiliado.dni}</p>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-4 py-4">
-                      <span
-                        className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium ${
-                          prioridadColorMap[alerta.prioridad]
-                        }`}
+                filteredAlertas.map((alerta) => {
+                  const isExpanded = expandedId === alerta.id;
+                  const soluciones = getSolucionesForAlerta(alerta);
+                  return (
+                    <>
+                      <tr
+                        key={alerta.id}
+                        className={`cursor-pointer transition-colors ${isExpanded ? 'bg-amber-50' : 'hover:bg-neutral-50'}`}
+                        onClick={() => setExpandedId(isExpanded ? null : alerta.id)}
                       >
-                        {alerta.prioridad}
-                      </span>
-                    </td>
-                    <td className="px-4 py-4">
-                      <span
-                        className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium ${
-                          estadoColorMap[alerta.estado]
-                        }`}
-                      >
-                        {alerta.estado}
-                      </span>
-                    </td>
-                    <td className="px-4 py-4 text-sm text-neutral-700">
-                      {alerta.codigoAlerta?.codigo} - {alerta.codigoAlerta?.descripcion}
-                    </td>
-                    <td className="px-4 py-4 text-sm text-neutral-700">
-                      {formatDate(alerta.fechaObjetivo ?? alerta.createdAt)}
-                    </td>
-                    <td className="px-4 py-4">
-                      <div className="flex justify-end gap-2">
-                        {alerta.estado === 'PENDIENTE' && (
-                          <button
-                            onClick={() => handleVista(alerta.id)}
-                            className="btn-secondary flex items-center gap-1"
-                            disabled={loadingAction}
+                        <td className="px-4 py-4">
+                          <div className="flex items-start gap-3">
+                            <div className="mt-1">
+                              {alerta.prioridad === 'CRITICA' ? (
+                                <ExclamationTriangleIcon className="h-5 w-5 text-red-500" />
+                              ) : (
+                                <BellIcon className="h-5 w-5 text-neutral-400" />
+                              )}
+                            </div>
+                            <div>
+                              <p className="font-medium text-neutral-900">{alerta.titulo}</p>
+                              <p className="text-sm text-neutral-600 mt-1 line-clamp-2">
+                                {alerta.mensaje}
+                              </p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-4 py-4 text-sm text-neutral-700">
+                          <div>
+                            <p className="font-medium text-neutral-800">
+                              {alerta.afiliado
+                                ? `${alerta.afiliado.nombre} ${alerta.afiliado.apellido}`
+                                : 'Sin afiliado'}
+                            </p>
+                            {alerta.afiliado?.dni && (
+                              <p className="text-xs text-neutral-500">DNI {alerta.afiliado.dni}</p>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-4 py-4">
+                          <span
+                            className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium ${
+                              prioridadColorMap[alerta.prioridad]
+                            }`}
                           >
-                            <CheckCircleIcon className="h-4 w-4" />
-                            Vista
-                          </button>
-                        )}
-                        {alerta.estado !== 'RESUELTA' && (
-                          <button
-                            onClick={() => handleResolver(alerta.id)}
-                            className="btn-primary flex items-center gap-1"
-                            disabled={loadingAction}
+                            {alerta.prioridad}
+                          </span>
+                        </td>
+                        <td className="px-4 py-4">
+                          <span
+                            className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium ${
+                              estadoColorMap[alerta.estado]
+                            }`}
                           >
-                            <CheckCircleIcon className="h-4 w-4" />
-                            Resolver
-                          </button>
-                        )}
-                        {alerta.estado !== 'DESCARTADA' && (
-                          <button
-                            onClick={() => handleDescartar(alerta.id)}
-                            className="btn-danger flex items-center gap-1"
-                            disabled={loadingAction}
-                          >
-                            <XCircleIcon className="h-4 w-4" />
-                            Descartar
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                            {alerta.estado}
+                          </span>
+                        </td>
+                        <td className="px-4 py-4 text-sm text-neutral-700">
+                          {alerta.codigoAlerta?.codigo} - {alerta.codigoAlerta?.descripcion}
+                        </td>
+                        <td className="px-4 py-4 text-sm text-neutral-700">
+                          {formatDate(alerta.fechaObjetivo ?? alerta.createdAt)}
+                        </td>
+                        <td className="px-4 py-4">
+                          <div className="flex justify-end items-center gap-2">
+                            {alerta.estado === 'PENDIENTE' && (
+                              <button
+                                onClick={(e) => { e.stopPropagation(); handleVista(alerta.id); }}
+                                className="btn-secondary flex items-center gap-1"
+                                disabled={loadingAction}
+                              >
+                                <CheckCircleIcon className="h-4 w-4" />
+                                Vista
+                              </button>
+                            )}
+                            {alerta.estado !== 'RESUELTA' && (
+                              <button
+                                onClick={(e) => { e.stopPropagation(); handleResolver(alerta.id); }}
+                                className="btn-primary flex items-center gap-1"
+                                disabled={loadingAction}
+                              >
+                                <CheckCircleIcon className="h-4 w-4" />
+                                Resolver
+                              </button>
+                            )}
+                            {alerta.estado !== 'DESCARTADA' && (
+                              <button
+                                onClick={(e) => { e.stopPropagation(); handleDescartar(alerta.id); }}
+                                className="btn-danger flex items-center gap-1"
+                                disabled={loadingAction}
+                              >
+                                <XCircleIcon className="h-4 w-4" />
+                                Descartar
+                              </button>
+                            )}
+                            <button
+                              onClick={(e) => { e.stopPropagation(); setExpandedId(isExpanded ? null : alerta.id); }}
+                              className="p-1.5 rounded-lg text-amber-600 hover:bg-amber-100 transition-colors"
+                              title="Ver posibles soluciones"
+                            >
+                              {isExpanded ? <ChevronUpIcon className="h-4 w-4" /> : <ChevronDownIcon className="h-4 w-4" />}
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                      {isExpanded && (
+                        <tr key={`${alerta.id}-soluciones`} className="bg-amber-50 border-t border-amber-100">
+                          <td colSpan={7} className="px-6 py-4">
+                            <div className="flex items-start gap-3">
+                              <LightBulbIcon className="h-5 w-5 text-amber-500 mt-0.5 flex-shrink-0" />
+                              <div>
+                                <p className="text-sm font-semibold text-amber-800 mb-2">Posibles soluciones</p>
+                                <ul className="space-y-1.5">
+                                  {soluciones.map((sol, idx) => (
+                                    <li key={idx} className="flex items-start gap-2 text-sm text-amber-900">
+                                      <span className="mt-1 flex-shrink-0 w-4 h-4 rounded-full bg-amber-200 text-amber-700 text-xs flex items-center justify-center font-bold">
+                                        {idx + 1}
+                                      </span>
+                                      {sol}
+                                    </li>
+                                  ))}
+                                </ul>
+                                {alerta.codigoAlerta?.validezHoras && (
+                                  <p className="mt-2 text-xs text-amber-600">
+                                    Esta alerta tiene validez de {alerta.codigoAlerta.validezHoras}hs desde su generación.
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </>
+                  );
+                })
               )}
             </tbody>
           </table>
