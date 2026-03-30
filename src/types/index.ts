@@ -584,6 +584,7 @@ export interface CreateCertificadoDiscapacidadDto {
   fechaEmision: string;
   fechaVencimiento?: string;
   grado: string;
+  observaciones?: string;
   afiliadoId: string;
   tipoDiscapacidadId: string;
   tipoDiscapacidadIds?: string[];
