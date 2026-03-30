@@ -4,6 +4,7 @@ import {
   CreateOrientacionPrestacionalDto,
   UpdateOrientacionPrestacionalDto,
   AddServicioDto,
+  AddServicioNoNomencladoDto,
   AddCertificadoDto
 } from '@/types';
 
@@ -48,6 +49,18 @@ export const orientacionPrestacionalService = {
 
   async removeServicio(id: string, servicioId: string): Promise<void> {
     await api.delete(`/orientacion-prestacional/${id}/servicios/${servicioId}`);
+  },
+
+  async addServicioNoNomenclado(id: string, data: AddServicioNoNomencladoDto): Promise<OrientacionPrestacional> {
+    const response = await api.post<OrientacionPrestacional>(
+      `/orientacion-prestacional/${id}/servicios-no-nomenclados`,
+      data
+    );
+    return response.data;
+  },
+
+  async removeServicioNoNomenclado(id: string, servicioId: string): Promise<void> {
+    await api.delete(`/orientacion-prestacional/${id}/servicios-no-nomenclados/${servicioId}`);
   },
 
   async addCertificado(id: string, data: AddCertificadoDto): Promise<OrientacionPrestacional> {

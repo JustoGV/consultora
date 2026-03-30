@@ -32,13 +32,13 @@ export const alertasService = {
     return response.data;
   },
 
-  async resolver(id: string): Promise<Alerta> {
-    const response = await api.patch<Alerta>(`/alertas/${id}/resolver`);
+  async resolver(id: string, notasResolucion?: string): Promise<Alerta> {
+    const response = await api.patch<Alerta>(`/alertas/${id}/resolver`, notasResolucion ? { notasResolucion } : undefined);
     return response.data;
   },
 
-  async descartar(id: string): Promise<Alerta> {
-    const response = await api.patch<Alerta>(`/alertas/${id}/descartar`);
+  async descartar(id: string, notasResolucion?: string): Promise<Alerta> {
+    const response = await api.patch<Alerta>(`/alertas/${id}/descartar`, notasResolucion ? { notasResolucion } : undefined);
     return response.data;
   }
 };

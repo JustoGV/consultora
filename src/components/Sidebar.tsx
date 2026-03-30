@@ -21,6 +21,7 @@ import {
   DocumentTextIcon,
   IdentificationIcon,
   AdjustmentsHorizontalIcon,
+  BuildingOffice2Icon,
   MagnifyingGlassIcon,
 } from '@heroicons/react/24/outline';
 
@@ -60,6 +61,9 @@ export default function Sidebar() {
     { name: 'Categorías', href: '/dashboard/categories', icon: ClipboardDocumentListIcon, section: 'catalogos' },
     { name: 'Nomencladores', href: '/dashboard/nomenclators', icon: ChartBarIcon, section: 'catalogos' },
     { name: 'Servicios', href: '/dashboard/servicios', icon: AdjustmentsHorizontalIcon, section: 'catalogos' },
+    { name: 'Servicios No Nomenclados', href: '/dashboard/servicios-no-nomenclados', icon: DocumentTextIcon, section: 'catalogos' },
+    { name: 'Efectores', href: '/dashboard/efectores', icon: BuildingOffice2Icon, section: 'catalogos' },
+    { name: 'Prestadores', href: '/dashboard/prestadores', icon: UsersIcon, section: 'catalogos' },
     { name: 'Orientación Prestacional', href: '/dashboard/orientacion-prestacional', icon: LinkIcon, section: 'catalogos' },
     
     { name: 'Configuración', href: '/dashboard/settings', icon: CogIcon, section: 'config' },
@@ -83,6 +87,9 @@ export default function Sidebar() {
     { name: 'Categorías', href: '/dashboard/categories', icon: ClipboardDocumentListIcon, section: 'catalogos' },
     { name: 'Nomencladores', href: '/dashboard/nomenclators', icon: ChartBarIcon, section: 'catalogos' },
     { name: 'Servicios', href: '/dashboard/servicios', icon: AdjustmentsHorizontalIcon, section: 'catalogos' },
+    { name: 'Servicios No Nomenclados', href: '/dashboard/servicios-no-nomenclados', icon: DocumentTextIcon, section: 'catalogos' },
+    { name: 'Efectores', href: '/dashboard/efectores', icon: BuildingOffice2Icon, section: 'catalogos' },
+    { name: 'Prestadores', href: '/dashboard/prestadores', icon: UsersIcon, section: 'catalogos' },
     { name: 'Orientación Prestacional', href: '/dashboard/orientacion-prestacional', icon: LinkIcon, section: 'catalogos' },
     
     { name: 'Configuración', href: '/dashboard/settings', icon: CogIcon, section: 'config' },

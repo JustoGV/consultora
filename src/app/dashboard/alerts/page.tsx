@@ -64,42 +64,13 @@ const formatDate = (value?: string) => {
 };
 
 function getSolucionesForAlerta(alerta: Alerta): string[] {
-  const soluciones: string[] = [];
-  const desc = (alerta.codigoAlerta?.descripcion || '').toLowerCase();
-  const titulo = alerta.titulo.toLowerCase();
-  const mensaje = alerta.mensaje.toLowerCase();
-  const plantilla = alerta.codigoAlerta?.mensajePlantilla;
-  if (plantilla) soluciones.push(plantilla);
-
-  if (desc.includes('vencimiento') || desc.includes('vencido') || titulo.includes('vencimiento') || titulo.includes('vencido')) {
-    soluciones.push('Solicitar al afiliado la documentación para renovar el certificado.');
-    soluciones.push('Contactar al médico certificante para gestionar la renovación.');
+  // Use real posiblesSoluciones from backend if available
+  if (alerta.codigoAlerta?.posiblesSoluciones?.length) {
+    return alerta.codigoAlerta.posiblesSoluciones.map((s) => s.texto);
   }
-  if (desc.includes('certificado') || titulo.includes('certificado')) {
-    soluciones.push('Verificar el estado del certificado en el historial del afiliado.');
-  }
-  if (desc.includes('afiliado') || desc.includes('contacto') || titulo.includes('afiliado')) {
-    soluciones.push('Actualizar los datos de contacto del afiliado.');
-    soluciones.push('Verificar que el afiliado esté al corriente con la documentación.');
-  }
-  if (desc.includes('prestacion') || desc.includes('servicio') || titulo.includes('prestacion')) {
-    soluciones.push('Revisar las orientaciones prestacionales asignadas al afiliado.');
-    soluciones.push('Verificar que los servicios correspondientes estén activos.');
-  }
-  if (alerta.prioridad === 'CRITICA' || alerta.prioridad === 'ALTA') {
-    soluciones.push('Escalar la situación al supervisor o responsable de la administradora.');
-    soluciones.push('Registrar la intervención una vez resuelta para el historial.');
-  }
-  if (desc.includes('edad') || mensaje.includes('edad') || titulo.includes('edad')) {
-    soluciones.push('Verificar si el afiliado sigue dentro del rango etario habilitado.');
-    soluciones.push('Revisar las orientaciones prestacionales que aplican según la nueva edad.');
-  }
-  if (soluciones.length <= 1) {
-    soluciones.push('Revisar la información del afiliado y confirmar que esté actualizada.');
-    soluciones.push('Contactar al afiliado para informar la situación y coordinar una solución.');
-  }
-  // deduplicate and limit
-  return [...new Set(soluciones)].slice(0, 5);
+  // Fallback for alertas without posiblesSoluciones populated
+  return ['Revisar la información del afiliado y confirmar que esté actualizada.',
+          'Contactar al afiliado para informar la situación y coordinar una solución.'];
 }
 
 export default function AlertsPage() {
@@ -113,6 +84,8 @@ export default function AlertsPage() {
   const [prioridad, setPrioridad] = useState<PrioridadAlerta | 'ALL'>('ALL');
   const [codigoNumerico, setCodigoNumerico] = useState<'ALL' | string>('ALL');
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [notasModal, setNotasModal] = useState<{ id: string; tipo: 'resolver' | 'descartar' } | null>(null);
+  const [notasResolucion, setNotasResolucion] = useState('');
 
   const loadData = async () => {
     try {
@@ -168,11 +141,13 @@ export default function AlertsPage() {
     }
   };
 
-  const handleResolver = async (id: string) => {
+  const handleResolver = async (id: string, notas?: string) => {
     try {
       setLoadingAction(true);
-      await alertasService.resolver(id);
+      await alertasService.resolver(id, notas);
       await loadData();
+      setNotasModal(null);
+      setNotasResolucion('');
     } catch (error) {
       console.error('Error al resolver:', error);
     } finally {
@@ -180,11 +155,13 @@ export default function AlertsPage() {
     }
   };
 
-  const handleDescartar = async (id: string) => {
+  const handleDescartar = async (id: string, notas?: string) => {
     try {
       setLoadingAction(true);
-      await alertasService.descartar(id);
+      await alertasService.descartar(id, notas);
       await loadData();
+      setNotasModal(null);
+      setNotasResolucion('');
     } catch (error) {
       console.error('Error al descartar:', error);
     } finally {
@@ -328,7 +305,7 @@ export default function AlertsPage() {
               ) : (
                 filteredAlertas.map((alerta) => {
                   const isExpanded = expandedId === alerta.id;
-                  const soluciones = getSolucionesForAlerta(alerta);
+                  const soluciones = alerta.codigoAlerta?.posiblesSoluciones ?? [];
                   return (
                     <>
                       <tr
@@ -403,7 +380,7 @@ export default function AlertsPage() {
                             )}
                             {alerta.estado !== 'RESUELTA' && (
                               <button
-                                onClick={(e) => { e.stopPropagation(); handleResolver(alerta.id); }}
+                                onClick={(e) => { e.stopPropagation(); setNotasResolucion(''); setNotasModal({ id: alerta.id, tipo: 'resolver' }); }}
                                 className="btn-primary flex items-center gap-1"
                                 disabled={loadingAction}
                               >
@@ -413,7 +390,7 @@ export default function AlertsPage() {
                             )}
                             {alerta.estado !== 'DESCARTADA' && (
                               <button
-                                onClick={(e) => { e.stopPropagation(); handleDescartar(alerta.id); }}
+                                onClick={(e) => { e.stopPropagation(); setNotasResolucion(''); setNotasModal({ id: alerta.id, tipo: 'descartar' }); }}
                                 className="btn-danger flex items-center gap-1"
                                 disabled={loadingAction}
                               >
@@ -436,18 +413,28 @@ export default function AlertsPage() {
                           <td colSpan={7} className="px-6 py-4">
                             <div className="flex items-start gap-3">
                               <LightBulbIcon className="h-5 w-5 text-amber-500 mt-0.5 flex-shrink-0" />
-                              <div>
+                              <div className="w-full">
                                 <p className="text-sm font-semibold text-amber-800 mb-2">Posibles soluciones</p>
-                                <ul className="space-y-1.5">
-                                  {soluciones.map((sol, idx) => (
-                                    <li key={idx} className="flex items-start gap-2 text-sm text-amber-900">
-                                      <span className="mt-1 flex-shrink-0 w-4 h-4 rounded-full bg-amber-200 text-amber-700 text-xs flex items-center justify-center font-bold">
-                                        {idx + 1}
-                                      </span>
-                                      {sol}
-                                    </li>
-                                  ))}
-                                </ul>
+                                {soluciones.length > 0 ? (
+                                  <ul className="space-y-1.5">
+                                    {soluciones.map((sol, idx) => (
+                                      <li key={idx} className="flex items-start gap-2 text-sm text-amber-900">
+                                        <span className="mt-1 flex-shrink-0 w-4 h-4 rounded-full bg-amber-200 text-amber-700 text-xs flex items-center justify-center font-bold">
+                                          {idx + 1}
+                                        </span>
+                                        <span>{sol.texto}</span>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                ) : (
+                                  <p className="text-sm text-amber-700">No hay soluciones registradas para este código.</p>
+                                )}
+                                {alerta.notasResolucion && (
+                                  <div className="mt-3 p-2 bg-amber-100 rounded-lg">
+                                    <p className="text-xs font-semibold text-amber-800">Notas de resolución:</p>
+                                    <p className="text-sm text-amber-900 mt-0.5">{alerta.notasResolucion}</p>
+                                  </div>
+                                )}
                                 {alerta.codigoAlerta?.validezHoras && (
                                   <p className="mt-2 text-xs text-amber-600">
                                     Esta alerta tiene validez de {alerta.codigoAlerta.validezHoras}hs desde su generación.
@@ -466,6 +453,62 @@ export default function AlertsPage() {
           </table>
         </div>
       </div>
+
+      {/* Modal notas de resolución/descarte */}
+      {notasModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4">
+            <div className="flex items-center justify-between p-6 border-b border-neutral-200">
+              <h2 className="text-lg font-semibold text-neutral-900">
+                {notasModal.tipo === 'resolver' ? 'Resolver alerta' : 'Descartar alerta'}
+              </h2>
+              <button
+                onClick={() => { setNotasModal(null); setNotasResolucion(''); }}
+                className="p-2 text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 rounded-lg transition-colors"
+              >
+                <XCircleIcon className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-neutral-700 mb-1">
+                  Notas de resolución <span className="text-neutral-400 font-normal">(opcional)</span>
+                </label>
+                <textarea
+                  value={notasResolucion}
+                  onChange={(e) => setNotasResolucion(e.target.value)}
+                  maxLength={1000}
+                  rows={4}
+                  placeholder="Descripción de la acción tomada..."
+                  className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none"
+                />
+                <p className="text-xs text-neutral-400 mt-1">{notasResolucion.length}/1000</p>
+              </div>
+              <div className="flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => { setNotasModal(null); setNotasResolucion(''); }}
+                  className="px-4 py-2 text-sm font-medium text-neutral-700 bg-neutral-100 hover:bg-neutral-200 rounded-lg transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  disabled={loadingAction}
+                  onClick={() => {
+                    if (notasModal.tipo === 'resolver') handleResolver(notasModal.id, notasResolucion || undefined);
+                    else handleDescartar(notasModal.id, notasResolucion || undefined);
+                  }}
+                  className={notasModal.tipo === 'resolver' ? 'btn-primary flex items-center gap-2' : 'btn-danger flex items-center gap-2'}
+                >
+                  {loadingAction ? <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" /> : null}
+                  {notasModal.tipo === 'resolver' ? 'Confirmar resolución' : 'Confirmar descarte'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

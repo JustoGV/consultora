@@ -6,10 +6,12 @@ import {
   OrientacionPrestacional,
   CreateOrientacionPrestacionalDto,
   PrioridadOrientacion,
-  Servicio
+  Servicio,
+  ServicioNoNomenclado
 } from '@/types';
 import { orientacionPrestacionalService } from '@/services/orientacionPrestacionalService';
 import { serviciosService } from '@/services/serviciosService';
+import { serviciosNoNomencladosService } from '@/services/serviciosNoNomencladosService';
 import { PlusIcon, PencilIcon, TrashIcon, XMarkIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 import SearchableSelect from '@/components/SearchableSelect';
 import Pagination from '@/components/Pagination';
@@ -25,6 +27,7 @@ export default function OrientacionPrestacionalPage() {
   const { isSuperAdmin, isAdmin } = useAuth();
   const [orientaciones, setOrientaciones] = useState<OrientacionPrestacional[]>([]);
   const [servicios, setServicios] = useState<Servicio[]>([]);
+  const [serviciosNoNom, setServiciosNoNom] = useState<ServicioNoNomenclado[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -44,12 +47,14 @@ export default function OrientacionPrestacionalPage() {
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
-      const [orientacionesData, serviciosData] = await Promise.all([
+      const [orientacionesData, serviciosData, snnData] = await Promise.all([
         orientacionPrestacionalService.getAll(),
-        serviciosService.getAll()
+        serviciosService.getAll(),
+        serviciosNoNomencladosService.getAll()
       ]);
       setOrientaciones(orientacionesData);
       setServicios(serviciosData);
+      setServiciosNoNom(snnData);
       if (editingOrientacion) {
         const updated = orientacionesData.find((orientacion) => orientacion.id === editingOrientacion.id);
         if (updated) {
@@ -158,12 +163,12 @@ export default function OrientacionPrestacionalPage() {
     if (!editingOrientacion || !selectedServicioNoNomId) return;
 
     try {
-      await orientacionPrestacionalService.addServicio(editingOrientacion.id, { servicioId: selectedServicioNoNomId });
+      await orientacionPrestacionalService.addServicioNoNomenclado(editingOrientacion.id, { servicioNoNomencladoId: selectedServicioNoNomId });
       await loadData();
       setSelectedServicioNoNomId('');
     } catch (error) {
-      console.error('Error al agregar servicio:', error);
-      alert('Error al agregar servicio');
+      console.error('Error al agregar servicio no nomenclado:', error);
+      alert('Error al agregar servicio no nomenclado');
     }
   };
 
@@ -176,6 +181,18 @@ export default function OrientacionPrestacionalPage() {
     } catch (error) {
       console.error('Error al remover servicio:', error);
       alert('Error al remover servicio');
+    }
+  };
+
+  const handleRemoveServicioNoNom = async (servicioId: string) => {
+    if (!editingOrientacion) return;
+
+    try {
+      await orientacionPrestacionalService.removeServicioNoNomenclado(editingOrientacion.id, servicioId);
+      await loadData();
+    } catch (error) {
+      console.error('Error al remover servicio no nomenclado:', error);
+      alert('Error al remover servicio no nomenclado');
     }
   };
 
@@ -195,19 +212,15 @@ export default function OrientacionPrestacionalPage() {
     handleItemsPerPageChange
   } = usePagination({ items: filteredOrientaciones, itemsPerPage: 10 });
 
-  const servicioNomOptions = servicios
-    .filter(s => s.nomencladorId || s.tipoServicio === 'NOMENCLADO')
-    .map((servicio) => ({
-      value: servicio.id,
-      label: `${servicio.titulo} (${servicio.nomenclador?.codigoPrestacion || 'N/A'})`
-    }));
+  const servicioNomOptions = servicios.map((servicio) => ({
+    value: servicio.id,
+    label: `${servicio.titulo} (${servicio.nomenclador?.codigoPrestacion || 'N/A'})`
+  }));
 
-  const servicioNoNomOptions = servicios
-    .filter(s => !s.nomencladorId && s.tipoServicio !== 'NOMENCLADO')
-    .map((servicio) => ({
-      value: servicio.id,
-      label: servicio.titulo
-    }));
+  const servicioNoNomOptions = serviciosNoNom.map((snn) => ({
+    value: snn.id,
+    label: `${snn.titulo} — ${snn.convenio === 'CON_CONVENIO' ? 'Con convenio' : 'Sin convenio'}${snn.prestador?.efector?.nombre ? ` (${snn.prestador.efector.nombre})` : ''}`
+  }));
 
   return (
     <div className="space-y-6">
@@ -253,6 +266,7 @@ export default function OrientacionPrestacionalPage() {
                   <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase">Rango de Edad</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase">Prioridad</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase">Servicios</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase">Serv. No Nom.</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase">Certificados</th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-neutral-500 uppercase">Acciones</th>
                 </tr>
@@ -274,6 +288,9 @@ export default function OrientacionPrestacionalPage() {
                     <td className="px-6 py-4 text-sm text-neutral-600">{orientacion.prioridad}</td>
                     <td className="px-6 py-4 text-sm text-neutral-600">
                       {orientacion.servicios?.length || 0}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-neutral-600">
+                      {orientacion.serviciosNoNomenclados?.length || 0}
                     </td>
                     <td className="px-6 py-4 text-sm text-neutral-600">
                       {orientacion.certificados?.length || 0}
@@ -448,9 +465,7 @@ export default function OrientacionPrestacionalPage() {
                   )}
                   {editingOrientacion && (
                     <div className="mt-3 space-y-2">
-                      {editingOrientacion.servicios
-                        ?.filter(s => s.nomencladorId || s.tipoServicio === 'NOMENCLADO')
-                        .map((servicio) => (
+                      {editingOrientacion.servicios?.map((servicio) => (
                           <div key={servicio.id} className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
                             <div>
                               <p className="text-sm font-medium text-neutral-900">{servicio.titulo}</p>
@@ -465,7 +480,7 @@ export default function OrientacionPrestacionalPage() {
                             </button>
                           </div>
                         ))}
-                      {editingOrientacion.servicios?.filter(s => s.nomencladorId || s.tipoServicio === 'NOMENCLADO').length === 0 && (
+                      {(editingOrientacion.servicios?.length ?? 0) === 0 && (
                         <p className="text-sm text-neutral-500">Sin servicios nomenclados asociados</p>
                       )}
                     </div>
@@ -502,21 +517,25 @@ export default function OrientacionPrestacionalPage() {
                   )}
                   {editingOrientacion && (
                     <div className="mt-3 space-y-2">
-                      {editingOrientacion.servicios
-                        ?.filter(s => !s.nomencladorId && s.tipoServicio !== 'NOMENCLADO')
-                        .map((servicio) => (
-                          <div key={servicio.id} className="flex items-center justify-between p-3 bg-purple-50 rounded-lg">
-                            <p className="text-sm font-medium text-neutral-900">{servicio.titulo}</p>
-                            <button
-                              type="button"
-                              onClick={() => handleRemoveServicio(servicio.id)}
-                              className="text-red-600 hover:text-red-800 text-sm"
-                            >
-                              Quitar
-                            </button>
+                      {editingOrientacion.serviciosNoNomenclados?.map((snn) => (
+                        <div key={snn.id} className="flex items-center justify-between p-3 bg-purple-50 rounded-lg">
+                          <div>
+                            <p className="text-sm font-medium text-neutral-900">{snn.titulo}</p>
+                            <p className="text-xs text-neutral-500">
+                              {snn.convenio === 'CON_CONVENIO' ? 'Con convenio' : 'Sin convenio'}
+                              {snn.prestador?.efector?.nombre ? ` · ${snn.prestador.efector.nombre}` : ''}
+                            </p>
                           </div>
-                        ))}
-                      {editingOrientacion.servicios?.filter(s => !s.nomencladorId && s.tipoServicio !== 'NOMENCLADO').length === 0 && (
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveServicioNoNom(snn.id)}
+                            className="text-red-600 hover:text-red-800 text-sm"
+                          >
+                            Quitar
+                          </button>
+                        </div>
+                      ))}
+                      {(editingOrientacion.serviciosNoNomenclados?.length ?? 0) === 0 && (
                         <p className="text-sm text-neutral-500">Sin servicios no nomenclados asociados</p>
                       )}
                     </div>

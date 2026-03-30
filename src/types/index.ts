@@ -17,6 +17,11 @@ export type EntidadOrigenAlerta =
   | 'orientaciones_prestacionales'
   | 'afiliados';
 
+export interface PosibleSolucion {
+  texto: string;
+  accion: 'ver_certificado' | 'ver_orientacion' | 'listar_orientaciones' | 'renovar_certificado' | 'cargar_certificado' | null;
+}
+
 export interface CodigoAlerta {
   id: string;
   codigo: number;
@@ -24,6 +29,7 @@ export interface CodigoAlerta {
   prioridad: PrioridadAlerta;
   validezHoras: number | null;
   mensajePlantilla: string;
+  posiblesSoluciones: PosibleSolucion[];
   activo: boolean;
   createdAt: string;
   updatedAt: string;
@@ -46,6 +52,7 @@ export interface Alerta {
   resueltaPor?: User | null;
   resueltaEn: string | null;
   validaHasta: string | null;
+  notasResolucion: string | null;
   administradoraId: string;
   administradora: Administradora;
   activo: boolean;
@@ -73,6 +80,7 @@ export interface AlertasQueryParams {
   prioridad?: PrioridadAlerta;
   afiliadoId?: string;
   codigoNumerico?: number;
+  entidadOrigenId?: string;
 }
 
 // ============================================
@@ -289,6 +297,101 @@ export interface UpdateServicioDto {
 
 export type PrioridadOrientacion = 'ALTA' | 'MEDIA' | 'BAJA';
 
+// ============================================
+// MÓDULO EFECTORES Y PRESTADORES
+// ============================================
+
+export type TipoEfector = 'PERSONA_FISICA' | 'PERSONA_JURIDICA';
+
+export interface Efector {
+  id: string;
+  nombre: string;
+  tipo: TipoEfector;
+  cuit?: string;
+  direccion?: string;
+  telefono?: string;
+  email?: string;
+  activo: boolean;
+  administradoraId: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateEfectorDto {
+  nombre: string;
+  tipo: TipoEfector;
+  cuit?: string;
+  telefono?: string;
+  email?: string;
+  direccion?: string;
+  administradoraId: string;
+}
+
+export interface UpdateEfectorDto {
+  nombre?: string;
+  tipo?: TipoEfector;
+  cuit?: string;
+  telefono?: string;
+  email?: string;
+  direccion?: string;
+}
+
+export interface Prestador {
+  id: string;
+  efectorId: string;
+  efector?: Efector;
+  administradoraId: string;
+  administradora?: Administradora;
+  activo: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreatePrestadorDto {
+  efectorId: string;
+  administradoraId: string;
+}
+
+export interface UpdatePrestadorDto {
+  activo?: boolean;
+}
+
+// ============================================
+// MÓDULO SERVICIOS NO NOMENCLADOS
+// ============================================
+
+export type ConvenioServicio = 'CON_CONVENIO' | 'SIN_CONVENIO';
+
+export interface ServicioNoNomenclado {
+  id: string;
+  titulo: string;
+  convenio: ConvenioServicio;
+  prestadorId: string;
+  prestador?: Prestador;
+  administradoraId: string;
+  administradora?: Administradora;
+  activo: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateServicioNoNomencladoDto {
+  titulo: string;
+  convenio: ConvenioServicio;
+  prestadorId: string;
+  administradoraId: string;
+}
+
+export interface UpdateServicioNoNomencladoDto {
+  titulo?: string;
+  convenio?: ConvenioServicio;
+  prestadorId?: string;
+}
+
+export interface AddServicioNoNomencladoDto {
+  servicioNoNomencladoId: string;
+}
+
 export interface OrientacionPrestacional {
   id: string;
   titulo: string;
@@ -297,6 +400,7 @@ export interface OrientacionPrestacional {
   prioridad: PrioridadOrientacion;
   administradoraId: string;
   servicios?: Servicio[];
+  serviciosNoNomenclados?: ServicioNoNomenclado[];
   certificados?: CertificadoDiscapacidad[];
   activo: boolean;
   createdAt: string;
