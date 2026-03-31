@@ -1,10 +1,13 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
-import { Afiliado, CreateAfiliadoDto, EstadoCivil } from '@/types';
+import { Afiliado, CreateAfiliadoDto, EstadoCivil, TercerosVinculado, PersonaTercerosVinculado, CreateTercerosVinculadoDto, CreatePersonaTercerosVinculadoDto } from '@/types';
 import { afiliadosService } from '@/services/afiliadosService';
 import { estadoCivilService } from '@/services/estadoCivilService';
+import { tercerosVinculadoService } from '@/services/tercerosVinculadoService';
+import { personaTercerosService } from '@/services/personaTercerosService';
 import {
   PencilIcon,
   TrashIcon,
@@ -21,6 +24,7 @@ import Link from 'next/link';
 
 export default function AfiliadosPage() {
   const { user, isAdmin, isSuperAdmin } = useAuth();
+  const router = useRouter();
   const [afiliados, setAfiliados] = useState<Afiliado[]>([]);
   const [estadosCiviles, setEstadosCiviles] = useState<EstadoCivil[]>([]);
   const [loading, setLoading] = useState(true);
@@ -28,6 +32,17 @@ export default function AfiliadosPage() {
   const [editingAfiliado, setEditingAfiliado] = useState<Afiliado | null>(null);
   const [saving, setSaving] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+
+  // Adherentes en el formulario
+  const [terceros, setTerceros] = useState<TercerosVinculado[]>([]);
+  const [pendingAdherentes, setPendingAdherentes] = useState<Array<{
+    id: string; tipoRelacion: string; observaciones?: string;
+    modo: 'existente' | 'nuevo'; tercerosVinculadoId?: string; terceroNombre: string;
+    nuevoDatos?: { nombre: string; apellido: string; dni: string; fechaNacimiento: string; telefono?: string; email?: string };
+  }>>([]);
+  const [modoAdherente, setModoAdherente] = useState<'existente' | 'nuevo'>('existente');
+  const [relFormData, setRelFormData] = useState({ tipoRelacion: '', observaciones: '', tercerosVinculadoId: '' });
+  const [nuevoTerceroData, setNuevoTerceroData] = useState({ nombre: '', apellido: '', dni: '', fechaNacimiento: '', telefono: '', email: '' });
 
   const [formData, setFormData] = useState<CreateAfiliadoDto>({
     nombre: '',
@@ -54,15 +69,23 @@ export default function AfiliadosPage() {
     loadData();
   }, []);
 
+  useEffect(() => {
+    if (user?.administradoraId) {
+      setFormData(prev => ({ ...prev, administradoraId: user.administradoraId || '' }));
+    }
+  }, [user?.administradoraId]);
+
   const loadData = async () => {
     try {
       setLoading(true);
-      const [afiliadosData, estadosCivilesData] = await Promise.all([
+      const [afiliadosData, estadosCivilesData, tercerosData] = await Promise.all([
         afiliadosService.getAll(),
         estadoCivilService.getAll(),
+        tercerosVinculadoService.getAll(),
       ]);
       setAfiliados(afiliadosData);
       setEstadosCiviles(estadosCivilesData);
+      setTerceros(tercerosData);
     } catch (error) {
       console.error('Error al cargar datos:', error);
       alert('Error al cargar datos');
@@ -126,6 +149,10 @@ export default function AfiliadosPage() {
         administradoraId: user?.administradoraId || '',
         activo: true,
       });
+      setPendingAdherentes([]);
+      setRelFormData({ tipoRelacion: '', observaciones: '', tercerosVinculadoId: '' });
+      setNuevoTerceroData({ nombre: '', apellido: '', dni: '', fechaNacimiento: '', telefono: '', email: '' });
+      setModoAdherente('existente');
     }
     setIsModalOpen(true);
   };
@@ -133,6 +160,7 @@ export default function AfiliadosPage() {
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setEditingAfiliado(null);
+    setPendingAdherentes([]);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -143,11 +171,35 @@ export default function AfiliadosPage() {
     }
     try {
       setSaving(true);
-      const dataToSend = { ...formData, edad: calculateAge(formData.fechaNacimiento) };
+      const dataToSend = {
+        ...formData,
+        edad: calculateAge(formData.fechaNacimiento),
+        administradoraId: formData.administradoraId || user?.administradoraId || '',
+      };
       if (editingAfiliado) {
         await afiliadosService.update(editingAfiliado.id, dataToSend);
       } else {
-        await afiliadosService.create(dataToSend);
+        const created = await afiliadosService.create(dataToSend);
+        for (const pa of pendingAdherentes) {
+          let tvId = pa.tercerosVinculadoId!;
+          if (pa.modo === 'nuevo' && pa.nuevoDatos) {
+            const nuevo = await tercerosVinculadoService.create({
+              ...pa.nuevoDatos,
+              edad: calculateAge(pa.nuevoDatos.fechaNacimiento),
+              administradoraId: user?.administradoraId || '',
+              activo: true,
+            });
+            tvId = nuevo.id;
+          }
+          await personaTercerosService.create({
+            afiliadoId: created.id,
+            tercerosVinculadoId: tvId,
+            tipoRelacion: pa.tipoRelacion,
+            observaciones: pa.observaciones || undefined,
+            administradoraId: user?.administradoraId || '',
+            activo: true,
+          });
+        }
       }
       await loadData();
       handleCloseModal();
@@ -158,6 +210,36 @@ export default function AfiliadosPage() {
       setSaving(false);
     }
   };
+
+  const handleAddPendingAdherente = () => {
+    if (!relFormData.tipoRelacion) { alert('Seleccioná el tipo de relación'); return; }
+    if (modoAdherente === 'existente' && !relFormData.tercerosVinculadoId) { alert('Seleccioná un tercero vinculado'); return; }
+    if (modoAdherente === 'nuevo') {
+      if (!nuevoTerceroData.apellido || !nuevoTerceroData.nombre || !nuevoTerceroData.dni || !nuevoTerceroData.fechaNacimiento) {
+        alert('Completá apellido, nombre, DNI y fecha de nacimiento');
+        return;
+      }
+    }
+    const terceroNombre = modoAdherente === 'nuevo'
+      ? `${nuevoTerceroData.apellido}, ${nuevoTerceroData.nombre}`
+      : (() => { const t = terceros.find(x => x.id === relFormData.tercerosVinculadoId); return t ? `${t.apellido}, ${t.nombre}` : ''; })();
+    setPendingAdherentes(prev => [...prev, {
+      id: Math.random().toString(36).slice(2),
+      tipoRelacion: relFormData.tipoRelacion,
+      observaciones: relFormData.observaciones || undefined,
+      modo: modoAdherente,
+      tercerosVinculadoId: modoAdherente === 'existente' ? relFormData.tercerosVinculadoId : undefined,
+      terceroNombre,
+      nuevoDatos: modoAdherente === 'nuevo' ? { ...nuevoTerceroData } : undefined,
+    }]);
+    setRelFormData({ tipoRelacion: '', observaciones: '', tercerosVinculadoId: '' });
+    setNuevoTerceroData({ nombre: '', apellido: '', dni: '', fechaNacimiento: '', telefono: '', email: '' });
+    setModoAdherente('existente');
+  };
+
+  const tipoRelacionOptions = [
+    'Padre/Madre', 'Hijo/Hija', 'Cónyuge', 'Hermano/Hermana', 'Tutor', 'Curador', 'Otro',
+  ];
 
   const handleDelete = async (id: string) => {
     if (!confirm('¿Está seguro de eliminar este afiliado?')) return;
@@ -498,6 +580,101 @@ export default function AfiliadosPage() {
                     </div>
                   </div>
                 </div>
+
+                {/* Adherentes — solo al crear */}
+                {!editingAfiliado && (
+                  <div>
+                    <h4 className="text-base font-semibold text-neutral-800 mb-3 pb-2 border-b flex items-center justify-between">
+                      Adherentes
+                      <span className="text-xs font-normal text-neutral-400">(opcional)</span>
+                    </h4>
+
+                    {/* Lista de adherentes pendientes */}
+                    {pendingAdherentes.length > 0 && (
+                      <div className="mb-3 rounded-lg border border-blue-200 bg-blue-50 p-3">
+                        <ul className="space-y-1">
+                          {pendingAdherentes.map((pa) => (
+                            <li key={pa.id} className="flex items-center justify-between text-sm">
+                              <span className="text-blue-800">✓ <strong>{pa.terceroNombre}</strong> — {pa.tipoRelacion}</span>
+                              <button type="button" onClick={() => setPendingAdherentes(prev => prev.filter(x => x.id !== pa.id))}
+                                className="text-blue-400 hover:text-red-500 ml-2">
+                                <XMarkIcon className="w-4 h-4" />
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {/* Add adherente inline */}
+                    <div className="space-y-3 p-4 border border-neutral-200 rounded-lg bg-neutral-50">
+                      {/* Toggle */}
+                      <div className="flex rounded-lg border border-neutral-200 overflow-hidden text-sm bg-white">
+                        <button type="button" onClick={() => setModoAdherente('existente')}
+                          className={`flex-1 py-1.5 font-medium transition-colors ${
+                            modoAdherente === 'existente' ? 'bg-blue-600 text-white' : 'text-neutral-600 hover:bg-neutral-100'
+                          }`}>Seleccionar existente</button>
+                        <button type="button" onClick={() => setModoAdherente('nuevo')}
+                          className={`flex-1 py-1.5 font-medium transition-colors ${
+                            modoAdherente === 'nuevo' ? 'bg-blue-600 text-white' : 'text-neutral-600 hover:bg-neutral-100'
+                          }`}>Crear nuevo</button>
+                      </div>
+
+                      {modoAdherente === 'existente' && (
+                        <div>
+                          <label className="block text-xs font-medium text-neutral-700 mb-1">Tercero vinculado</label>
+                          <select value={relFormData.tercerosVinculadoId}
+                            onChange={e => setRelFormData(prev => ({ ...prev, tercerosVinculadoId: e.target.value }))}
+                            className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 bg-white">
+                            <option value="">Seleccionar...</option>
+                            {terceros.map(t => <option key={t.id} value={t.id}>{t.apellido}, {t.nombre} — DNI {t.dni}</option>)}
+                          </select>
+                          {terceros.length === 0 && <p className="text-xs text-amber-600 mt-1">No hay terceros. Usá &ldquo;Crear nuevo&rdquo;.</p>}
+                        </div>
+                      )}
+
+                      {modoAdherente === 'nuevo' && (
+                        <div className="grid grid-cols-2 gap-2">
+                          <div><label className="block text-xs font-medium text-neutral-700 mb-1">Apellido *</label>
+                            <input type="text" value={nuevoTerceroData.apellido} onChange={e => setNuevoTerceroData(p => ({ ...p, apellido: e.target.value }))}
+                              className="w-full px-2 py-1.5 border border-neutral-300 rounded-md text-sm bg-white" placeholder="Apellido" /></div>
+                          <div><label className="block text-xs font-medium text-neutral-700 mb-1">Nombre *</label>
+                            <input type="text" value={nuevoTerceroData.nombre} onChange={e => setNuevoTerceroData(p => ({ ...p, nombre: e.target.value }))}
+                              className="w-full px-2 py-1.5 border border-neutral-300 rounded-md text-sm bg-white" placeholder="Nombre" /></div>
+                          <div><label className="block text-xs font-medium text-neutral-700 mb-1">DNI *</label>
+                            <input type="text" value={nuevoTerceroData.dni} onChange={e => setNuevoTerceroData(p => ({ ...p, dni: e.target.value }))}
+                              className="w-full px-2 py-1.5 border border-neutral-300 rounded-md text-sm bg-white" placeholder="DNI" /></div>
+                          <div><label className="block text-xs font-medium text-neutral-700 mb-1">Fecha de nac. *</label>
+                            <input type="date" value={nuevoTerceroData.fechaNacimiento} onChange={e => setNuevoTerceroData(p => ({ ...p, fechaNacimiento: e.target.value }))}
+                              className="w-full px-2 py-1.5 border border-neutral-300 rounded-md text-sm bg-white" /></div>
+                          <div><label className="block text-xs font-medium text-neutral-700 mb-1">Teléfono</label>
+                            <input type="text" value={nuevoTerceroData.telefono} onChange={e => setNuevoTerceroData(p => ({ ...p, telefono: e.target.value }))}
+                              className="w-full px-2 py-1.5 border border-neutral-300 rounded-md text-sm bg-white" placeholder="Teléfono" /></div>
+                          <div><label className="block text-xs font-medium text-neutral-700 mb-1">Email</label>
+                            <input type="email" value={nuevoTerceroData.email} onChange={e => setNuevoTerceroData(p => ({ ...p, email: e.target.value }))}
+                              className="w-full px-2 py-1.5 border border-neutral-300 rounded-md text-sm bg-white" placeholder="Email" /></div>
+                        </div>
+                      )}
+
+                      <div className="grid grid-cols-2 gap-2">
+                        <div><label className="block text-xs font-medium text-neutral-700 mb-1">Tipo de relación *</label>
+                          <select value={relFormData.tipoRelacion} onChange={e => setRelFormData(p => ({ ...p, tipoRelacion: e.target.value }))}
+                            className="w-full px-2 py-1.5 border border-neutral-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 bg-white">
+                            <option value="">Seleccionar...</option>
+                            {tipoRelacionOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                          </select></div>
+                        <div><label className="block text-xs font-medium text-neutral-700 mb-1">Observaciones</label>
+                          <input type="text" value={relFormData.observaciones} onChange={e => setRelFormData(p => ({ ...p, observaciones: e.target.value }))}
+                            className="w-full px-2 py-1.5 border border-neutral-300 rounded-md text-sm bg-white" placeholder="Opcional..." /></div>
+                      </div>
+
+                      <button type="button" onClick={handleAddPendingAdherente}
+                        className="w-full px-3 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700">
+                        + Agregar a la lista
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="flex gap-3 p-6 border-t bg-white">

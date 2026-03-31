@@ -1,13 +1,15 @@
 "use client";
 
 import { useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { alertasService } from '@/services/alertasService';
 import {
   Alerta,
   CodigoAlerta,
   DashboardAlertas,
   EstadoAlerta,
-  PrioridadAlerta
+  PrioridadAlerta,
+  PosibleSolucion
 } from '@/types';
 import {
   BellIcon,
@@ -74,6 +76,7 @@ function getSolucionesForAlerta(alerta: Alerta): string[] {
 }
 
 export default function AlertsPage() {
+  const router = useRouter();
   const [allAlertas, setAllAlertas] = useState<Alerta[]>([]);
   const [codigos, setCodigos] = useState<CodigoAlerta[]>([]);
   const [dashboard, setDashboard] = useState<DashboardAlertas | null>(null);
@@ -166,6 +169,22 @@ export default function AlertsPage() {
       console.error('Error al descartar:', error);
     } finally {
       setLoadingAction(false);
+    }
+  };
+
+  const navegar = (accion: PosibleSolucion['accion'], _entidadOrigenId: string) => {
+    switch (accion) {
+      case 'ver_certificado':
+      case 'renovar_certificado':
+      case 'cargar_certificado':
+        router.push('/dashboard/certificados-discapacidad');
+        break;
+      case 'ver_orientacion':
+      case 'listar_orientaciones':
+        router.push('/dashboard/orientacion-prestacional');
+        break;
+      default:
+        break;
     }
   };
 
@@ -416,13 +435,23 @@ export default function AlertsPage() {
                               <div className="w-full">
                                 <p className="text-sm font-semibold text-amber-800 mb-2">Posibles soluciones</p>
                                 {soluciones.length > 0 ? (
-                                  <ul className="space-y-1.5">
+                                  <ul className="space-y-2">
                                     {soluciones.map((sol, idx) => (
                                       <li key={idx} className="flex items-start gap-2 text-sm text-amber-900">
                                         <span className="mt-1 flex-shrink-0 w-4 h-4 rounded-full bg-amber-200 text-amber-700 text-xs flex items-center justify-center font-bold">
                                           {idx + 1}
                                         </span>
-                                        <span>{sol.texto}</span>
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                          <span>{sol.texto}</span>
+                                          {sol.accion && (
+                                            <button
+                                              onClick={(e) => { e.stopPropagation(); navegar(sol.accion, alerta.entidadOrigenId); }}
+                                              className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-semibold rounded-full bg-amber-600 text-white hover:bg-amber-700 transition-colors"
+                                            >
+                                              Ir →
+                                            </button>
+                                          )}
+                                        </div>
                                       </li>
                                     ))}
                                   </ul>

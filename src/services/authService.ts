@@ -89,5 +89,13 @@ export const authService = {
 
   isAuthenticated(): boolean {
     return !!this.getToken();
+  },
+
+  async getProfile(): Promise<User> {
+    const response = await api.get<User>('/auth/profile');
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(USER_KEY, JSON.stringify(response.data));
+    }
+    return response.data;
   }
 };

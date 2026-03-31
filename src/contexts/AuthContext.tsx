@@ -24,8 +24,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const currentUser = authService.getCurrentUser();
     if (currentUser && authService.isAuthenticated()) {
       setUser(currentUser);
+      // Refrescar perfil para tener administradoraId actualizado
+      authService.getProfile()
+        .then(profile => setUser(profile))
+        .catch(() => {/* si falla el refresh, usamos el del localStorage */})
+        .finally(() => setLoading(false));
+    } else {
+      setLoading(false);
     }
-    setLoading(false);
   }, []);
 
   const login = async (email: string, password: string): Promise<boolean> => {

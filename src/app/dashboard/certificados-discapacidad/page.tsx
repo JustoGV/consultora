@@ -7,18 +7,13 @@ import {
   CreateCertificadoDiscapacidadDto,
   Afiliado,
   TipoDiscapacidad,
-  OrientacionPrestacional,
-  Diagnostico,
-  Alerta,
-  NivelAlertaCertificado
+  OrientacionPrestacional
 } from '@/types';
 import { certificadosDiscapacidadService } from '@/services/certificadosDiscapacidadService';
 import { afiliadosService } from '@/services/afiliadosService';
 import { tipoDiscapacidadService } from '@/services/tipoDiscapacidadService';
 import { orientacionPrestacionalService } from '@/services/orientacionPrestacionalService';
-import { diagnosticoService } from '@/services/diagnosticoService';
-import { alertasService } from '@/services/alertasService';
-import { PencilIcon, TrashIcon, PlusIcon, XMarkIcon, DocumentTextIcon, BellAlertIcon } from '@heroicons/react/24/outline';
+import { PencilIcon, TrashIcon, PlusIcon, XMarkIcon, DocumentTextIcon } from '@heroicons/react/24/outline';
 import SearchableSelect from '@/components/SearchableSelect';
 import Pagination from '@/components/Pagination';
 import { usePagination } from '@/hooks/usePagination';
@@ -29,27 +24,21 @@ export default function CertificadosDiscapacidadPage() {
   const [afiliados, setAfiliados] = useState<Afiliado[]>([]);
   const [tiposDiscapacidad, setTiposDiscapacidad] = useState<TipoDiscapacidad[]>([]);
   const [orientaciones, setOrientaciones] = useState<OrientacionPrestacional[]>([]);
-  const [diagnosticos, setDiagnosticos] = useState<Diagnostico[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCertificado, setEditingCertificado] = useState<CertificadoDiscapacidad | null>(null);
   const [saving, setSaving] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedOrientacionId, setSelectedOrientacionId] = useState('');
-  const [tipoToAdd, setTipoToAdd] = useState('');
-  const [certificadoAlertas, setCertificadoAlertas] = useState<Alerta[]>([]);
-  const [loadingAlertas, setLoadingAlertas] = useState(false);
 
   const [formData, setFormData] = useState<CreateCertificadoDiscapacidadDto>({
     numeroCertificado: '',
     fechaEmision: '',
     fechaVencimiento: '',
     grado: '',
+    observaciones: '',
     afiliadoId: '',
     tipoDiscapacidadId: '',
-    tipoDiscapacidadIds: [],
-    diagnosticoId: '',
-    nivelAlerta: undefined,
     administradoraId: user?.administradoraId || '',
     activo: true,
   });
@@ -67,18 +56,16 @@ export default function CertificadosDiscapacidadPage() {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [certificadosData, afiliadosData, tiposData, orientacionesData, diagnosticosData] = await Promise.all([
+      const [certificadosData, afiliadosData, tiposData, orientacionesData] = await Promise.all([
         certificadosDiscapacidadService.getAll(),
         afiliadosService.getAll(),
         tipoDiscapacidadService.getAll(),
         orientacionPrestacionalService.getAll(),
-        diagnosticoService.getAll(),
       ]);
       setCertificados(certificadosData);
       setAfiliados(afiliadosData);
       setTiposDiscapacidad(tiposData);
       setOrientaciones(orientacionesData);
-      setDiagnosticos(diagnosticosData);
     } catch (error) {
       console.error('Error al cargar datos:', error);
       alert('Error al cargar datos');
@@ -90,36 +77,18 @@ export default function CertificadosDiscapacidadPage() {
   const handleOpenModal = (certificado?: CertificadoDiscapacidad) => {
     if (certificado) {
       setEditingCertificado(certificado);
-      const tiposIds = certificado.tipoDiscapacidadIds?.length
-        ? certificado.tipoDiscapacidadIds
-        : certificado.tipoDiscapacidadId ? [certificado.tipoDiscapacidadId] : [];
       setFormData({
         numeroCertificado: certificado.numeroCertificado,
         fechaEmision: certificado.fechaEmision.split('T')[0],
         fechaVencimiento: certificado.fechaVencimiento ? certificado.fechaVencimiento.split('T')[0] : '',
         grado: certificado.grado,
+        observaciones: certificado.observaciones || '',
         afiliadoId: certificado.afiliadoId,
         tipoDiscapacidadId: certificado.tipoDiscapacidadId,
-        tipoDiscapacidadIds: tiposIds,
-        diagnosticoId: certificado.diagnosticoId || '',
-        nivelAlerta: certificado.nivelAlerta,
         administradoraId: certificado.administradoraId,
         activo: certificado.activo,
       });
       setSelectedOrientacionId('');
-      setTipoToAdd('');
-      // Load alerts linked to this certificate
-      setLoadingAlertas(true);
-      alertasService.getAlertasByAfiliado(certificado.afiliadoId)
-        .then(alertas => {
-          setCertificadoAlertas(
-            alertas.filter(
-              a => a.entidadOrigen === 'certificados_discapacidad' && a.entidadOrigenId === certificado.id
-            )
-          );
-        })
-        .catch(() => setCertificadoAlertas([]))
-        .finally(() => setLoadingAlertas(false));
     } else {
       setEditingCertificado(null);
       setFormData({
@@ -127,17 +96,13 @@ export default function CertificadosDiscapacidadPage() {
         fechaEmision: '',
         fechaVencimiento: '',
         grado: '',
+        observaciones: '',
         afiliadoId: '',
         tipoDiscapacidadId: '',
-        tipoDiscapacidadIds: [],
-        diagnosticoId: '',
-        nivelAlerta: undefined,
         administradoraId: user?.administradoraId || '',
         activo: true,
       });
       setSelectedOrientacionId('');
-      setTipoToAdd('');
-      setCertificadoAlertas([]);
     }
     setIsModalOpen(true);
   };
@@ -150,7 +115,7 @@ export default function CertificadosDiscapacidadPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.numeroCertificado || !formData.fechaEmision || !formData.grado || !formData.afiliadoId || (formData.tipoDiscapacidadIds?.length ?? 0) === 0) {
+    if (!formData.numeroCertificado || !formData.fechaEmision || !formData.grado || !formData.afiliadoId || !formData.tipoDiscapacidadId) {
       alert('Por favor complete los campos requeridos');
       return;
     }
@@ -165,7 +130,6 @@ export default function CertificadosDiscapacidadPage() {
 
       const payload = {
         ...formData,
-        tipoDiscapacidadId: formData.tipoDiscapacidadIds?.[0] || formData.tipoDiscapacidadId,
         administradoraId: formData.administradoraId || user?.administradoraId || ''
       };
 
@@ -212,16 +176,6 @@ export default function CertificadosDiscapacidadPage() {
     return tipo ? tipo.nombre : '-';
   };
 
-  const getCertificadoTiposLabel = (cert: CertificadoDiscapacidad) => {
-    const ids = cert.tipoDiscapacidadIds?.length
-      ? cert.tipoDiscapacidadIds
-      : cert.tipoDiscapacidadId ? [cert.tipoDiscapacidadId] : [];
-    if (ids.length === 0) return '-';
-    const nombres = ids.map(id => getTipoDiscapacidadNombre(id));
-    if (nombres.length === 1) return nombres[0];
-    return `${nombres[0]} (+${nombres.length - 1})`;
-  };
-
   const filteredCertificados = certificados.filter((cert) => {
     const afiliadoNombre = getAfiliadoNombre(cert.afiliadoId).toLowerCase();
     const tipoNombre = getTipoDiscapacidadNombre(cert.tipoDiscapacidadId).toLowerCase();
@@ -248,12 +202,7 @@ export default function CertificadosDiscapacidadPage() {
   // Opciones para selects
   const afiliadoOptions = afiliados.map(af => ({
     value: af.id,
-    label: `${af.apellido}, ${af.nombre} (DNI: ${af.dni}) - N° ${af.numeroAfiliado}`
-  }));
-
-  const diagnosticoOptions = diagnosticos.map(d => ({
-    value: d.id,
-    label: `${d.codigo} - ${d.nombre}`
+    label: `${af.apellido}, ${af.nombre} (DNI: ${af.dni})`
   }));
 
   const tipoDiscapacidadOptions = tiposDiscapacidad.map(tipo => ({
@@ -325,7 +274,7 @@ export default function CertificadosDiscapacidadPage() {
                       {getAfiliadoNombre(certificado.afiliadoId)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-neutral-600">
-                      {getCertificadoTiposLabel(certificado)}
+                      {getTipoDiscapacidadNombre(certificado.tipoDiscapacidadId)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-neutral-600">{certificado.grado}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-neutral-600">
@@ -409,90 +358,26 @@ export default function CertificadosDiscapacidadPage() {
                   />
                 </div>
 
-                <div className="md:col-span-2">
+                <div>
                   <label className="block text-sm font-medium text-neutral-700 mb-1">Afiliado *</label>
                   <SearchableSelect
                     options={afiliadoOptions}
                     value={formData.afiliadoId}
                     onChange={(value) => setFormData({ ...formData, afiliadoId: value })}
-                    placeholder="Buscar por nombre, DNI o N° de afiliado..."
+                    placeholder="Seleccionar afiliado..."
                     required
                   />
                 </div>
 
-                {/* Tipos de Discapacidad — multi-select */}
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-neutral-700 mb-1">Tipos de Discapacidad *</label>
-                  {formData.tipoDiscapacidadIds && formData.tipoDiscapacidadIds.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mb-2">
-                      {formData.tipoDiscapacidadIds.map(id => {
-                        const tipo = tiposDiscapacidad.find(t => t.id === id);
-                        return tipo ? (
-                          <span key={id} className="inline-flex items-center gap-1 px-2 py-1 bg-primary-100 text-primary-700 text-xs rounded-full">
-                            {tipo.nombre}
-                            <button
-                              type="button"
-                              onClick={() => setFormData(prev => ({ ...prev, tipoDiscapacidadIds: (prev.tipoDiscapacidadIds ?? []).filter(t => t !== id) }))}
-                              className="ml-1 text-primary-500 hover:text-primary-700"
-                            >
-                              <XMarkIcon className="w-3 h-3" />
-                            </button>
-                          </span>
-                        ) : null;
-                      })}
-                    </div>
-                  )}
-                  <div className="flex gap-2">
-                    <SearchableSelect
-                      options={tiposDiscapacidad
-                        .filter(t => !(formData.tipoDiscapacidadIds ?? []).includes(t.id))
-                        .map(t => ({ value: t.id, label: t.nombre }))}
-                      value={tipoToAdd}
-                      onChange={(val) => {
-                        if (val) {
-                          setFormData(prev => ({ ...prev, tipoDiscapacidadIds: [...(prev.tipoDiscapacidadIds ?? []), val] }));
-                          setTipoToAdd('');
-                        }
-                      }}
-                      placeholder="Agregar tipo de discapacidad..."
-                      className="flex-1"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setFormData(prev => ({ ...prev, tipoDiscapacidadIds: tiposDiscapacidad.map(t => t.id) }))}
-                      className="px-3 py-2 text-sm bg-neutral-100 hover:bg-neutral-200 rounded-lg text-neutral-600 whitespace-nowrap border border-neutral-300"
-                    >
-                      Todos
-                    </button>
-                  </div>
-                  {(!formData.tipoDiscapacidadIds || formData.tipoDiscapacidadIds.length === 0) && (
-                    <p className="text-xs text-red-500 mt-1">Seleccione al menos un tipo de discapacidad</p>
-                  )}
-                </div>
-
                 <div>
-                  <label className="block text-sm font-medium text-neutral-700 mb-1">Diagnóstico</label>
+                  <label className="block text-sm font-medium text-neutral-700 mb-1">Tipo de Discapacidad *</label>
                   <SearchableSelect
-                    options={diagnosticoOptions}
-                    value={formData.diagnosticoId || ''}
-                    onChange={(value) => setFormData({ ...formData, diagnosticoId: value })}
-                    placeholder="Seleccionar diagnóstico..."
+                    options={tipoDiscapacidadOptions}
+                    value={formData.tipoDiscapacidadId}
+                    onChange={(value) => setFormData({ ...formData, tipoDiscapacidadId: value })}
+                    placeholder="Seleccionar tipo..."
+                    required
                   />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-neutral-700 mb-1">Nivel de Alerta</label>
-                  <select
-                    value={formData.nivelAlerta || ''}
-                    onChange={(e) => setFormData({ ...formData, nivelAlerta: (e.target.value as NivelAlertaCertificado) || undefined })}
-                    className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500 bg-white"
-                  >
-                    <option value="">Sin nivel de alerta</option>
-                    <option value="BAJO">Bajo</option>
-                    <option value="MEDIO">Medio</option>
-                    <option value="ALTO">Alto</option>
-                    <option value="CRITICO">Crítico</option>
-                  </select>
                 </div>
 
                 <div>
@@ -539,6 +424,17 @@ export default function CertificadosDiscapacidadPage() {
                   />
                 </div>
 
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-neutral-700 mb-1">Observaciones</label>
+                  <textarea
+                    value={formData.observaciones}
+                    onChange={(e) => setFormData({ ...formData, observaciones: e.target.value })}
+                    rows={3}
+                    className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                    maxLength={500}
+                  />
+                </div>
+
                 <div className="md:col-span-2 flex items-center">
                   <input
                     type="checkbox"
@@ -551,58 +447,6 @@ export default function CertificadosDiscapacidadPage() {
                     Activo
                   </label>
                 </div>
-
-                {/* Historial de alertas — solo visible al editar */}
-                {editingCertificado && (
-                  <div className="md:col-span-2">
-                    <h4 className="text-sm font-semibold text-neutral-700 mb-3 flex items-center gap-2">
-                      <BellAlertIcon className="w-4 h-4 text-primary-600" />
-                      Historial de Alertas
-                    </h4>
-                    <div className="space-y-2 max-h-52 overflow-y-auto border border-neutral-200 rounded-lg p-3 bg-neutral-50">
-                      {/* Evento hardcodeado: creación del certificado */}
-                      <div className="flex gap-3 text-xs">
-                        <div className="w-2 h-2 bg-blue-400 rounded-full mt-1 flex-shrink-0"></div>
-                        <div>
-                          <span className="font-medium text-neutral-700">Se creó el certificado</span>
-                          <span className="text-neutral-400 ml-2">
-                            {new Date(editingCertificado.createdAt).toLocaleDateString('es-AR', {
-                              day: '2-digit', month: '2-digit', year: 'numeric',
-                              hour: '2-digit', minute: '2-digit'
-                            })}
-                          </span>
-                        </div>
-                      </div>
-                      {/* Alertas del backend filtradas por este certificado */}
-                      {loadingAlertas ? (
-                        <div className="text-center py-2 text-xs text-neutral-400">Cargando alertas...</div>
-                      ) : certificadoAlertas.length === 0 ? (
-                        <div className="text-xs text-neutral-400 py-1 pl-5">Sin alertas adicionales registradas</div>
-                      ) : (
-                        certificadoAlertas.map(alerta => (
-                          <div key={alerta.id} className="flex gap-3 text-xs">
-                            <div className={`w-2 h-2 rounded-full mt-1 flex-shrink-0 ${
-                              alerta.prioridad === 'CRITICA' ? 'bg-red-500' :
-                              alerta.prioridad === 'ALTA' ? 'bg-orange-500' :
-                              alerta.prioridad === 'MEDIA' ? 'bg-yellow-500' :
-                              'bg-blue-400'
-                            }`}></div>
-                            <div>
-                              <span className="font-medium text-neutral-700">{alerta.titulo}</span>
-                              {alerta.mensaje && <p className="text-neutral-500 mt-0.5">{alerta.mensaje}</p>}
-                              <span className="text-neutral-400">
-                                {new Date(alerta.createdAt).toLocaleDateString('es-AR', {
-                                  day: '2-digit', month: '2-digit', year: 'numeric',
-                                  hour: '2-digit', minute: '2-digit'
-                                })}
-                              </span>
-                            </div>
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  </div>
-                )}
               </div>
 
               <div className="flex gap-3 pt-4">
