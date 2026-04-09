@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { TipoDiscapacidad, CreateTipoDiscapacidadDto } from '@/types';
+
+type FormState = CreateTipoDiscapacidadDto & { activo?: boolean };
 import { tipoDiscapacidadService } from '@/services/tipoDiscapacidadService';
 import { PencilIcon, TrashIcon, PlusIcon, XMarkIcon } from '@heroicons/react/24/outline';
 
@@ -14,12 +16,11 @@ export default function TipoDiscapacidadPage() {
   const [editingTipo, setEditingTipo] = useState<TipoDiscapacidad | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const [formData, setFormData] = useState<CreateTipoDiscapacidadDto>({
+  const [formData, setFormData] = useState<FormState>({
     nombre: '',
     codigo: '',
     descripcion: '',
     administradoraId: user?.administradoraId || '',
-    activo: true,
   });
 
   useEffect(() => {
@@ -56,7 +57,6 @@ export default function TipoDiscapacidadPage() {
         codigo: '',
         descripcion: '',
         administradoraId: user?.administradoraId || '',
-        activo: true,
       });
     }
     setIsModalOpen(true);
@@ -81,7 +81,8 @@ export default function TipoDiscapacidadPage() {
       if (editingTipo) {
         await tipoDiscapacidadService.update(editingTipo.id, formData);
       } else {
-        await tipoDiscapacidadService.create(formData);
+        const { activo, ...createData } = formData;
+        await tipoDiscapacidadService.create(createData);
       }
 
       await loadTiposDiscapacidad();
@@ -228,16 +229,18 @@ export default function TipoDiscapacidadPage() {
                 />
               </div>
 
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  id="activo"
-                  checked={formData.activo}
-                  onChange={(e) => setFormData({ ...formData, activo: e.target.checked })}
-                  className="w-4 h-4 text-primary-600 border-neutral-300 rounded focus:ring-primary-500"
-                />
-                <label htmlFor="activo" className="ml-2 text-sm text-neutral-700">Activo</label>
-              </div>
+              {editingTipo && (
+                <div className="flex items-center">
+                  <input
+                    type="checkbox"
+                    id="activo"
+                    checked={formData.activo ?? true}
+                    onChange={(e) => setFormData({ ...formData, activo: e.target.checked })}
+                    className="w-4 h-4 text-primary-600 border-neutral-300 rounded focus:ring-primary-500"
+                  />
+                  <label htmlFor="activo" className="ml-2 text-sm text-neutral-700">Activo</label>
+                </div>
+              )}
 
               <div className="flex gap-3 pt-4">
                 <button

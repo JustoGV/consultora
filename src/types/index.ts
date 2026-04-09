@@ -521,7 +521,6 @@ export interface CreateTipoDiscapacidadDto {
   codigo: string;
   descripcion?: string;
   administradoraId: string;
-  activo?: boolean;
 }
 
 export interface UpdateTipoDiscapacidadDto {
