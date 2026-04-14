@@ -10,6 +10,7 @@ import { PlusIcon, PencilIcon, TrashIcon, XMarkIcon, MagnifyingGlassIcon } from 
 import SearchableSelect from '@/components/SearchableSelect';
 import Pagination from '@/components/Pagination';
 import { usePagination } from '@/hooks/usePagination';
+import { extractErrorMessage } from '@/lib/errorUtils';
 
 export default function ServiciosPage() {
   const { isSuperAdmin, isAdmin } = useAuth();
@@ -19,6 +20,8 @@ export default function ServiciosPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [formError, setFormError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingServicio, setEditingServicio] = useState<Servicio | null>(null);
 
@@ -53,6 +56,8 @@ export default function ServiciosPage() {
   };
 
   const handleOpenModal = (servicio?: Servicio) => {
+    setFormError('');
+    setFieldErrors({});
     if (servicio) {
       setEditingServicio(servicio);
       const tipo: TipoServicio = servicio.tipoServicio ?? (servicio.nomencladorId ? 'NOMENCLADO' : 'NO_NOMENCLADO');
@@ -77,14 +82,21 @@ export default function ServiciosPage() {
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setEditingServicio(null);
+    setFormError('');
+    setFieldErrors({});
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.titulo || !formData.categoriaId || (formData.tipoServicio === 'NOMENCLADO' && !formData.nomencladorId)) {
-      alert('Por favor complete los campos requeridos');
+    const errors: Record<string, string> = {};
+    if (!formData.titulo) errors.titulo = 'Requerido';
+    if (!formData.categoriaId) errors.categoriaId = 'Requerido';
+    if (formData.tipoServicio === 'NOMENCLADO' && !formData.nomencladorId) errors.nomencladorId = 'Requerido';
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
       return;
     }
+    setFieldErrors({});
 
     try {
       setSaving(true);
@@ -97,7 +109,7 @@ export default function ServiciosPage() {
       handleCloseModal();
     } catch (error) {
       console.error('Error al guardar servicio:', error);
-      alert('Error al guardar servicio');
+      setFormError(extractErrorMessage(error));
     } finally {
       setSaving(false);
     }
@@ -340,6 +352,12 @@ export default function ServiciosPage() {
                     placeholder="Seleccionar nomenclador..."
                     required
                   />
+                </div>
+              )}
+
+              {formError && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">
+                  <span className="font-medium">Error:</span> {formError}
                 </div>
               )}
 

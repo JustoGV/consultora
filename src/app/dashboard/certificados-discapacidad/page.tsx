@@ -17,6 +17,7 @@ import { PencilIcon, TrashIcon, PlusIcon, XMarkIcon, DocumentTextIcon } from '@h
 import SearchableSelect from '@/components/SearchableSelect';
 import Pagination from '@/components/Pagination';
 import { usePagination } from '@/hooks/usePagination';
+import { extractErrorMessage } from '@/lib/errorUtils';
 
 export default function CertificadosDiscapacidadPage() {
   const { user } = useAuth();
@@ -30,8 +31,12 @@ export default function CertificadosDiscapacidadPage() {
   const [saving, setSaving] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedOrientacionId, setSelectedOrientacionId] = useState('');
+  const [selectedTiposIds, setSelectedTiposIds] = useState<string[]>([]);
+  const [tipoSearchTerm, setTipoSearchTerm] = useState('');
+  const [formError, setFormError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
-  const [formData, setFormData] = useState<CreateCertificadoDiscapacidadDto>({
+  const [formData, setFormData] = useState<Omit<CreateCertificadoDiscapacidadDto, 'tipoDiscapacidadId' | 'tipoDiscapacidadIds'> & { tipoDiscapacidadId: string }>( {
     numeroCertificado: '',
     fechaEmision: '',
     fechaVencimiento: '',
@@ -75,8 +80,14 @@ export default function CertificadosDiscapacidadPage() {
   };
 
   const handleOpenModal = (certificado?: CertificadoDiscapacidad) => {
+    setFormError('');
+    setFieldErrors({});
     if (certificado) {
       setEditingCertificado(certificado);
+      const tiposIds = certificado.tipoDiscapacidadIds && certificado.tipoDiscapacidadIds.length > 0
+        ? certificado.tipoDiscapacidadIds
+        : certificado.tipoDiscapacidadId ? [certificado.tipoDiscapacidadId] : [];
+      setSelectedTiposIds(tiposIds);
       setFormData({
         numeroCertificado: certificado.numeroCertificado,
         fechaEmision: certificado.fechaEmision.split('T')[0],
@@ -84,13 +95,15 @@ export default function CertificadosDiscapacidadPage() {
         grado: certificado.grado,
         observaciones: certificado.observaciones || '',
         afiliadoId: certificado.afiliadoId,
-        tipoDiscapacidadId: certificado.tipoDiscapacidadId,
+        tipoDiscapacidadId: tiposIds[0] || '',
         administradoraId: certificado.administradoraId,
         activo: certificado.activo,
       });
       setSelectedOrientacionId('');
-    } else {
+      setTipoSearchTerm('');
       setEditingCertificado(null);
+      setSelectedTiposIds([]);
+      setTipoSearchTerm('');
       setFormData({
         numeroCertificado: '',
         fechaEmision: '',
@@ -110,26 +123,37 @@ export default function CertificadosDiscapacidadPage() {
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setEditingCertificado(null);
+    setFormError('');
+    setFieldErrors({});
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.numeroCertificado || !formData.fechaEmision || !formData.grado || !formData.afiliadoId || !formData.tipoDiscapacidadId) {
-      alert('Por favor complete los campos requeridos');
+    const errors: Record<string, string> = {};
+    if (!formData.numeroCertificado) errors.numeroCertificado = 'Requerido';
+    if (!formData.fechaEmision) errors.fechaEmision = 'Requerido';
+    if (!formData.grado) errors.grado = 'Requerido';
+    if (!formData.afiliadoId) errors.afiliadoId = 'Requerido';
+    if (selectedTiposIds.length === 0) errors.tipoDiscapacidadId = 'Seleccione al menos un tipo';
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
       return;
     }
+    setFieldErrors({});
 
     if (!formData.administradoraId) {
-      alert('No se pudo determinar la administradora del usuario');
+      setFormError('No se pudo determinar la administradora del usuario');
       return;
     }
 
     try {
       setSaving(true);
 
-      const payload = {
+      const payload: CreateCertificadoDiscapacidadDto = {
         ...formData,
+        tipoDiscapacidadId: selectedTiposIds[0],
+        tipoDiscapacidadIds: selectedTiposIds,
         administradoraId: formData.administradoraId || user?.administradoraId || ''
       };
 
@@ -148,7 +172,7 @@ export default function CertificadosDiscapacidadPage() {
       handleCloseModal();
     } catch (error) {
       console.error('Error al guardar:', error);
-      alert(error instanceof Error ? error.message : 'Error al guardar certificado');
+      setFormError(extractErrorMessage(error));
     } finally {
       setSaving(false);
     }
@@ -162,7 +186,7 @@ export default function CertificadosDiscapacidadPage() {
       await loadData();
     } catch (error) {
       console.error('Error al eliminar:', error);
-      alert(error instanceof Error ? error.message : 'Error al eliminar certificado');
+      alert(extractErrorMessage(error));
     }
   };
 
@@ -171,9 +195,16 @@ export default function CertificadosDiscapacidadPage() {
     return afiliado ? `${afiliado.apellido}, ${afiliado.nombre}` : '-';
   };
 
-  const getTipoDiscapacidadNombre = (tipoId: string) => {
-    const tipo = tiposDiscapacidad.find((t) => t.id === tipoId);
-    return tipo ? tipo.nombre : '-';
+  const getTipoDiscapacidadNombre = (tipoId: string, tipoIds?: string[]) => {
+    const ids = tipoIds && tipoIds.length > 0 ? tipoIds : [tipoId];
+    const nombres = ids.map(id => tiposDiscapacidad.find(t => t.id === id)?.nombre).filter(Boolean);
+    return nombres.length > 0 ? nombres.join(', ') : '-';
+  };
+
+  const toggleTipoDiscapacidad = (id: string) => {
+    setSelectedTiposIds(prev =>
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    );
   };
 
   const filteredCertificados = certificados.filter((cert) => {
@@ -205,10 +236,6 @@ export default function CertificadosDiscapacidadPage() {
     label: `${af.apellido}, ${af.nombre} (DNI: ${af.dni})`
   }));
 
-  const tipoDiscapacidadOptions = tiposDiscapacidad.map(tipo => ({
-    value: tipo.id,
-    label: tipo.nombre
-  }));
   const orientacionOptions = orientaciones.map((orientacion) => ({
     value: orientacion.id,
     label: orientacion.titulo
@@ -273,8 +300,8 @@ export default function CertificadosDiscapacidadPage() {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-neutral-600">
                       {getAfiliadoNombre(certificado.afiliadoId)}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-neutral-600">
-                      {getTipoDiscapacidadNombre(certificado.tipoDiscapacidadId)}
+                    <td className="px-6 py-4 text-sm text-neutral-600">
+                      {getTipoDiscapacidadNombre(certificado.tipoDiscapacidadId, certificado.tipoDiscapacidadIds)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-neutral-600">{certificado.grado}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-neutral-600">
@@ -369,15 +396,74 @@ export default function CertificadosDiscapacidadPage() {
                   />
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-neutral-700 mb-1">Tipo de Discapacidad *</label>
-                  <SearchableSelect
-                    options={tipoDiscapacidadOptions}
-                    value={formData.tipoDiscapacidadId}
-                    onChange={(value) => setFormData({ ...formData, tipoDiscapacidadId: value })}
-                    placeholder="Seleccionar tipo..."
-                    required
-                  />
+                <div className="md:col-span-2">
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-sm font-medium text-neutral-700">Tipos de Discapacidad *</label>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedTiposIds(tiposDiscapacidad.map(t => t.id))}
+                        className="text-xs text-primary-600 hover:text-primary-800 font-medium"
+                      >
+                        Seleccionar todos
+                      </button>
+                      {selectedTiposIds.length > 0 && (
+                        <>
+                          <span className="text-neutral-300">|</span>
+                          <button
+                            type="button"
+                            onClick={() => setSelectedTiposIds([])}
+                            className="text-xs text-neutral-500 hover:text-neutral-700 font-medium"
+                          >
+                            Limpiar
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                  <div className={`border rounded-lg ${
+                    fieldErrors.tipoDiscapacidadId ? 'border-red-400' : 'border-neutral-300'
+                  }`}>
+                    <div className="px-2 pt-2">
+                      <input
+                        type="text"
+                        value={tipoSearchTerm}
+                        onChange={(e) => setTipoSearchTerm(e.target.value)}
+                        placeholder="Buscar tipo de discapacidad..."
+                        className="w-full text-sm border border-neutral-200 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-primary-400"
+                      />
+                    </div>
+                    <div className={`max-h-40 overflow-y-auto p-2 space-y-1 ${
+                      fieldErrors.tipoDiscapacidadId ? 'bg-red-50' : ''
+                    }`}>
+                      {tiposDiscapacidad.filter(t =>
+                        t.nombre.toLowerCase().includes(tipoSearchTerm.toLowerCase())
+                      ).map(tipo => (
+                        <label key={tipo.id} className="flex items-center gap-2 px-2 py-1 rounded hover:bg-neutral-50 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={selectedTiposIds.includes(tipo.id)}
+                            onChange={() => toggleTipoDiscapacidad(tipo.id)}
+                            className="w-4 h-4 text-primary-600 border-neutral-300 rounded focus:ring-primary-500"
+                          />
+                          <span className="text-sm text-neutral-700">{tipo.nombre}</span>
+                        </label>
+                      ))}
+                      {tiposDiscapacidad.filter(t =>
+                        t.nombre.toLowerCase().includes(tipoSearchTerm.toLowerCase())
+                      ).length === 0 && (
+                        <p className="text-sm text-neutral-400 text-center py-2">
+                          {tipoSearchTerm ? 'Sin resultados' : 'No hay tipos disponibles'}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  {fieldErrors.tipoDiscapacidadId && (
+                    <p className="text-xs text-red-600 mt-1">{fieldErrors.tipoDiscapacidadId}</p>
+                  )}
+                  {selectedTiposIds.length > 0 && (
+                    <p className="text-xs text-neutral-500 mt-1">{selectedTiposIds.length} seleccionado{selectedTiposIds.length > 1 ? 's' : ''}</p>
+                  )}
                 </div>
 
                 <div>
@@ -448,6 +534,12 @@ export default function CertificadosDiscapacidadPage() {
                   </label>
                 </div>
               </div>
+
+              {formError && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">
+                  <span className="font-medium">Error:</span> {formError}
+                </div>
+              )}
 
               <div className="flex gap-3 pt-4">
                 <button

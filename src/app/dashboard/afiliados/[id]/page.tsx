@@ -94,6 +94,8 @@ export default function AfiliadoDetailPage({ params }: { params: Promise<{ id: s
     email: '',
   });
   const [savingRelacion, setSavingRelacion] = useState(false);
+  const [relacionFormError, setRelacionFormError] = useState('');
+  const [relacionFieldErrors, setRelacionFieldErrors] = useState<Record<string, string>>({});
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -137,6 +139,8 @@ export default function AfiliadoDetailPage({ params }: { params: Promise<{ id: s
   };
 
   const handleOpenRelacionModal = (relacion?: PersonaTercerosVinculado) => {
+    setRelacionFormError('');
+    setRelacionFieldErrors({});
     if (relacion) {
       setEditingRelacion(relacion);
       setModoAdherente('existente');
@@ -167,14 +171,17 @@ export default function AfiliadoDetailPage({ params }: { params: Promise<{ id: s
   const handleCloseRelacionModal = () => {
     setIsRelacionModalOpen(false);
     setEditingRelacion(null);
+    setRelacionFormError('');
+    setRelacionFieldErrors({});
   };
 
   const handleSaveRelacion = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!relacionFormData.tipoRelacion) {
-      alert('Por favor seleccione el tipo de relación');
+      setRelacionFieldErrors({ tipoRelacion: 'Requerido' });
       return;
     }
+    setRelacionFieldErrors({});
     try {
       setSavingRelacion(true);
       if (editingRelacion) {
@@ -184,8 +191,13 @@ export default function AfiliadoDetailPage({ params }: { params: Promise<{ id: s
         };
         await personaTercerosService.update(editingRelacion.id, updateData);
       } else if (modoAdherente === 'nuevo') {
-        if (!nuevoTerceroData.nombre || !nuevoTerceroData.apellido || !nuevoTerceroData.dni || !nuevoTerceroData.fechaNacimiento) {
-          alert('Por favor complete nombre, apellido, DNI y fecha de nacimiento');
+        const errorsNuevo: Record<string, string> = {};
+        if (!nuevoTerceroData.nombre) errorsNuevo.nombre = 'Requerido';
+        if (!nuevoTerceroData.apellido) errorsNuevo.apellido = 'Requerido';
+        if (!nuevoTerceroData.dni) errorsNuevo.dni = 'Requerido';
+        if (!nuevoTerceroData.fechaNacimiento) errorsNuevo.fechaNacimiento = 'Requerido';
+        if (Object.keys(errorsNuevo).length > 0) {
+          setRelacionFieldErrors(errorsNuevo);
           return;
         }
         const nuevoTercero = await tercerosVinculadoService.create({
@@ -197,7 +209,7 @@ export default function AfiliadoDetailPage({ params }: { params: Promise<{ id: s
         await personaTercerosService.create({ ...relacionFormData, tercerosVinculadoId: nuevoTercero.id });
       } else {
         if (!relacionFormData.tercerosVinculadoId) {
-          alert('Por favor seleccione un tercero vinculado');
+          setRelacionFieldErrors({ tercerosVinculadoId: 'Requerido' });
           return;
         }
         await personaTercerosService.create(relacionFormData);
@@ -206,7 +218,7 @@ export default function AfiliadoDetailPage({ params }: { params: Promise<{ id: s
       handleCloseRelacionModal();
     } catch (err) {
       console.error(err);
-      alert('Error al guardar el adherente');
+      setRelacionFormError(err instanceof Error ? err.message : 'Error al guardar el adherente');
     } finally {
       setSavingRelacion(false);
     }
@@ -652,6 +664,12 @@ export default function AfiliadoDetailPage({ params }: { params: Promise<{ id: s
                   placeholder="Observaciones opcionales..."
                 />
               </div>
+              {relacionFormError && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">
+                  <span className="font-medium">Error:</span> {relacionFormError}
+                </div>
+              )}
+
               <div className="flex justify-end gap-3 pt-2">
                 <button
                   type="button"

@@ -743,3 +743,47 @@ export interface UpdatePersonaTercerosVinculadoDto {
   tercerosVinculadoId?: string;
   activo?: boolean;
 }
+
+// Aderentes
+export interface Aderente {
+  id: string;
+  nombre: string;
+  apellido: string;
+  caracterAfiliado: string;
+  afiliadoId: string;
+  afiliado?: Afiliado;
+  telefono?: string;
+  direccion?: string;
+  email?: string;
+  codigoPostal?: string;
+  administradoraId: string;
+  activo: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateAderenteDto {
+  nombre: string;
+  apellido: string;
+  caracterAfiliado: string;
+  afiliadoId: string;
+  administradoraId: string;
+  telefono?: string;
+  direccion?: string;
+  email?: string;
+  codigoPostal?: string;
+  activo?: boolean;
+}
+
+export interface UpdateAderenteDto {
+  nombre?: string;
+  apellido?: string;
+  caracterAfiliado?: string;
+  afiliadoId?: string;
+  administradoraId?: string;
+  telefono?: string;
+  direccion?: string;
+  email?: string;
+  codigoPostal?: string;
+  activo?: boolean;
+}

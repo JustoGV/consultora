@@ -30,6 +30,8 @@ export default function PrestadoresPage() {
     efectorId: '',
     administradoraId: '',
   });
+  const [formError, setFormError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     loadData();
@@ -57,19 +59,27 @@ export default function PrestadoresPage() {
       efectorId: '',
       administradoraId: user?.administradoraId ?? '',
     });
+    setFormError('');
+    setFieldErrors({});
     setIsModalOpen(true);
   };
 
   const handleCloseModal = () => {
     setIsModalOpen(false);
+    setFormError('');
+    setFieldErrors({});
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.efectorId || !formData.administradoraId) {
-      alert('Por favor complete todos los campos requeridos');
+    const errors: Record<string, string> = {};
+    if (!formData.efectorId) errors.efectorId = 'Requerido';
+    if (!formData.administradoraId) errors.administradoraId = 'Requerido';
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
       return;
     }
+    setFieldErrors({});
     try {
       setSaving(true);
       await prestadorService.create(formData);
@@ -79,9 +89,9 @@ export default function PrestadoresPage() {
       console.error('Error al crear prestador:', error);
       const err = error as { response?: { status?: number } };
       if (err?.response?.status === 409) {
-        alert('Este efector ya está registrado como prestador en esta administradora');
+        setFormError('Este efector ya está registrado como prestador en esta administradora');
       } else {
-        alert('Error al crear prestador');
+        setFormError('Error al crear prestador');
       }
     } finally {
       setSaving(false);
@@ -328,7 +338,7 @@ export default function PrestadoresPage() {
                   <select
                     value={formData.efectorId}
                     onChange={(e) => setFormData({ ...formData, efectorId: e.target.value })}
-                    className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent ${fieldErrors.efectorId ? 'border-red-500 bg-red-50' : 'border-neutral-300'}`}
                     required
                   >
                     <option value="">Seleccionar efector...</option>
@@ -345,10 +355,11 @@ export default function PrestadoresPage() {
                     value={formData.efectorId}
                     onChange={(e) => setFormData({ ...formData, efectorId: e.target.value })}
                     placeholder="UUID del efector"
-                    className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent ${fieldErrors.efectorId ? 'border-red-500 bg-red-50' : 'border-neutral-300'}`}
                     required
                   />
                 )}
+                {fieldErrors.efectorId && <p className="text-xs text-red-600 mt-1">{fieldErrors.efectorId}</p>}
               </div>
 
               {/* Administradora (solo superadmin) */}
@@ -364,15 +375,22 @@ export default function PrestadoresPage() {
                       setFormData({ ...formData, administradoraId: e.target.value })
                     }
                     placeholder="UUID de la administradora"
-                    className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent ${fieldErrors.administradoraId ? 'border-red-500 bg-red-50' : 'border-neutral-300'}`}
                     required
                   />
+                  {fieldErrors.administradoraId && <p className="text-xs text-red-600 mt-1">{fieldErrors.administradoraId}</p>}
                 </div>
               )}
 
               <p className="text-xs text-neutral-500">
                 Un efector no puede estar registrado dos veces en la misma administradora.
               </p>
+
+              {formError && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">
+                  <span className="font-medium">Error:</span> {formError}
+                </div>
+              )}
 
               <div className="flex justify-end gap-3 pt-2">
                 <button

@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { TipoDiscapacidad, CreateTipoDiscapacidadDto } from '@/types';
 import { tipoDiscapacidadService } from '@/services/tipoDiscapacidadService';
 import { PencilIcon, TrashIcon, PlusIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { extractErrorMessage } from '@/lib/errorUtils';
 
 export default function TipoDiscapacidadPage() {
   const { user } = useAuth();
@@ -13,6 +14,8 @@ export default function TipoDiscapacidadPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTipo, setEditingTipo] = useState<TipoDiscapacidad | null>(null);
   const [saving, setSaving] = useState(false);
+  const [formError, setFormError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const [formData, setFormData] = useState<CreateTipoDiscapacidadDto>({
     nombre: '',
@@ -40,6 +43,8 @@ export default function TipoDiscapacidadPage() {
   };
 
   const handleOpenModal = (tipo?: TipoDiscapacidad) => {
+    setFormError('');
+    setFieldErrors({});
     if (tipo) {
       setEditingTipo(tipo);
       setFormData({
@@ -65,19 +70,25 @@ export default function TipoDiscapacidadPage() {
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setEditingTipo(null);
+    setFormError('');
+    setFieldErrors({});
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.nombre || !formData.codigo) {
-      alert('Por favor complete los campos requeridos');
+    const errors: Record<string, string> = {};
+    if (!formData.nombre) errors.nombre = 'Requerido';
+    if (!formData.codigo) errors.codigo = 'Requerido';
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
       return;
     }
+    setFieldErrors({});
 
     try {
       setSaving(true);
-      
+
       if (editingTipo) {
         await tipoDiscapacidadService.update(editingTipo.id, formData);
       } else {
@@ -88,7 +99,7 @@ export default function TipoDiscapacidadPage() {
       handleCloseModal();
     } catch (error) {
       console.error('Error al guardar:', error);
-      alert(error instanceof Error ? error.message : 'Error al guardar tipo de discapacidad');
+      setFormError(extractErrorMessage(error));
     } finally {
       setSaving(false);
     }
@@ -104,7 +115,7 @@ export default function TipoDiscapacidadPage() {
       await loadTiposDiscapacidad();
     } catch (error) {
       console.error('Error al eliminar:', error);
-      alert(error instanceof Error ? error.message : 'Error al eliminar tipo de discapacidad');
+      alert(extractErrorMessage(error));
     }
   };
 
@@ -196,11 +207,11 @@ export default function TipoDiscapacidadPage() {
                   type="text"
                   value={formData.codigo}
                   onChange={(e) => setFormData({ ...formData, codigo: e.target.value.toUpperCase() })}
-                  className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 ${fieldErrors.codigo ? 'border-red-500 bg-red-50' : 'border-neutral-300'}`}
                   placeholder="MOTORA"
-                  required
                   maxLength={50}
                 />
+                {fieldErrors.codigo && <p className="text-xs text-red-600 mt-1">{fieldErrors.codigo}</p>}
               </div>
 
               <div>
@@ -209,11 +220,11 @@ export default function TipoDiscapacidadPage() {
                   type="text"
                   value={formData.nombre}
                   onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
-                  className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 ${fieldErrors.nombre ? 'border-red-500 bg-red-50' : 'border-neutral-300'}`}
                   placeholder="Motora"
-                  required
                   maxLength={100}
                 />
+                {fieldErrors.nombre && <p className="text-xs text-red-600 mt-1">{fieldErrors.nombre}</p>}
               </div>
 
               <div>
@@ -238,6 +249,12 @@ export default function TipoDiscapacidadPage() {
                 />
                 <label htmlFor="activo" className="ml-2 text-sm text-neutral-700">Activo</label>
               </div>
+
+              {formError && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">
+                  <span className="font-medium">Error:</span> {formError}
+                </div>
+              )}
 
               <div className="flex gap-3 pt-4">
                 <button

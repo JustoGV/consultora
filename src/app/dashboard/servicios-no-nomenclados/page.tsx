@@ -21,6 +21,7 @@ import {
 import Pagination from '@/components/Pagination';
 import { usePagination } from '@/hooks/usePagination';
 import api from '@/lib/axios';
+import { extractErrorMessage } from '@/lib/errorUtils';
 
 export default function ServiciosNoNomencladosPage() {
   const { isSuperAdmin, isAdmin, user } = useAuth();
@@ -31,6 +32,8 @@ export default function ServiciosNoNomencladosPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingServicio, setEditingServicio] = useState<ServicioNoNomenclado | null>(null);
+  const [formError, setFormError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const [formData, setFormData] = useState<CreateServicioNoNomencladoDto>({
     titulo: '',
@@ -61,6 +64,8 @@ export default function ServiciosNoNomencladosPage() {
   };
 
   const handleOpenModal = (servicio?: ServicioNoNomenclado) => {
+    setFormError('');
+    setFieldErrors({});
     if (servicio) {
       setEditingServicio(servicio);
       setFormData({
@@ -84,14 +89,20 @@ export default function ServiciosNoNomencladosPage() {
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setEditingServicio(null);
+    setFormError('');
+    setFieldErrors({});
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.titulo || !formData.prestadorId) {
-      alert('Por favor complete todos los campos requeridos');
+    const errors: Record<string, string> = {};
+    if (!formData.titulo) errors.titulo = 'Requerido';
+    if (!formData.prestadorId) errors.prestadorId = 'Requerido';
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
       return;
     }
+    setFieldErrors({});
 
     try {
       setSaving(true);
@@ -109,7 +120,7 @@ export default function ServiciosNoNomencladosPage() {
       handleCloseModal();
     } catch (error) {
       console.error('Error al guardar:', error);
-      alert('Error al guardar servicio no nomenclado');
+      setFormError(extractErrorMessage(error));
     } finally {
       setSaving(false);
     }
@@ -420,6 +431,12 @@ export default function ServiciosNoNomencladosPage() {
                     className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                     required
                   />
+                </div>
+              )}
+
+              {formError && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">
+                  <span className="font-medium">Error:</span> {formError}
                 </div>
               )}
 

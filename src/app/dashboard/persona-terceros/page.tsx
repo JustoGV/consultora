@@ -8,6 +8,7 @@ import { afiliadosService } from '@/services/afiliadosService';
 import { tercerosVinculadoService } from '@/services/tercerosVinculadoService';
 import { PencilIcon, TrashIcon, PlusIcon, XMarkIcon, LinkIcon } from '@heroicons/react/24/outline';
 import SearchableSelect from '@/components/SearchableSelect';
+import { extractErrorMessage } from '@/lib/errorUtils';
 
 export default function PersonaTercerosPage() {
   const { user } = useAuth();
@@ -19,6 +20,8 @@ export default function PersonaTercerosPage() {
   const [editingRelacion, setEditingRelacion] = useState<PersonaTercerosVinculado | null>(null);
   const [saving, setSaving] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [formError, setFormError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const [formData, setFormData] = useState<CreatePersonaTercerosVinculadoDto>({
     tipoRelacion: '',
@@ -53,6 +56,8 @@ export default function PersonaTercerosPage() {
   };
 
   const handleOpenModal = (relacion?: PersonaTercerosVinculado) => {
+    setFormError('');
+    setFieldErrors({});
     if (relacion) {
       setEditingRelacion(relacion);
       setFormData({
@@ -80,15 +85,22 @@ export default function PersonaTercerosPage() {
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setEditingRelacion(null);
+    setFormError('');
+    setFieldErrors({});
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.tipoRelacion || !formData.afiliadoId || !formData.tercerosVinculadoId) {
-      alert('Por favor complete los campos requeridos');
+    const errors: Record<string, string> = {};
+    if (!formData.tipoRelacion) errors.tipoRelacion = 'Requerido';
+    if (!formData.afiliadoId) errors.afiliadoId = 'Requerido';
+    if (!formData.tercerosVinculadoId) errors.tercerosVinculadoId = 'Requerido';
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
       return;
     }
+    setFieldErrors({});
 
     try {
       setSaving(true);
@@ -103,7 +115,7 @@ export default function PersonaTercerosPage() {
       handleCloseModal();
     } catch (error) {
       console.error('Error al guardar:', error);
-      alert(error instanceof Error ? error.message : 'Error al guardar relación');
+      setFormError(extractErrorMessage(error));
     } finally {
       setSaving(false);
     }
@@ -117,7 +129,7 @@ export default function PersonaTercerosPage() {
       await loadData();
     } catch (error) {
       console.error('Error al eliminar:', error);
-      alert(error instanceof Error ? error.message : 'Error al eliminar relación');
+      alert(extractErrorMessage(error));
     }
   };
 
@@ -331,6 +343,12 @@ export default function PersonaTercerosPage() {
                   Activo
                 </label>
               </div>
+
+              {formError && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">
+                  <span className="font-medium">Error:</span> {formError}
+                </div>
+              )}
 
               <div className="flex gap-3 pt-4">
                 <button

@@ -10,12 +10,15 @@ import { tipoDiscapacidadService } from '@/services/tipoDiscapacidadService';
 import { CheckCircleIcon, DocumentPlusIcon } from '@heroicons/react/24/outline';
 import { useRouter } from 'next/navigation';
 import SearchableSelect from '@/components/SearchableSelect';
+import { extractErrorMessage } from '@/lib/errorUtils';
 
 export default function UploadPage() {
   const { user } = useAuth();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [formError, setFormError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [estadosCiviles, setEstadosCiviles] = useState<EstadoCivil[]>([]);
   const [tiposDiscapacidad, setTiposDiscapacidad] = useState<TipoDiscapacidad[]>([]);
 
@@ -108,15 +111,21 @@ export default function UploadPage() {
     e.preventDefault();
 
     // Validaciones
-    if (!afiliadoData.nombre || !afiliadoData.apellido || !afiliadoData.dni || !afiliadoData.fechaNacimiento) {
-      alert('Por favor complete todos los campos obligatorios del afiliado');
+    const errors: Record<string, string> = {};
+    if (!afiliadoData.nombre) errors.nombre = 'Requerido';
+    if (!afiliadoData.apellido) errors.apellido = 'Requerido';
+    if (!afiliadoData.dni) errors.dni = 'Requerido';
+    if (!afiliadoData.fechaNacimiento) errors.fechaNacimiento = 'Requerido';
+    if (!certificadoData.numeroCertificado) errors.numeroCertificado = 'Requerido';
+    if (!certificadoData.fechaEmision) errors.fechaEmision = 'Requerido';
+    if (!certificadoData.tipoDiscapacidadId) errors.tipoDiscapacidadId = 'Requerido';
+    if (!certificadoData.grado) errors.grado = 'Requerido';
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
       return;
     }
-
-    if (!certificadoData.numeroCertificado || !certificadoData.fechaEmision || !certificadoData.tipoDiscapacidadId || !certificadoData.grado) {
-      alert('Por favor complete todos los campos obligatorios del certificado');
-      return;
-    }
+    setFieldErrors({});
+    setFormError('');
 
     try {
       setLoading(true);
@@ -138,14 +147,14 @@ export default function UploadPage() {
       await certificadosDiscapacidadService.create(certificadoToCreate);
 
       setSuccess(true);
-      
+
       // Redirigir después de 2 segundos
       setTimeout(() => {
         router.push('/dashboard/afiliados');
       }, 2000);
     } catch (error) {
       console.error('Error al crear afiliado y certificado:', error);
-      alert(error instanceof Error ? error.message : 'Error al guardar los datos');
+      setFormError(extractErrorMessage(error));
     } finally {
       setLoading(false);
     }
@@ -467,6 +476,12 @@ export default function UploadPage() {
 
         {/* Botones de Acción */}
         <div className="bg-white p-6 rounded-xl shadow-md border border-gray-200 mt-6">
+          {formError && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">
+              <span className="font-medium">Error:</span> {formError}
+            </div>
+          )}
+
           <div className="flex gap-4 justify-end">
             <button
               type="button"

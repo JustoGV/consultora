@@ -19,6 +19,7 @@ export default function CategoriesPage() {
     descripcion: ''
   });
   const [saving, setSaving] = useState(false);
+  const [formError, setFormError] = useState('');
 
   useEffect(() => {
     loadCategorias();
@@ -53,6 +54,7 @@ export default function CategoriesPage() {
   };
 
   const handleOpenModal = (categoria?: Categoria) => {
+    setFormError('');
     if (categoria) {
       setEditingCategoria(categoria);
       setFormData({
@@ -72,10 +74,8 @@ export default function CategoriesPage() {
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setEditingCategoria(null);
-    setFormData({
-      nombre: '',
-      descripcion: ''
-    });
+    setFormData({ nombre: '', descripcion: '' });
+    setFormError('');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -92,7 +92,7 @@ export default function CategoriesPage() {
       handleCloseModal();
     } catch (err) {
       console.error('Error al guardar categoría:', err);
-      alert('Error al guardar la categoría');
+      setFormError(err instanceof Error ? err.message : 'Error al guardar la categoría');
     } finally {
       setSaving(false);
     }
@@ -274,6 +274,12 @@ export default function CategoriesPage() {
                   placeholder="Descripción opcional..."
                 />
               </div>
+
+              {formError && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">
+                  <span className="font-medium">Error:</span> {formError}
+                </div>
+              )}
 
               <div className="flex gap-3 pt-4">
                 <button

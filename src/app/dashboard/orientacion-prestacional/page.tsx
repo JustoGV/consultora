@@ -16,6 +16,7 @@ import { PlusIcon, PencilIcon, TrashIcon, XMarkIcon, MagnifyingGlassIcon } from 
 import SearchableSelect from '@/components/SearchableSelect';
 import Pagination from '@/components/Pagination';
 import { usePagination } from '@/hooks/usePagination';
+import { extractErrorMessage } from '@/lib/errorUtils';
 
 const prioridadOptions = [
   { value: 'ALTA', label: 'Alta' },
@@ -33,6 +34,8 @@ export default function OrientacionPrestacionalPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingOrientacion, setEditingOrientacion] = useState<OrientacionPrestacional | null>(null);
+  const [formError, setFormError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [selectedServicioId, setSelectedServicioId] = useState('');
   const [selectedServicioNoNomId, setSelectedServicioNoNomId] = useState('');
   const [todasEdades, setTodasEdades] = useState(false);
@@ -74,6 +77,8 @@ export default function OrientacionPrestacionalPage() {
   }, [loadData]);
 
   const handleOpenModal = (orientacion?: OrientacionPrestacional) => {
+    setFormError('');
+    setFieldErrors({});
     if (orientacion) {
       setEditingOrientacion(orientacion);
       const sinEdades = orientacion.edadDesde == null && orientacion.edadHasta == null;
@@ -102,14 +107,17 @@ export default function OrientacionPrestacionalPage() {
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setEditingOrientacion(null);
+    setFormError('');
+    setFieldErrors({});
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.titulo) {
-      alert('Por favor complete el título');
+      setFieldErrors({ titulo: 'Requerido' });
       return;
     }
+    setFieldErrors({});
 
     try {
       setSaving(true);
@@ -128,7 +136,7 @@ export default function OrientacionPrestacionalPage() {
       handleCloseModal();
     } catch (error) {
       console.error('Error al guardar orientación:', error);
-      alert('Error al guardar orientación');
+      setFormError(extractErrorMessage(error));
     } finally {
       setSaving(false);
     }
@@ -542,6 +550,12 @@ export default function OrientacionPrestacionalPage() {
                   )}
                 </div>
               </div>
+
+              {formError && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">
+                  <span className="font-medium">Error:</span> {formError}
+                </div>
+              )}
 
               <div className="flex gap-3 pt-6 border-t mt-6">
                 <button

@@ -3,11 +3,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
-import { Afiliado, CreateAfiliadoDto, EstadoCivil, TercerosVinculado, PersonaTercerosVinculado, CreateTercerosVinculadoDto, CreatePersonaTercerosVinculadoDto } from '@/types';
+import { Afiliado, CreateAfiliadoDto, CreateAderenteDto, Aderente, EstadoCivil, TercerosVinculado, PersonaTercerosVinculado, CreateTercerosVinculadoDto, CreatePersonaTercerosVinculadoDto } from '@/types';
 import { afiliadosService } from '@/services/afiliadosService';
 import { estadoCivilService } from '@/services/estadoCivilService';
 import { tercerosVinculadoService } from '@/services/tercerosVinculadoService';
 import { personaTercerosService } from '@/services/personaTercerosService';
+import { aderentesService } from '@/services/aderentesService';
 import {
   PencilIcon,
   TrashIcon,
@@ -21,6 +22,7 @@ import SearchableSelect from '@/components/SearchableSelect';
 import Pagination from '@/components/Pagination';
 import { usePagination } from '@/hooks/usePagination';
 import Link from 'next/link';
+import { extractErrorMessage } from '@/lib/errorUtils';
 
 export default function AfiliadosPage() {
   const { user, isAdmin, isSuperAdmin } = useAuth();
@@ -32,17 +34,36 @@ export default function AfiliadosPage() {
   const [editingAfiliado, setEditingAfiliado] = useState<Afiliado | null>(null);
   const [saving, setSaving] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [formError, setFormError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [adherenteError, setAdherenteError] = useState('');
 
-  // Adherentes en el formulario
-  const [terceros, setTerceros] = useState<TercerosVinculado[]>([]);
-  const [pendingAdherentes, setPendingAdherentes] = useState<Array<{
+  // Terceros Vinculados en el formulario
+  type PendingItem = {
     id: string; tipoRelacion: string; observaciones?: string;
     modo: 'existente' | 'nuevo'; tercerosVinculadoId?: string; terceroNombre: string;
     nuevoDatos?: { nombre: string; apellido: string; dni: string; fechaNacimiento: string; telefono?: string; email?: string };
-  }>>([]);
+  };
+  type PendingAderente = {
+    id: string; nombre: string; apellido: string; caracterAfiliado: string;
+    telefono?: string; direccion?: string; email?: string; codigoPostal?: string;
+  };
+  const [terceros, setTerceros] = useState<TercerosVinculado[]>([]);
+
+  // Adherentes
+  const [pendingAdherentes, setPendingAdherentes] = useState<PendingAderente[]>([]);
   const [modoAdherente, setModoAdherente] = useState<'existente' | 'nuevo'>('existente');
-  const [relFormData, setRelFormData] = useState({ tipoRelacion: '', observaciones: '', tercerosVinculadoId: '' });
-  const [nuevoTerceroData, setNuevoTerceroData] = useState({ nombre: '', apellido: '', dni: '', fechaNacimiento: '', telefono: '', email: '' });
+  const [aderentes, setAderentes] = useState<Aderente[]>([]);
+  const [selectedAderenteId, setSelectedAderenteId] = useState('');
+  const [nuevaAderenteData, setNuevaAderenteData] = useState({ nombre: '', apellido: '', telefono: '', direccion: '', email: '', codigoPostal: '' });
+  const [relacionAderenteData, setRelacionAderenteData] = useState({ caracterAfiliado: '', observaciones: '' });
+
+  // Terceros Vinculados
+  const [pendingTerceros, setPendingTerceros] = useState<PendingItem[]>([]);
+  const [modoTercero, setModoTercero] = useState<'existente' | 'nuevo'>('existente');
+  const [relTerceroFormData, setRelTerceroFormData] = useState({ tipoRelacion: '', observaciones: '', tercerosVinculadoId: '' });
+  const [nuevoTerceroVinculadoData, setNuevoTerceroVinculadoData] = useState({ nombre: '', apellido: '', dni: '', fechaNacimiento: '', telefono: '', email: '' });
+  const [terceroVinculadoError, setTerceroVinculadoError] = useState('');
 
   const [formData, setFormData] = useState<CreateAfiliadoDto>({
     nombre: '',
@@ -78,14 +99,16 @@ export default function AfiliadosPage() {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [afiliadosData, estadosCivilesData, tercerosData] = await Promise.all([
+      const [afiliadosData, estadosCivilesData, tercerosData, aderentesData] = await Promise.all([
         afiliadosService.getAll(),
         estadoCivilService.getAll(),
         tercerosVinculadoService.getAll(),
+        aderentesService.getAll(),
       ]);
       setAfiliados(afiliadosData);
       setEstadosCiviles(estadosCivilesData);
       setTerceros(tercerosData);
+      setAderentes(aderentesData);
     } catch (error) {
       console.error('Error al cargar datos:', error);
       alert('Error al cargar datos');
@@ -105,6 +128,9 @@ export default function AfiliadosPage() {
   };
 
   const handleOpenModal = (afiliado?: Afiliado) => {
+    setFormError('');
+    setFieldErrors({});
+    setAdherenteError('');
     if (afiliado) {
       setEditingAfiliado(afiliado);
       setFormData({
@@ -150,9 +176,15 @@ export default function AfiliadosPage() {
         activo: true,
       });
       setPendingAdherentes([]);
-      setRelFormData({ tipoRelacion: '', observaciones: '', tercerosVinculadoId: '' });
-      setNuevoTerceroData({ nombre: '', apellido: '', dni: '', fechaNacimiento: '', telefono: '', email: '' });
       setModoAdherente('existente');
+      setSelectedAderenteId('');
+      setNuevaAderenteData({ nombre: '', apellido: '', telefono: '', direccion: '', email: '', codigoPostal: '' });
+      setRelacionAderenteData({ caracterAfiliado: '', observaciones: '' });
+      setPendingTerceros([]);
+      setRelTerceroFormData({ tipoRelacion: '', observaciones: '', tercerosVinculadoId: '' });
+      setNuevoTerceroVinculadoData({ nombre: '', apellido: '', dni: '', fechaNacimiento: '', telefono: '', email: '' });
+      setModoTercero('existente');
+      setTerceroVinculadoError('');
     }
     setIsModalOpen(true);
   };
@@ -161,14 +193,26 @@ export default function AfiliadosPage() {
     setIsModalOpen(false);
     setEditingAfiliado(null);
     setPendingAdherentes([]);
+    setPendingTerceros([]);
+    setFormError('');
+    setFieldErrors({});
+    setAdherenteError('');
+    setTerceroVinculadoError('');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.nombre || !formData.apellido || !formData.dni || !formData.fechaNacimiento) {
-      alert('Por favor complete los campos requeridos');
+    const errors: Record<string, string> = {};
+    if (!formData.nombre) errors.nombre = 'Requerido';
+    if (!formData.apellido) errors.apellido = 'Requerido';
+    if (!formData.dni) errors.dni = 'Requerido';
+    if (!formData.fechaNacimiento) errors.fechaNacimiento = 'Requerido';
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
       return;
     }
+    setFieldErrors({});
+
     try {
       setSaving(true);
       const dataToSend = {
@@ -180,61 +224,127 @@ export default function AfiliadosPage() {
         await afiliadosService.update(editingAfiliado.id, dataToSend);
       } else {
         const created = await afiliadosService.create(dataToSend);
-        for (const pa of pendingAdherentes) {
-          let tvId = pa.tercerosVinculadoId!;
-          if (pa.modo === 'nuevo' && pa.nuevoDatos) {
-            const nuevo = await tercerosVinculadoService.create({
-              ...pa.nuevoDatos,
-              edad: calculateAge(pa.nuevoDatos.fechaNacimiento),
+        try {
+          // Adherentes via /aderentes
+          for (const pa of pendingAdherentes) {
+            const adDto: CreateAderenteDto = {
+              nombre: pa.nombre,
+              apellido: pa.apellido,
+              caracterAfiliado: pa.caracterAfiliado,
+              afiliadoId: created.id,
+              administradoraId: user?.administradoraId || '',
+              telefono: pa.telefono || undefined,
+              direccion: pa.direccion || undefined,
+              email: pa.email || undefined,
+              codigoPostal: pa.codigoPostal || undefined,
+              activo: true,
+            };
+            await aderentesService.create(adDto);
+          }
+          // Terceros Vinculados via /terceros-vinculado + /persona-terceros-vinculado
+          for (const pt of pendingTerceros) {
+            let tvId = pt.tercerosVinculadoId!;
+            if (pt.modo === 'nuevo' && pt.nuevoDatos) {
+              const nuevo = await tercerosVinculadoService.create({
+                ...pt.nuevoDatos,
+                edad: calculateAge(pt.nuevoDatos.fechaNacimiento),
+                administradoraId: user?.administradoraId || '',
+                activo: true,
+              });
+              tvId = nuevo.id;
+            }
+            await personaTercerosService.create({
+              afiliadoId: created.id,
+              tercerosVinculadoId: tvId,
+              tipoRelacion: pt.tipoRelacion,
+              observaciones: pt.observaciones || undefined,
               administradoraId: user?.administradoraId || '',
               activo: true,
             });
-            tvId = nuevo.id;
           }
-          await personaTercerosService.create({
-            afiliadoId: created.id,
-            tercerosVinculadoId: tvId,
-            tipoRelacion: pa.tipoRelacion,
-            observaciones: pa.observaciones || undefined,
-            administradoraId: user?.administradoraId || '',
-            activo: true,
-          });
+        } catch (relError) {
+          // Rollback: eliminar el afiliado recién creado para no dejarlo huérfano
+          try { await afiliadosService.delete(created.id); } catch { /* ignorar error de rollback */ }
+          const msg = extractErrorMessage(relError);
+          setFormError(`Error al guardar adherentes/terceros vinculados: ${msg}`);
+          setSaving(false);
+          return;
         }
       }
       await loadData();
       handleCloseModal();
     } catch (error) {
       console.error('Error al guardar:', error);
-      alert(error instanceof Error ? error.message : 'Error al guardar afiliado');
+      setFormError(extractErrorMessage(error));
     } finally {
       setSaving(false);
     }
   };
 
   const handleAddPendingAdherente = () => {
-    if (!relFormData.tipoRelacion) { alert('Seleccioná el tipo de relación'); return; }
-    if (modoAdherente === 'existente' && !relFormData.tercerosVinculadoId) { alert('Seleccioná un tercero vinculado'); return; }
-    if (modoAdherente === 'nuevo') {
-      if (!nuevoTerceroData.apellido || !nuevoTerceroData.nombre || !nuevoTerceroData.dni || !nuevoTerceroData.fechaNacimiento) {
-        alert('Completá apellido, nombre, DNI y fecha de nacimiento');
+    if (!relacionAderenteData.caracterAfiliado) {
+      setAdherenteError('Seleccioná el carácter del afiliado');
+      return;
+    }
+    if (modoAdherente === 'existente') {
+      if (!selectedAderenteId) { setAdherenteError('Seleccioná un aderente existente'); return; }
+      const existing = aderentes.find(a => a.id === selectedAderenteId);
+      if (!existing) return;
+      if (pendingAdherentes.some(p => p.id === selectedAderenteId)) { setAdherenteError('Ya fue agregado'); return; }
+      setAdherenteError('');
+      setPendingAdherentes(prev => [...prev, {
+        id: existing.id,
+        nombre: existing.nombre,
+        apellido: existing.apellido,
+        caracterAfiliado: relacionAderenteData.caracterAfiliado,
+        telefono: existing.telefono,
+        direccion: existing.direccion,
+        email: existing.email,
+        codigoPostal: existing.codigoPostal,
+      }]);
+      setSelectedAderenteId('');
+      setRelacionAderenteData({ caracterAfiliado: '', observaciones: '' });
+      return;
+    }
+    if (!nuevaAderenteData.nombre || !nuevaAderenteData.apellido) {
+      setAdherenteError('Completá nombre y apellido');
+      return;
+    }
+    setAdherenteError('');
+    setPendingAdherentes(prev => [...prev, {
+      id: Math.random().toString(36).slice(2),
+      ...nuevaAderenteData,
+      caracterAfiliado: relacionAderenteData.caracterAfiliado,
+    }]);
+    setNuevaAderenteData({ nombre: '', apellido: '', telefono: '', direccion: '', email: '', codigoPostal: '' });
+    setRelacionAderenteData({ caracterAfiliado: '', observaciones: '' });
+  };
+
+  const handleAddPendingTercero = () => {
+    if (!relTerceroFormData.tipoRelacion) { setTerceroVinculadoError('Seleccioná el tipo de relación'); return; }
+    if (modoTercero === 'existente' && !relTerceroFormData.tercerosVinculadoId) { setTerceroVinculadoError('Seleccioná un tercero vinculado'); return; }
+    if (modoTercero === 'nuevo') {
+      if (!nuevoTerceroVinculadoData.apellido || !nuevoTerceroVinculadoData.nombre || !nuevoTerceroVinculadoData.dni || !nuevoTerceroVinculadoData.fechaNacimiento) {
+        setTerceroVinculadoError('Completá apellido, nombre, DNI y fecha de nacimiento');
         return;
       }
     }
-    const terceroNombre = modoAdherente === 'nuevo'
-      ? `${nuevoTerceroData.apellido}, ${nuevoTerceroData.nombre}`
-      : (() => { const t = terceros.find(x => x.id === relFormData.tercerosVinculadoId); return t ? `${t.apellido}, ${t.nombre}` : ''; })();
-    setPendingAdherentes(prev => [...prev, {
+    setTerceroVinculadoError('');
+    const terceroNombre = modoTercero === 'nuevo'
+      ? `${nuevoTerceroVinculadoData.apellido}, ${nuevoTerceroVinculadoData.nombre}`
+      : (() => { const t = terceros.find(x => x.id === relTerceroFormData.tercerosVinculadoId); return t ? `${t.apellido}, ${t.nombre}` : ''; })();
+    setPendingTerceros(prev => [...prev, {
       id: Math.random().toString(36).slice(2),
-      tipoRelacion: relFormData.tipoRelacion,
-      observaciones: relFormData.observaciones || undefined,
-      modo: modoAdherente,
-      tercerosVinculadoId: modoAdherente === 'existente' ? relFormData.tercerosVinculadoId : undefined,
+      tipoRelacion: relTerceroFormData.tipoRelacion,
+      observaciones: relTerceroFormData.observaciones || undefined,
+      modo: modoTercero,
+      tercerosVinculadoId: modoTercero === 'existente' ? relTerceroFormData.tercerosVinculadoId : undefined,
       terceroNombre,
-      nuevoDatos: modoAdherente === 'nuevo' ? { ...nuevoTerceroData } : undefined,
+      nuevoDatos: modoTercero === 'nuevo' ? { ...nuevoTerceroVinculadoData } : undefined,
     }]);
-    setRelFormData({ tipoRelacion: '', observaciones: '', tercerosVinculadoId: '' });
-    setNuevoTerceroData({ nombre: '', apellido: '', dni: '', fechaNacimiento: '', telefono: '', email: '' });
-    setModoAdherente('existente');
+    setRelTerceroFormData({ tipoRelacion: '', observaciones: '', tercerosVinculadoId: '' });
+    setNuevoTerceroVinculadoData({ nombre: '', apellido: '', dni: '', fechaNacimiento: '', telefono: '', email: '' });
+    setModoTercero('existente');
   };
 
   const tipoRelacionOptions = [
@@ -248,7 +358,7 @@ export default function AfiliadosPage() {
       await loadData();
     } catch (error) {
       console.error('Error al eliminar:', error);
-      alert(error instanceof Error ? error.message : 'Error al eliminar afiliado');
+      alert(extractErrorMessage(error));
     }
   };
 
@@ -453,29 +563,32 @@ export default function AfiliadosPage() {
                       <label className="block text-sm font-medium text-neutral-700 mb-1">Nombre *</label>
                       <input type="text" value={formData.nombre}
                         onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
-                        className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-                        required maxLength={100} />
+                        className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 ${fieldErrors.nombre ? 'border-red-500 bg-red-50' : 'border-neutral-300'}`}
+                        maxLength={100} />
+                      {fieldErrors.nombre && <p className="text-xs text-red-600 mt-1">{fieldErrors.nombre}</p>}
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-neutral-700 mb-1">Apellido *</label>
                       <input type="text" value={formData.apellido}
                         onChange={(e) => setFormData({ ...formData, apellido: e.target.value })}
-                        className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-                        required maxLength={100} />
+                        className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 ${fieldErrors.apellido ? 'border-red-500 bg-red-50' : 'border-neutral-300'}`}
+                        maxLength={100} />
+                      {fieldErrors.apellido && <p className="text-xs text-red-600 mt-1">{fieldErrors.apellido}</p>}
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-neutral-700 mb-1">DNI *</label>
                       <input type="text" value={formData.dni}
                         onChange={(e) => setFormData({ ...formData, dni: e.target.value })}
-                        className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-                        required maxLength={20} />
+                        className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 ${fieldErrors.dni ? 'border-red-500 bg-red-50' : 'border-neutral-300'}`}
+                        maxLength={20} />
+                      {fieldErrors.dni && <p className="text-xs text-red-600 mt-1">{fieldErrors.dni}</p>}
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-neutral-700 mb-1">Fecha de Nacimiento *</label>
                       <input type="date" value={formData.fechaNacimiento}
                         onChange={(e) => setFormData({ ...formData, fechaNacimiento: e.target.value })}
-                        className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-                        required />
+                        className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 ${fieldErrors.fechaNacimiento ? 'border-red-500 bg-red-50' : 'border-neutral-300'}`} />
+                      {fieldErrors.fechaNacimiento && <p className="text-xs text-red-600 mt-1">{fieldErrors.fechaNacimiento}</p>}
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-neutral-700 mb-1">Sexo</label>
@@ -583,99 +696,207 @@ export default function AfiliadosPage() {
 
                 {/* Adherentes — solo al crear */}
                 {!editingAfiliado && (
-                  <div>
-                    <h4 className="text-base font-semibold text-neutral-800 mb-3 pb-2 border-b flex items-center justify-between">
-                      Adherentes
-                      <span className="text-xs font-normal text-neutral-400">(opcional)</span>
-                    </h4>
+                  <>
+                    {/* Sección Adherentes */}
+                    <div>
+                      <h4 className="text-base font-semibold text-neutral-800 mb-1 pb-2 border-b flex items-center justify-between">
+                        Adherentes
+                        <span className="text-xs font-normal text-neutral-400">(opcional)</span>
+                      </h4>
+                      <p className="text-xs text-neutral-500 mb-3">Reciben los mismos servicios que el titular.</p>
 
-                    {/* Lista de adherentes pendientes */}
-                    {pendingAdherentes.length > 0 && (
-                      <div className="mb-3 rounded-lg border border-blue-200 bg-blue-50 p-3">
-                        <ul className="space-y-1">
-                          {pendingAdherentes.map((pa) => (
-                            <li key={pa.id} className="flex items-center justify-between text-sm">
-                              <span className="text-blue-800">✓ <strong>{pa.terceroNombre}</strong> — {pa.tipoRelacion}</span>
-                              <button type="button" onClick={() => setPendingAdherentes(prev => prev.filter(x => x.id !== pa.id))}
-                                className="text-blue-400 hover:text-red-500 ml-2">
-                                <XMarkIcon className="w-4 h-4" />
-                              </button>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-
-                    {/* Add adherente inline */}
-                    <div className="space-y-3 p-4 border border-neutral-200 rounded-lg bg-neutral-50">
-                      {/* Toggle */}
-                      <div className="flex rounded-lg border border-neutral-200 overflow-hidden text-sm bg-white">
-                        <button type="button" onClick={() => setModoAdherente('existente')}
-                          className={`flex-1 py-1.5 font-medium transition-colors ${
-                            modoAdherente === 'existente' ? 'bg-blue-600 text-white' : 'text-neutral-600 hover:bg-neutral-100'
-                          }`}>Seleccionar existente</button>
-                        <button type="button" onClick={() => setModoAdherente('nuevo')}
-                          className={`flex-1 py-1.5 font-medium transition-colors ${
-                            modoAdherente === 'nuevo' ? 'bg-blue-600 text-white' : 'text-neutral-600 hover:bg-neutral-100'
-                          }`}>Crear nuevo</button>
-                      </div>
-
-                      {modoAdherente === 'existente' && (
-                        <div>
-                          <label className="block text-xs font-medium text-neutral-700 mb-1">Tercero vinculado</label>
-                          <select value={relFormData.tercerosVinculadoId}
-                            onChange={e => setRelFormData(prev => ({ ...prev, tercerosVinculadoId: e.target.value }))}
-                            className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 bg-white">
-                            <option value="">Seleccionar...</option>
-                            {terceros.map(t => <option key={t.id} value={t.id}>{t.apellido}, {t.nombre} — DNI {t.dni}</option>)}
-                          </select>
-                          {terceros.length === 0 && <p className="text-xs text-amber-600 mt-1">No hay terceros. Usá &ldquo;Crear nuevo&rdquo;.</p>}
+                      {pendingAdherentes.length > 0 && (
+                        <div className="mb-3 rounded-lg border border-blue-200 bg-blue-50 p-3">
+                          <ul className="space-y-1">
+                            {pendingAdherentes.map((pa) => (
+                              <li key={pa.id} className="flex items-center justify-between text-sm">
+                                <span className="text-blue-800">✓ <strong>{pa.apellido}, {pa.nombre}</strong> — {pa.caracterAfiliado}</span>
+                                <button type="button" onClick={() => setPendingAdherentes(prev => prev.filter(x => x.id !== pa.id))}
+                                  className="text-blue-400 hover:text-red-500 ml-2">
+                                  <XMarkIcon className="w-4 h-4" />
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
                         </div>
                       )}
 
-                      {modoAdherente === 'nuevo' && (
+                      <div className="space-y-3 p-4 border border-neutral-200 rounded-lg bg-neutral-50">
+                        <div className="flex rounded-lg border border-neutral-200 overflow-hidden text-sm bg-white">
+                          <button type="button" onClick={() => { setModoAdherente('existente'); setAdherenteError(''); }}
+                            className={`flex-1 py-1.5 font-medium transition-colors ${
+                              modoAdherente === 'existente' ? 'bg-blue-600 text-white' : 'text-neutral-600 hover:bg-neutral-100'
+                            }`}>Seleccionar existente</button>
+                          <button type="button" onClick={() => { setModoAdherente('nuevo'); setAdherenteError(''); }}
+                            className={`flex-1 py-1.5 font-medium transition-colors ${
+                              modoAdherente === 'nuevo' ? 'bg-blue-600 text-white' : 'text-neutral-600 hover:bg-neutral-100'
+                            }`}>Crear nuevo</button>
+                        </div>
+
+                        {modoAdherente === 'existente' && (
+                          <div>
+                            <label className="block text-xs font-medium text-neutral-700 mb-1">Aderente</label>
+                            <select value={selectedAderenteId}
+                              onChange={e => setSelectedAderenteId(e.target.value)}
+                              className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 bg-white">
+                              <option value="">Seleccionar...</option>
+                              {aderentes.map(a => <option key={a.id} value={a.id}>{a.apellido}, {a.nombre} — {a.caracterAfiliado}</option>)}
+                            </select>
+                            {aderentes.length === 0 && <p className="text-xs text-amber-600 mt-1">No hay aderentes registrados. Usá &ldquo;Crear nuevo&rdquo;.</p>}
+                          </div>
+                        )}
+
+                        {modoAdherente === 'nuevo' && (
+                          <div className="grid grid-cols-2 gap-2">
+                            <div><label className="block text-xs font-medium text-neutral-700 mb-1">Apellido *</label>
+                              <input type="text" value={nuevaAderenteData.apellido} onChange={e => setNuevaAderenteData(p => ({ ...p, apellido: e.target.value }))}
+                                className="w-full px-2 py-1.5 border border-neutral-300 rounded-md text-sm bg-white" placeholder="Apellido" /></div>
+                            <div><label className="block text-xs font-medium text-neutral-700 mb-1">Nombre *</label>
+                              <input type="text" value={nuevaAderenteData.nombre} onChange={e => setNuevaAderenteData(p => ({ ...p, nombre: e.target.value }))}
+                                className="w-full px-2 py-1.5 border border-neutral-300 rounded-md text-sm bg-white" placeholder="Nombre" /></div>
+                            <div><label className="block text-xs font-medium text-neutral-700 mb-1">Teléfono</label>
+                              <input type="text" value={nuevaAderenteData.telefono} onChange={e => setNuevaAderenteData(p => ({ ...p, telefono: e.target.value }))}
+                                className="w-full px-2 py-1.5 border border-neutral-300 rounded-md text-sm bg-white" placeholder="Teléfono" /></div>
+                            <div><label className="block text-xs font-medium text-neutral-700 mb-1">Email</label>
+                              <input type="email" value={nuevaAderenteData.email} onChange={e => setNuevaAderenteData(p => ({ ...p, email: e.target.value }))}
+                                className="w-full px-2 py-1.5 border border-neutral-300 rounded-md text-sm bg-white" placeholder="Email" /></div>
+                            <div><label className="block text-xs font-medium text-neutral-700 mb-1">Dirección</label>
+                              <input type="text" value={nuevaAderenteData.direccion} onChange={e => setNuevaAderenteData(p => ({ ...p, direccion: e.target.value }))}
+                                className="w-full px-2 py-1.5 border border-neutral-300 rounded-md text-sm bg-white" placeholder="Dirección" /></div>
+                            <div><label className="block text-xs font-medium text-neutral-700 mb-1">Código Postal</label>
+                              <input type="text" value={nuevaAderenteData.codigoPostal} onChange={e => setNuevaAderenteData(p => ({ ...p, codigoPostal: e.target.value }))}
+                                className="w-full px-2 py-1.5 border border-neutral-300 rounded-md text-sm bg-white" placeholder="CP" /></div>
+                          </div>
+                        )}
+
                         <div className="grid grid-cols-2 gap-2">
-                          <div><label className="block text-xs font-medium text-neutral-700 mb-1">Apellido *</label>
-                            <input type="text" value={nuevoTerceroData.apellido} onChange={e => setNuevoTerceroData(p => ({ ...p, apellido: e.target.value }))}
-                              className="w-full px-2 py-1.5 border border-neutral-300 rounded-md text-sm bg-white" placeholder="Apellido" /></div>
-                          <div><label className="block text-xs font-medium text-neutral-700 mb-1">Nombre *</label>
-                            <input type="text" value={nuevoTerceroData.nombre} onChange={e => setNuevoTerceroData(p => ({ ...p, nombre: e.target.value }))}
-                              className="w-full px-2 py-1.5 border border-neutral-300 rounded-md text-sm bg-white" placeholder="Nombre" /></div>
-                          <div><label className="block text-xs font-medium text-neutral-700 mb-1">DNI *</label>
-                            <input type="text" value={nuevoTerceroData.dni} onChange={e => setNuevoTerceroData(p => ({ ...p, dni: e.target.value }))}
-                              className="w-full px-2 py-1.5 border border-neutral-300 rounded-md text-sm bg-white" placeholder="DNI" /></div>
-                          <div><label className="block text-xs font-medium text-neutral-700 mb-1">Fecha de nac. *</label>
-                            <input type="date" value={nuevoTerceroData.fechaNacimiento} onChange={e => setNuevoTerceroData(p => ({ ...p, fechaNacimiento: e.target.value }))}
-                              className="w-full px-2 py-1.5 border border-neutral-300 rounded-md text-sm bg-white" /></div>
-                          <div><label className="block text-xs font-medium text-neutral-700 mb-1">Teléfono</label>
-                            <input type="text" value={nuevoTerceroData.telefono} onChange={e => setNuevoTerceroData(p => ({ ...p, telefono: e.target.value }))}
-                              className="w-full px-2 py-1.5 border border-neutral-300 rounded-md text-sm bg-white" placeholder="Teléfono" /></div>
-                          <div><label className="block text-xs font-medium text-neutral-700 mb-1">Email</label>
-                            <input type="email" value={nuevoTerceroData.email} onChange={e => setNuevoTerceroData(p => ({ ...p, email: e.target.value }))}
-                              className="w-full px-2 py-1.5 border border-neutral-300 rounded-md text-sm bg-white" placeholder="Email" /></div>
+                          <div><label className="block text-xs font-medium text-neutral-700 mb-1">Carácter del afiliado *</label>
+                            <select value={relacionAderenteData.caracterAfiliado} onChange={e => setRelacionAderenteData(p => ({ ...p, caracterAfiliado: e.target.value }))}
+                              className="w-full px-2 py-1.5 border border-neutral-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 bg-white">
+                              <option value="">Seleccionar...</option>
+                              {tipoRelacionOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                            </select></div>
+                          <div><label className="block text-xs font-medium text-neutral-700 mb-1">Observaciones</label>
+                            <input type="text" value={relacionAderenteData.observaciones} onChange={e => setRelacionAderenteData(p => ({ ...p, observaciones: e.target.value }))}
+                              className="w-full px-2 py-1.5 border border-neutral-300 rounded-md text-sm bg-white" placeholder="Opcional..." /></div>
+                        </div>
+
+                        {adherenteError && (
+                          <div className="bg-red-50 border border-red-200 rounded-lg p-2 text-xs text-red-700">
+                            {adherenteError}
+                          </div>
+                        )}
+                        <button type="button" onClick={handleAddPendingAdherente}
+                          className="w-full px-3 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700">
+                          + Agregar adherente
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Sección Terceros Vinculados */}
+                    <div>
+                      <h4 className="text-base font-semibold text-neutral-800 mb-1 pb-2 border-b flex items-center justify-between">
+                        Terceros Vinculados
+                        <span className="text-xs font-normal text-neutral-400">(opcional)</span>
+                      </h4>
+                      <p className="text-xs text-neutral-500 mb-3">Pueden no recibir servicios del titular.</p>
+
+                      {pendingTerceros.length > 0 && (
+                        <div className="mb-3 rounded-lg border border-violet-200 bg-violet-50 p-3">
+                          <ul className="space-y-1">
+                            {pendingTerceros.map((pt) => (
+                              <li key={pt.id} className="flex items-center justify-between text-sm">
+                                <span className="text-violet-800">✓ <strong>{pt.terceroNombre}</strong> — {pt.tipoRelacion}</span>
+                                <button type="button" onClick={() => setPendingTerceros(prev => prev.filter(x => x.id !== pt.id))}
+                                  className="text-violet-400 hover:text-red-500 ml-2">
+                                  <XMarkIcon className="w-4 h-4" />
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
                         </div>
                       )}
 
-                      <div className="grid grid-cols-2 gap-2">
-                        <div><label className="block text-xs font-medium text-neutral-700 mb-1">Tipo de relación *</label>
-                          <select value={relFormData.tipoRelacion} onChange={e => setRelFormData(p => ({ ...p, tipoRelacion: e.target.value }))}
-                            className="w-full px-2 py-1.5 border border-neutral-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 bg-white">
-                            <option value="">Seleccionar...</option>
-                            {tipoRelacionOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                          </select></div>
-                        <div><label className="block text-xs font-medium text-neutral-700 mb-1">Observaciones</label>
-                          <input type="text" value={relFormData.observaciones} onChange={e => setRelFormData(p => ({ ...p, observaciones: e.target.value }))}
-                            className="w-full px-2 py-1.5 border border-neutral-300 rounded-md text-sm bg-white" placeholder="Opcional..." /></div>
-                      </div>
+                      <div className="space-y-3 p-4 border border-neutral-200 rounded-lg bg-neutral-50">
+                        <div className="flex rounded-lg border border-neutral-200 overflow-hidden text-sm bg-white">
+                          <button type="button" onClick={() => setModoTercero('existente')}
+                            className={`flex-1 py-1.5 font-medium transition-colors ${
+                              modoTercero === 'existente' ? 'bg-violet-600 text-white' : 'text-neutral-600 hover:bg-neutral-100'
+                            }`}>Seleccionar existente</button>
+                          <button type="button" onClick={() => setModoTercero('nuevo')}
+                            className={`flex-1 py-1.5 font-medium transition-colors ${
+                              modoTercero === 'nuevo' ? 'bg-violet-600 text-white' : 'text-neutral-600 hover:bg-neutral-100'
+                            }`}>Crear nuevo</button>
+                        </div>
 
-                      <button type="button" onClick={handleAddPendingAdherente}
-                        className="w-full px-3 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700">
-                        + Agregar a la lista
-                      </button>
+                        {modoTercero === 'existente' && (
+                          <div>
+                            <label className="block text-xs font-medium text-neutral-700 mb-1">Tercero vinculado</label>
+                            <select value={relTerceroFormData.tercerosVinculadoId}
+                              onChange={e => setRelTerceroFormData(prev => ({ ...prev, tercerosVinculadoId: e.target.value }))}
+                              className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-violet-500 bg-white">
+                              <option value="">Seleccionar...</option>
+                              {terceros.map(t => <option key={t.id} value={t.id}>{t.apellido}, {t.nombre} — DNI {t.dni}</option>)}
+                            </select>
+                            {terceros.length === 0 && <p className="text-xs text-amber-600 mt-1">No hay terceros. Usá &ldquo;Crear nuevo&rdquo;.</p>}
+                          </div>
+                        )}
+
+                        {modoTercero === 'nuevo' && (
+                          <div className="grid grid-cols-2 gap-2">
+                            <div><label className="block text-xs font-medium text-neutral-700 mb-1">Apellido *</label>
+                              <input type="text" value={nuevoTerceroVinculadoData.apellido} onChange={e => setNuevoTerceroVinculadoData(p => ({ ...p, apellido: e.target.value }))}
+                                className="w-full px-2 py-1.5 border border-neutral-300 rounded-md text-sm bg-white" placeholder="Apellido" /></div>
+                            <div><label className="block text-xs font-medium text-neutral-700 mb-1">Nombre *</label>
+                              <input type="text" value={nuevoTerceroVinculadoData.nombre} onChange={e => setNuevoTerceroVinculadoData(p => ({ ...p, nombre: e.target.value }))}
+                                className="w-full px-2 py-1.5 border border-neutral-300 rounded-md text-sm bg-white" placeholder="Nombre" /></div>
+                            <div><label className="block text-xs font-medium text-neutral-700 mb-1">DNI *</label>
+                              <input type="text" value={nuevoTerceroVinculadoData.dni} onChange={e => setNuevoTerceroVinculadoData(p => ({ ...p, dni: e.target.value }))}
+                                className="w-full px-2 py-1.5 border border-neutral-300 rounded-md text-sm bg-white" placeholder="DNI" /></div>
+                            <div><label className="block text-xs font-medium text-neutral-700 mb-1">Fecha de nac. *</label>
+                              <input type="date" value={nuevoTerceroVinculadoData.fechaNacimiento} onChange={e => setNuevoTerceroVinculadoData(p => ({ ...p, fechaNacimiento: e.target.value }))}
+                                className="w-full px-2 py-1.5 border border-neutral-300 rounded-md text-sm bg-white" /></div>
+                            <div><label className="block text-xs font-medium text-neutral-700 mb-1">Teléfono</label>
+                              <input type="text" value={nuevoTerceroVinculadoData.telefono} onChange={e => setNuevoTerceroVinculadoData(p => ({ ...p, telefono: e.target.value }))}
+                                className="w-full px-2 py-1.5 border border-neutral-300 rounded-md text-sm bg-white" placeholder="Teléfono" /></div>
+                            <div><label className="block text-xs font-medium text-neutral-700 mb-1">Email</label>
+                              <input type="email" value={nuevoTerceroVinculadoData.email} onChange={e => setNuevoTerceroVinculadoData(p => ({ ...p, email: e.target.value }))}
+                                className="w-full px-2 py-1.5 border border-neutral-300 rounded-md text-sm bg-white" placeholder="Email" /></div>
+                          </div>
+                        )}
+
+                        <div className="grid grid-cols-2 gap-2">
+                          <div><label className="block text-xs font-medium text-neutral-700 mb-1">Tipo de relación *</label>
+                            <select value={relTerceroFormData.tipoRelacion} onChange={e => setRelTerceroFormData(p => ({ ...p, tipoRelacion: e.target.value }))}
+                              className="w-full px-2 py-1.5 border border-neutral-300 rounded-md text-sm focus:ring-2 focus:ring-violet-500 bg-white">
+                              <option value="">Seleccionar...</option>
+                              {tipoRelacionOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                            </select></div>
+                          <div><label className="block text-xs font-medium text-neutral-700 mb-1">Observaciones</label>
+                            <input type="text" value={relTerceroFormData.observaciones} onChange={e => setRelTerceroFormData(p => ({ ...p, observaciones: e.target.value }))}
+                              className="w-full px-2 py-1.5 border border-neutral-300 rounded-md text-sm bg-white" placeholder="Opcional..." /></div>
+                        </div>
+
+                        {terceroVinculadoError && (
+                          <div className="bg-red-50 border border-red-200 rounded-lg p-2 text-xs text-red-700">
+                            {terceroVinculadoError}
+                          </div>
+                        )}
+                        <button type="button" onClick={handleAddPendingTercero}
+                          className="w-full px-3 py-2 bg-violet-600 text-white text-sm font-medium rounded-lg hover:bg-violet-700">
+                          + Agregar tercero vinculado
+                        </button>
+                      </div>
                     </div>
-                  </div>
+                  </>
                 )}
               </div>
+
+              {formError && (
+                <div className="mx-6 mb-2 bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">
+                  <span className="font-medium">Error:</span> {formError}
+                </div>
+              )}
 
               <div className="flex gap-3 p-6 border-t bg-white">
                 <button type="button" onClick={handleCloseModal}

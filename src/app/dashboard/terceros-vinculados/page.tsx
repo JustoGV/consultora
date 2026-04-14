@@ -4,7 +4,9 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { TercerosVinculado, CreateTercerosVinculadoDto } from '@/types';
 import { tercerosVinculadoService } from '@/services/tercerosVinculadoService';
+import { personaTercerosService } from '@/services/personaTercerosService';
 import { PencilIcon, TrashIcon, PlusIcon, XMarkIcon, UsersIcon } from '@heroicons/react/24/outline';
+import { extractErrorMessage } from '@/lib/errorUtils';
 
 export default function TercerosVinculadosPage() {
   const { user } = useAuth();
@@ -14,6 +16,8 @@ export default function TercerosVinculadosPage() {
   const [editingTercero, setEditingTercero] = useState<TercerosVinculado | null>(null);
   const [saving, setSaving] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [formError, setFormError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const [formData, setFormData] = useState<CreateTercerosVinculadoDto>({
     nombre: '',
@@ -58,6 +62,8 @@ export default function TercerosVinculadosPage() {
   };
 
   const handleOpenModal = (tercero?: TercerosVinculado) => {
+    setFormError('');
+    setFieldErrors({});
     if (tercero) {
       setEditingTercero(tercero);
       setFormData({
@@ -93,15 +99,23 @@ export default function TercerosVinculadosPage() {
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setEditingTercero(null);
+    setFormError('');
+    setFieldErrors({});
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.nombre || !formData.apellido || !formData.dni || !formData.fechaNacimiento) {
-      alert('Por favor complete los campos requeridos');
+    const errors: Record<string, string> = {};
+    if (!formData.nombre) errors.nombre = 'Requerido';
+    if (!formData.apellido) errors.apellido = 'Requerido';
+    if (!formData.dni) errors.dni = 'Requerido';
+    if (!formData.fechaNacimiento) errors.fechaNacimiento = 'Requerido';
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
       return;
     }
+    setFieldErrors({});
 
     try {
       setSaving(true);
@@ -120,21 +134,37 @@ export default function TercerosVinculadosPage() {
       handleCloseModal();
     } catch (error) {
       console.error('Error al guardar:', error);
-      alert(error instanceof Error ? error.message : 'Error al guardar tercero');
+      setFormError(extractErrorMessage(error));
     } finally {
       setSaving(false);
     }
   };
 
+  const extractErrorMessage = (error: unknown): string => {
+    if (error && typeof error === 'object' && 'response' in error) {
+      const axiosError = error as { response?: { data?: { message?: string | string[] } } };
+      const msg = axiosError.response?.data?.message;
+      if (Array.isArray(msg)) return msg.join(', ');
+      if (typeof msg === 'string') return msg;
+    }
+    return extractErrorMessage(error);
+  };
+
   const handleDelete = async (id: string) => {
-    if (!confirm('¿Está seguro de eliminar este tercero vinculado?')) return;
+    if (!confirm('¿Está seguro de eliminar este tercero vinculado? También se eliminarán sus vínculos con afiliados.')) return;
 
     try {
+      // Primero eliminar todos los vínculos persona-terceros que referencian este tercero
+      const relaciones = await personaTercerosService.getAll();
+      const relacionadas = relaciones.filter((r) => r.tercerosVinculadoId === id);
+      for (const rel of relacionadas) {
+        await personaTercerosService.delete(rel.id);
+      }
       await tercerosVinculadoService.delete(id);
       await loadTerceros();
     } catch (error) {
       console.error('Error al eliminar:', error);
-      alert(error instanceof Error ? error.message : 'Error al eliminar tercero');
+      alert(extractErrorMessage(error));
     }
   };
 
@@ -259,10 +289,10 @@ export default function TercerosVinculadosPage() {
                     type="text"
                     value={formData.nombre}
                     onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
-                    className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-                    required
+                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 ${fieldErrors.nombre ? 'border-red-500 bg-red-50' : 'border-neutral-300'}`}
                     maxLength={100}
                   />
+                  {fieldErrors.nombre && <p className="text-xs text-red-600 mt-1">{fieldErrors.nombre}</p>}
                 </div>
 
                 <div>
@@ -271,10 +301,10 @@ export default function TercerosVinculadosPage() {
                     type="text"
                     value={formData.apellido}
                     onChange={(e) => setFormData({ ...formData, apellido: e.target.value })}
-                    className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-                    required
+                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 ${fieldErrors.apellido ? 'border-red-500 bg-red-50' : 'border-neutral-300'}`}
                     maxLength={100}
                   />
+                  {fieldErrors.apellido && <p className="text-xs text-red-600 mt-1">{fieldErrors.apellido}</p>}
                 </div>
 
                 <div>
@@ -283,10 +313,10 @@ export default function TercerosVinculadosPage() {
                     type="text"
                     value={formData.dni}
                     onChange={(e) => setFormData({ ...formData, dni: e.target.value })}
-                    className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-                    required
+                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 ${fieldErrors.dni ? 'border-red-500 bg-red-50' : 'border-neutral-300'}`}
                     maxLength={20}
                   />
+                  {fieldErrors.dni && <p className="text-xs text-red-600 mt-1">{fieldErrors.dni}</p>}
                 </div>
 
                 <div>
@@ -295,9 +325,9 @@ export default function TercerosVinculadosPage() {
                     type="date"
                     value={formData.fechaNacimiento}
                     onChange={(e) => setFormData({ ...formData, fechaNacimiento: e.target.value })}
-                    className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-                    required
+                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 ${fieldErrors.fechaNacimiento ? 'border-red-500 bg-red-50' : 'border-neutral-300'}`}
                   />
+                  {fieldErrors.fechaNacimiento && <p className="text-xs text-red-600 mt-1">{fieldErrors.fechaNacimiento}</p>}
                 </div>
 
                 <div>
@@ -346,6 +376,12 @@ export default function TercerosVinculadosPage() {
                   </label>
                 </div>
               </div>
+
+              {formError && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">
+                  <span className="font-medium">Error:</span> {formError}
+                </div>
+              )}
 
               <div className="flex gap-3 pt-4">
                 <button

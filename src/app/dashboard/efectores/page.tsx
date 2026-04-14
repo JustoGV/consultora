@@ -16,6 +16,7 @@ import {
 } from '@heroicons/react/24/outline';
 import Pagination from '@/components/Pagination';
 import { usePagination } from '@/hooks/usePagination';
+import { extractErrorMessage } from '@/lib/errorUtils';
 
 type FormData = CreateEfectorDto;
 
@@ -38,6 +39,8 @@ export default function EfectoresPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingEfector, setEditingEfector] = useState<Efector | null>(null);
   const [formData, setFormData] = useState<FormData>(emptyForm(''));
+  const [formError, setFormError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     loadData();
@@ -57,6 +60,8 @@ export default function EfectoresPage() {
   };
 
   const handleOpenModal = (efector?: Efector) => {
+    setFormError('');
+    setFieldErrors({});
     if (efector) {
       setEditingEfector(efector);
       setFormData({
@@ -78,14 +83,20 @@ export default function EfectoresPage() {
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setEditingEfector(null);
+    setFormError('');
+    setFieldErrors({});
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.nombre || !formData.tipo) {
-      alert('Nombre y tipo son obligatorios');
+    const errors: Record<string, string> = {};
+    if (!formData.nombre) errors.nombre = 'Requerido';
+    if (!formData.tipo) errors.tipo = 'Requerido';
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
       return;
     }
+    setFieldErrors({});
     try {
       setSaving(true);
       if (editingEfector) {
@@ -111,7 +122,7 @@ export default function EfectoresPage() {
       handleCloseModal();
     } catch (error) {
       console.error('Error al guardar efector:', error);
-      alert('Error al guardar efector');
+      setFormError(extractErrorMessage(error));
     } finally {
       setSaving(false);
     }
@@ -372,6 +383,12 @@ export default function EfectoresPage() {
                     className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                     required
                   />
+                </div>
+              )}
+
+              {formError && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">
+                  <span className="font-medium">Error:</span> {formError}
                 </div>
               )}
 

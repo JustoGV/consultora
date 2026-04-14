@@ -7,6 +7,7 @@ import { estadoCivilService } from '@/services/estadoCivilService';
 import { PencilIcon, TrashIcon, PlusIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import Pagination from '@/components/Pagination';
 import { usePagination } from '@/hooks/usePagination';
+import { extractErrorMessage } from '@/lib/errorUtils';
 
 export default function EstadoCivilPage() {
   const { user } = useAuth();
@@ -15,6 +16,8 @@ export default function EstadoCivilPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingEstadoCivil, setEditingEstadoCivil] = useState<EstadoCivil | null>(null);
   const [saving, setSaving] = useState(false);
+  const [formError, setFormError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const [formData, setFormData] = useState<CreateEstadoCivilDto>({
     nombre: '',
@@ -42,6 +45,8 @@ export default function EstadoCivilPage() {
   };
 
   const handleOpenModal = (estadoCivil?: EstadoCivil) => {
+    setFormError('');
+    setFieldErrors({});
     if (estadoCivil) {
       setEditingEstadoCivil(estadoCivil);
       setFormData({
@@ -74,19 +79,25 @@ export default function EstadoCivilPage() {
       administradoraId: user?.administradoraId || '',
       activo: true,
     });
+    setFormError('');
+    setFieldErrors({});
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.nombre || !formData.codigo) {
-      alert('Por favor complete los campos requeridos');
+    const errors: Record<string, string> = {};
+    if (!formData.nombre) errors.nombre = 'Requerido';
+    if (!formData.codigo) errors.codigo = 'Requerido';
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
       return;
     }
+    setFieldErrors({});
 
     try {
       setSaving(true);
-      
+
       if (editingEstadoCivil) {
         await estadoCivilService.update(editingEstadoCivil.id, formData);
       } else {
@@ -97,7 +108,7 @@ export default function EstadoCivilPage() {
       handleCloseModal();
     } catch (error) {
       console.error('Error al guardar:', error);
-      alert(error instanceof Error ? error.message : 'Error al guardar estado civil');
+      setFormError(extractErrorMessage(error));
     } finally {
       setSaving(false);
     }
@@ -113,7 +124,7 @@ export default function EstadoCivilPage() {
       await loadEstadosCiviles();
     } catch (error) {
       console.error('Error al eliminar:', error);
-      alert(error instanceof Error ? error.message : 'Error al eliminar estado civil');
+      alert(extractErrorMessage(error));
     }
   };
 
@@ -268,11 +279,11 @@ export default function EstadoCivilPage() {
                   type="text"
                   value={formData.codigo}
                   onChange={(e) => setFormData({ ...formData, codigo: e.target.value.toUpperCase() })}
-                  className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent ${fieldErrors.codigo ? 'border-red-500 bg-red-50' : 'border-neutral-300'}`}
                   placeholder="SOLTERO"
-                  required
                   maxLength={50}
                 />
+                {fieldErrors.codigo && <p className="text-xs text-red-600 mt-1">{fieldErrors.codigo}</p>}
               </div>
 
               <div>
@@ -283,11 +294,11 @@ export default function EstadoCivilPage() {
                   type="text"
                   value={formData.nombre}
                   onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
-                  className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent ${fieldErrors.nombre ? 'border-red-500 bg-red-50' : 'border-neutral-300'}`}
                   placeholder="Soltero/a"
-                  required
                   maxLength={100}
                 />
+                {fieldErrors.nombre && <p className="text-xs text-red-600 mt-1">{fieldErrors.nombre}</p>}
               </div>
 
               <div>
@@ -316,6 +327,12 @@ export default function EstadoCivilPage() {
                   Activo
                 </label>
               </div>
+
+              {formError && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">
+                  <span className="font-medium">Error:</span> {formError}
+                </div>
+              )}
 
               <div className="flex gap-3 pt-4">
                 <button

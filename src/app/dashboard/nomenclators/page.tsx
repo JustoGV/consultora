@@ -33,6 +33,7 @@ export default function NomenclatorsPage() {
     administradoraId: user?.administradoraId || ''
   });
   const [saving, setSaving] = useState(false);
+  const [formError, setFormError] = useState('');
 
   useEffect(() => {
     loadData();
@@ -66,6 +67,7 @@ export default function NomenclatorsPage() {
   };
 
   const handleOpenModal = (nomenclador?: Nomenclador) => {
+    setFormError('');
     if (nomenclador) {
       setEditingNomenclador(nomenclador);
       setFormData({
@@ -113,6 +115,7 @@ export default function NomenclatorsPage() {
       unidadMedida: '',
       administradoraId: user?.administradoraId || ''
     });
+    setFormError('');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -129,7 +132,7 @@ export default function NomenclatorsPage() {
       handleCloseModal();
     } catch (err) {
       console.error('Error al guardar nomenclador:', err);
-      alert('Error al guardar el nomenclador');
+      setFormError(err instanceof Error ? err.message : 'Error al guardar el nomenclador');
     } finally {
       setSaving(false);
     }
@@ -461,6 +464,12 @@ export default function NomenclatorsPage() {
                   />
                 </div>
               </div>
+
+              {formError && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">
+                  <span className="font-medium">Error:</span> {formError}
+                </div>
+              )}
 
               <div className="flex gap-3 pt-4">
                 <button
