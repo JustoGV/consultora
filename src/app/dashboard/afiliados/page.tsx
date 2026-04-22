@@ -247,6 +247,8 @@ export default function AfiliadosPage() {
             if (pt.modo === 'nuevo' && pt.nuevoDatos) {
               const nuevo = await tercerosVinculadoService.create({
                 ...pt.nuevoDatos,
+                telefono: pt.nuevoDatos.telefono || undefined,
+                email: pt.nuevoDatos.email || undefined,
                 edad: calculateAge(pt.nuevoDatos.fechaNacimiento),
                 administradoraId: user?.administradoraId || '',
                 activo: true,

@@ -36,12 +36,13 @@ export default function CertificadosDiscapacidadPage() {
   const [formError, setFormError] = useState('');
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
-  const [formData, setFormData] = useState<Omit<CreateCertificadoDiscapacidadDto, 'tipoDiscapacidadId' | 'tipoDiscapacidadIds'> & { tipoDiscapacidadId: string }>( {
+  const [formData, setFormData] = useState<Omit<CreateCertificadoDiscapacidadDto, 'tipoDiscapacidadId' | 'tipoDiscapacidadIds'> & { tipoDiscapacidadId: string }>({
     numeroCertificado: '',
     fechaEmision: '',
     fechaVencimiento: '',
     grado: '',
     observaciones: '',
+    antecedentes: '',
     afiliadoId: '',
     tipoDiscapacidadId: '',
     administradoraId: user?.administradoraId || '',
@@ -94,6 +95,7 @@ export default function CertificadosDiscapacidadPage() {
         fechaVencimiento: certificado.fechaVencimiento ? certificado.fechaVencimiento.split('T')[0] : '',
         grado: certificado.grado,
         observaciones: certificado.observaciones || '',
+        antecedentes: certificado.antecedentes || '',
         afiliadoId: certificado.afiliadoId,
         tipoDiscapacidadId: tiposIds[0] || '',
         administradoraId: certificado.administradoraId,
@@ -101,6 +103,7 @@ export default function CertificadosDiscapacidadPage() {
       });
       setSelectedOrientacionId('');
       setTipoSearchTerm('');
+    } else {
       setEditingCertificado(null);
       setSelectedTiposIds([]);
       setTipoSearchTerm('');
@@ -110,6 +113,7 @@ export default function CertificadosDiscapacidadPage() {
         fechaVencimiento: '',
         grado: '',
         observaciones: '',
+        antecedentes: '',
         afiliadoId: '',
         tipoDiscapacidadId: '',
         administradoraId: user?.administradoraId || '',
@@ -150,9 +154,9 @@ export default function CertificadosDiscapacidadPage() {
     try {
       setSaving(true);
 
+      const { tipoDiscapacidadId: _drop, ...formRest } = formData;
       const payload: CreateCertificadoDiscapacidadDto = {
-        ...formData,
-        tipoDiscapacidadId: selectedTiposIds[0],
+        ...formRest,
         tipoDiscapacidadIds: selectedTiposIds,
         administradoraId: formData.administradoraId || user?.administradoraId || ''
       };
@@ -209,7 +213,7 @@ export default function CertificadosDiscapacidadPage() {
 
   const filteredCertificados = certificados.filter((cert) => {
     const afiliadoNombre = getAfiliadoNombre(cert.afiliadoId).toLowerCase();
-    const tipoNombre = getTipoDiscapacidadNombre(cert.tipoDiscapacidadId).toLowerCase();
+    const tipoNombre = getTipoDiscapacidadNombre(cert.tipoDiscapacidadId || '', cert.tipoDiscapacidadIds).toLowerCase();
     const search = searchTerm.toLowerCase();
     return (
       cert.numeroCertificado.toLowerCase().includes(search) ||
@@ -507,6 +511,18 @@ export default function CertificadosDiscapacidadPage() {
                     value={formData.fechaVencimiento}
                     onChange={(e) => setFormData({ ...formData, fechaVencimiento: e.target.value })}
                     className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-neutral-700 mb-1">Antecedentes</label>
+                  <textarea
+                    value={formData.antecedentes || ''}
+                    onChange={(e) => setFormData({ ...formData, antecedentes: e.target.value })}
+                    rows={3}
+                    className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                    placeholder="Antecedentes relevantes (opcional)"
+                    maxLength={1000}
                   />
                 </div>
 

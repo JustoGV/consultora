@@ -596,6 +596,7 @@ export interface Afiliado {
   administradoraId: string;
   administradora?: Administradora;
   activo: boolean;
+  tercerosVinculados?: PersonaTercerosVinculado[];
   createdAt: string;
   updatedAt: string;
 }
@@ -667,11 +668,13 @@ export interface CertificadoDiscapacidad {
   fechaVencimiento?: string;
   grado: string;
   observaciones?: string;
+  antecedentes?: string;
   afiliadoId: string;
   afiliado?: Afiliado;
   tipoDiscapacidadId: string;
   tipoDiscapacidadIds?: string[];
   tipoDiscapacidad?: TipoDiscapacidad;
+  tipos?: TipoDiscapacidad[];
   diagnosticoId?: string;
   diagnostico?: Diagnostico;
   nivelAlerta?: NivelAlertaCertificado;
@@ -688,9 +691,10 @@ export interface CreateCertificadoDiscapacidadDto {
   fechaVencimiento?: string;
   grado: string;
   observaciones?: string;
+  antecedentes?: string;
   afiliadoId: string;
-  tipoDiscapacidadId: string;
-  tipoDiscapacidadIds?: string[];
+  tipoDiscapacidadId?: string;
+  tipoDiscapacidadIds: string[];
   diagnosticoId?: string;
   nivelAlerta?: NivelAlertaCertificado;
   administradoraId: string;
@@ -703,6 +707,7 @@ export interface UpdateCertificadoDiscapacidadDto {
   fechaVencimiento?: string;
   grado?: string;
   afiliadoId?: string;
+  antecedentes?: string;
   tipoDiscapacidadId?: string;
   tipoDiscapacidadIds?: string[];
   diagnosticoId?: string;

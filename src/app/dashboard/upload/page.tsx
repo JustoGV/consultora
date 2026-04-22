@@ -45,7 +45,7 @@ export default function UploadPage() {
   });
 
   // Formulario del Certificado
-  const [certificadoData, setCertificadoData] = useState<Omit<CreateCertificadoDiscapacidadDto, 'afiliadoId'>>({
+  const [certificadoData, setCertificadoData] = useState<Omit<CreateCertificadoDiscapacidadDto, 'afiliadoId' | 'tipoDiscapacidadIds'> & { tipoDiscapacidadId: string }>({
     numeroCertificado: '',
     fechaEmision: '',
     fechaVencimiento: '',
@@ -139,9 +139,11 @@ export default function UploadPage() {
       const nuevoAfiliado = await afiliadosService.create(afiliadoToCreate);
 
       // 2. Crear el certificado asociado al afiliado
+      const { tipoDiscapacidadId, ...certRest } = certificadoData;
       const certificadoToCreate: CreateCertificadoDiscapacidadDto = {
-        ...certificadoData,
+        ...certRest,
         afiliadoId: nuevoAfiliado.id,
+        tipoDiscapacidadIds: [tipoDiscapacidadId],
       };
 
       await certificadosDiscapacidadService.create(certificadoToCreate);

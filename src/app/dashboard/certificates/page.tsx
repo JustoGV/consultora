@@ -46,12 +46,18 @@ export default function CertificatesPage() {
       // Combinar datos
       const certificadosConInfo = certificadosData.map(cert => {
         const afiliado = afiliadosData.find(a => a.id === cert.afiliadoId);
-        const tipo = tiposData.find(t => t.id === cert.tipoDiscapacidadId);
+        const ids = cert.tipoDiscapacidadIds && cert.tipoDiscapacidadIds.length > 0
+          ? cert.tipoDiscapacidadIds
+          : cert.tipoDiscapacidadId ? [cert.tipoDiscapacidadId] : [];
+        const tipoDiscapacidadNombre = ids
+          .map(id => tiposData.find(t => t.id === id)?.nombre)
+          .filter(Boolean)
+          .join(', ') || 'N/A';
         return {
           ...cert,
           afiliadoNombre: afiliado ? `${afiliado.apellido}, ${afiliado.nombre}` : 'N/A',
           afiliadoDni: afiliado?.dni || 'N/A',
-          tipoDiscapacidadNombre: tipo?.nombre || 'N/A',
+          tipoDiscapacidadNombre,
         };
       });
 

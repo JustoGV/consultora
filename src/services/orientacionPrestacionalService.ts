@@ -8,13 +8,9 @@ import {
   AddCertificadoDto
 } from '@/types';
 
-interface GetOrientacionesParams {
-  administradoraId?: string;
-}
-
 export const orientacionPrestacionalService = {
-  async getAll(params?: GetOrientacionesParams): Promise<OrientacionPrestacional[]> {
-    const response = await api.get<OrientacionPrestacional[]>('/orientacion-prestacional', { params });
+  async getAll(): Promise<OrientacionPrestacional[]> {
+    const response = await api.get<OrientacionPrestacional[]>('/orientacion-prestacional');
     return response.data;
   },
 

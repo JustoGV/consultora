@@ -202,6 +202,8 @@ export default function AfiliadoDetailPage({ params }: { params: Promise<{ id: s
         }
         const nuevoTercero = await tercerosVinculadoService.create({
           ...nuevoTerceroData,
+          telefono: nuevoTerceroData.telefono || undefined,
+          email: nuevoTerceroData.email || undefined,
           edad: calcularEdad(nuevoTerceroData.fechaNacimiento),
           administradoraId: user?.administradoraId || '',
           activo: true,
@@ -329,6 +331,44 @@ export default function AfiliadoDetailPage({ params }: { params: Promise<{ id: s
           <InfoRow label="Email" value={afiliado.email} />
           <InfoRow label="Teléfono" value={afiliado.telefono} />
           <InfoRow label="Celular" value={afiliado.celular} />
+
+          {/* Contactos familiares/tutores (embebidos en la respuesta del afiliado) */}
+          {afiliado.tercerosVinculados && afiliado.tercerosVinculados.length > 0 && (
+            <div className="mt-4 pt-4 border-t border-gray-100">
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Contactos familiares / tutores</p>
+              <div className="space-y-3">
+                {afiliado.tercerosVinculados.map((rel) => {
+                  const tv = rel.tercerosVinculado;
+                  if (!tv) return null;
+                  return (
+                    <div key={rel.id} className="rounded-lg bg-blue-50 border border-blue-100 p-3">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-sm font-semibold text-gray-800">
+                          {tv.apellido}, {tv.nombre}
+                        </span>
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 font-medium">
+                          {rel.tipoRelacion}
+                        </span>
+                      </div>
+                      {tv.telefono && (
+                        <a href={`tel:${tv.telefono}`} className="flex items-center gap-1 text-sm text-blue-700 hover:underline">
+                          <PhoneIcon className="w-3.5 h-3.5" />{tv.telefono}
+                        </a>
+                      )}
+                      {tv.email && (
+                        <a href={`mailto:${tv.email}`} className="text-xs text-blue-600 hover:underline block mt-0.5">
+                          {tv.email}
+                        </a>
+                      )}
+                      {tv.direccion && (
+                        <p className="text-xs text-gray-500 mt-0.5">{tv.direccion}</p>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Domicilio */}

@@ -121,6 +121,9 @@ export default function TercerosVinculadosPage() {
       setSaving(true);
       const dataToSend = {
         ...formData,
+        telefono: formData.telefono || undefined,
+        email: formData.email || undefined,
+        direccion: formData.direccion || undefined,
         edad: calculateAge(formData.fechaNacimiento),
       };
 

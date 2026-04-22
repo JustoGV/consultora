@@ -239,7 +239,7 @@ export default function OrientacionPrestacionalPage() {
           </h1>
           <p className="text-neutral-600 mt-2">Gestión de recomendaciones y asociaciones</p>
         </div>
-        {(isSuperAdmin || isAdmin) && (
+        {isSuperAdmin && (
           <button onClick={() => handleOpenModal()} className="btn-primary flex items-center gap-2">
             <PlusIcon className="w-5 h-5" />
             Nueva Orientación
@@ -304,7 +304,7 @@ export default function OrientacionPrestacionalPage() {
                       {orientacion.certificados?.length || 0}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      {(isSuperAdmin || isAdmin) ? (
+                      {isSuperAdmin ? (
                         <>
                           <button
                             onClick={() => handleOpenModal(orientacion)}
