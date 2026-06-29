@@ -384,11 +384,52 @@ export default function AfiliadoDetailPage({ params }: { params: Promise<{ id: s
         </div>
       </div>
 
-      {/* Adherentes / Terceros Vinculados */}
+      {/* Adherentes (dependientes del titular) */}
+      <div className="bg-white rounded-xl shadow border border-gray-200 p-5">
+        <div className="flex items-center gap-2 mb-4 text-blue-700">
+          <UserGroupIcon className="w-5 h-5" />
+          <h2 className="font-semibold text-sm uppercase tracking-wide">Adherentes</h2>
+          <span className="ml-auto text-xs bg-blue-100 text-blue-700 font-semibold px-2 py-0.5 rounded-full">{afiliado.aderentes?.length ?? 0}</span>
+        </div>
+        {!afiliado.aderentes || afiliado.aderentes.length === 0 ? (
+          <p className="text-sm text-gray-400 italic">No hay adherentes registrados.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-xs font-semibold text-gray-500 uppercase border-b border-gray-100">
+                  <th className="text-left py-2 pr-4">Nombre</th>
+                  <th className="text-left py-2 pr-4">N° Afiliado</th>
+                  <th className="text-left py-2 pr-4">Carácter</th>
+                  <th className="text-left py-2 pr-4">Teléfono</th>
+                  <th className="text-left py-2">Email</th>
+                </tr>
+              </thead>
+              <tbody>
+                {afiliado.aderentes.map((ad) => (
+                  <tr key={ad.id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
+                    <td className="py-2 pr-4 font-medium text-gray-800">{ad.apellido}, {ad.nombre}</td>
+                    <td className="py-2 pr-4 text-gray-600">{ad.numeroAfiliado || '—'}</td>
+                    <td className="py-2 pr-4">
+                      <span className="inline-block px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">
+                        {ad.caracterAfiliado}
+                      </span>
+                    </td>
+                    <td className="py-2 pr-4 text-gray-600">{ad.telefono || '—'}</td>
+                    <td className="py-2 text-gray-600">{ad.email || '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* Terceros Vinculados */}
       <div className="bg-white rounded-xl shadow border border-gray-200 p-5">
         <div className="flex items-center gap-2 mb-4 text-purple-700">
           <UserGroupIcon className="w-5 h-5" />
-          <h2 className="font-semibold text-sm uppercase tracking-wide">Adherentes / Terceros Vinculados</h2>
+          <h2 className="font-semibold text-sm uppercase tracking-wide">Terceros Vinculados</h2>
           <span className="text-xs bg-purple-100 text-purple-700 font-semibold px-2 py-0.5 rounded-full">{relaciones.length}</span>
           <button
             onClick={() => handleOpenRelacionModal()}

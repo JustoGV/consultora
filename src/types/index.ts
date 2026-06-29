@@ -596,6 +596,7 @@ export interface Afiliado {
   administradoraId: string;
   administradora?: Administradora;
   activo: boolean;
+  aderentes?: Aderente[];
   tercerosVinculados?: PersonaTercerosVinculado[];
   createdAt: string;
   updatedAt: string;
@@ -754,6 +755,7 @@ export interface Aderente {
   nombre: string;
   apellido: string;
   caracterAfiliado: string;
+  numeroAfiliado: string;
   afiliadoId: string;
   afiliado?: Afiliado;
   telefono?: string;

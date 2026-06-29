@@ -65,6 +65,13 @@ export default function AfiliadosPage() {
   const [nuevoTerceroVinculadoData, setNuevoTerceroVinculadoData] = useState({ nombre: '', apellido: '', dni: '', fechaNacimiento: '', telefono: '', email: '' });
   const [terceroVinculadoError, setTerceroVinculadoError] = useState('');
 
+  // Relaciones ya existentes (al editar) + las marcadas para dar de baja
+  const [existingAdherentes, setExistingAdherentes] = useState<Aderente[]>([]);
+  const [existingTerceros, setExistingTerceros] = useState<PersonaTercerosVinculado[]>([]);
+  const [adherentesToRemove, setAdherentesToRemove] = useState<string[]>([]);
+  const [tercerosToRemove, setTercerosToRemove] = useState<string[]>([]);
+  const [loadingRelations, setLoadingRelations] = useState(false);
+
   const [formData, setFormData] = useState<CreateAfiliadoDto>({
     nombre: '',
     apellido: '',
@@ -127,10 +134,29 @@ export default function AfiliadosPage() {
     return age;
   };
 
-  const handleOpenModal = (afiliado?: Afiliado) => {
+  const resetRelationForms = () => {
+    setPendingAdherentes([]);
+    setModoAdherente('existente');
+    setSelectedAderenteId('');
+    setNuevaAderenteData({ nombre: '', apellido: '', telefono: '', direccion: '', email: '', codigoPostal: '' });
+    setRelacionAderenteData({ caracterAfiliado: '', observaciones: '' });
+    setPendingTerceros([]);
+    setRelTerceroFormData({ tipoRelacion: '', observaciones: '', tercerosVinculadoId: '' });
+    setNuevoTerceroVinculadoData({ nombre: '', apellido: '', dni: '', fechaNacimiento: '', telefono: '', email: '' });
+    setModoTercero('existente');
+    setTerceroVinculadoError('');
+    setExistingAdherentes([]);
+    setExistingTerceros([]);
+    setAdherentesToRemove([]);
+    setTercerosToRemove([]);
+  };
+
+  const handleOpenModal = async (afiliado?: Afiliado) => {
     setFormError('');
     setFieldErrors({});
     setAdherenteError('');
+    resetRelationForms();
+    setIsModalOpen(true);
     if (afiliado) {
       setEditingAfiliado(afiliado);
       setFormData({
@@ -153,6 +179,17 @@ export default function AfiliadosPage() {
         administradoraId: afiliado.administradoraId,
         activo: afiliado.activo,
       });
+      // Cargar adherentes/terceros ya vinculados para poder verlos y gestionarlos
+      setLoadingRelations(true);
+      try {
+        const detail = await afiliadosService.getById(afiliado.id);
+        setExistingAdherentes(detail.aderentes ?? []);
+        setExistingTerceros(detail.tercerosVinculados ?? []);
+      } catch (error) {
+        console.error('Error al cargar adherentes/terceros:', error);
+      } finally {
+        setLoadingRelations(false);
+      }
     } else {
       setEditingAfiliado(null);
       setFormData({
@@ -175,29 +212,69 @@ export default function AfiliadosPage() {
         administradoraId: user?.administradoraId || '',
         activo: true,
       });
-      setPendingAdherentes([]);
-      setModoAdherente('existente');
-      setSelectedAderenteId('');
-      setNuevaAderenteData({ nombre: '', apellido: '', telefono: '', direccion: '', email: '', codigoPostal: '' });
-      setRelacionAderenteData({ caracterAfiliado: '', observaciones: '' });
-      setPendingTerceros([]);
-      setRelTerceroFormData({ tipoRelacion: '', observaciones: '', tercerosVinculadoId: '' });
-      setNuevoTerceroVinculadoData({ nombre: '', apellido: '', dni: '', fechaNacimiento: '', telefono: '', email: '' });
-      setModoTercero('existente');
-      setTerceroVinculadoError('');
     }
-    setIsModalOpen(true);
   };
 
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setEditingAfiliado(null);
-    setPendingAdherentes([]);
-    setPendingTerceros([]);
+    resetRelationForms();
     setFormError('');
     setFieldErrors({});
     setAdherenteError('');
-    setTerceroVinculadoError('');
+  };
+
+  // Crea en el backend los adherentes/terceros que quedaron pendientes (alta y edición).
+  const createPendingRelations = async (afiliadoId: string) => {
+    // Adherentes via /aderentes
+    for (const pa of pendingAdherentes) {
+      const adDto: CreateAderenteDto = {
+        nombre: pa.nombre,
+        apellido: pa.apellido,
+        caracterAfiliado: pa.caracterAfiliado,
+        afiliadoId,
+        administradoraId: user?.administradoraId || '',
+        telefono: pa.telefono || undefined,
+        direccion: pa.direccion || undefined,
+        email: pa.email || undefined,
+        codigoPostal: pa.codigoPostal || undefined,
+        activo: true,
+      };
+      await aderentesService.create(adDto);
+    }
+    // Terceros Vinculados via /terceros-vinculado + /persona-terceros-vinculado
+    for (const pt of pendingTerceros) {
+      let tvId = pt.tercerosVinculadoId!;
+      if (pt.modo === 'nuevo' && pt.nuevoDatos) {
+        const nuevo = await tercerosVinculadoService.create({
+          ...pt.nuevoDatos,
+          telefono: pt.nuevoDatos.telefono || undefined,
+          email: pt.nuevoDatos.email || undefined,
+          edad: calculateAge(pt.nuevoDatos.fechaNacimiento),
+          administradoraId: user?.administradoraId || '',
+          activo: true,
+        });
+        tvId = nuevo.id;
+      }
+      await personaTercerosService.create({
+        afiliadoId,
+        tercerosVinculadoId: tvId,
+        tipoRelacion: pt.tipoRelacion,
+        observaciones: pt.observaciones || undefined,
+        administradoraId: user?.administradoraId || '',
+        activo: true,
+      });
+    }
+  };
+
+  // Da de baja (soft delete) los adherentes/terceros marcados al editar.
+  const removeMarkedRelations = async () => {
+    for (const aderenteId of adherentesToRemove) {
+      await aderentesService.delete(aderenteId);
+    }
+    for (const relacionId of tercerosToRemove) {
+      await personaTercerosService.delete(relacionId);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -222,48 +299,20 @@ export default function AfiliadosPage() {
       };
       if (editingAfiliado) {
         await afiliadosService.update(editingAfiliado.id, dataToSend);
+        try {
+          // El afiliado ya existe: aplicamos bajas y altas incrementales (sin rollback).
+          await removeMarkedRelations();
+          await createPendingRelations(editingAfiliado.id);
+        } catch (relError) {
+          await loadData();
+          setFormError(`Error al guardar adherentes/terceros vinculados: ${extractErrorMessage(relError)}`);
+          setSaving(false);
+          return;
+        }
       } else {
         const created = await afiliadosService.create(dataToSend);
         try {
-          // Adherentes via /aderentes
-          for (const pa of pendingAdherentes) {
-            const adDto: CreateAderenteDto = {
-              nombre: pa.nombre,
-              apellido: pa.apellido,
-              caracterAfiliado: pa.caracterAfiliado,
-              afiliadoId: created.id,
-              administradoraId: user?.administradoraId || '',
-              telefono: pa.telefono || undefined,
-              direccion: pa.direccion || undefined,
-              email: pa.email || undefined,
-              codigoPostal: pa.codigoPostal || undefined,
-              activo: true,
-            };
-            await aderentesService.create(adDto);
-          }
-          // Terceros Vinculados via /terceros-vinculado + /persona-terceros-vinculado
-          for (const pt of pendingTerceros) {
-            let tvId = pt.tercerosVinculadoId!;
-            if (pt.modo === 'nuevo' && pt.nuevoDatos) {
-              const nuevo = await tercerosVinculadoService.create({
-                ...pt.nuevoDatos,
-                telefono: pt.nuevoDatos.telefono || undefined,
-                email: pt.nuevoDatos.email || undefined,
-                edad: calculateAge(pt.nuevoDatos.fechaNacimiento),
-                administradoraId: user?.administradoraId || '',
-                activo: true,
-              });
-              tvId = nuevo.id;
-            }
-            await personaTercerosService.create({
-              afiliadoId: created.id,
-              tercerosVinculadoId: tvId,
-              tipoRelacion: pt.tipoRelacion,
-              observaciones: pt.observaciones || undefined,
-              administradoraId: user?.administradoraId || '',
-              activo: true,
-            });
-          }
+          await createPendingRelations(created.id);
         } catch (relError) {
           // Rollback: eliminar el afiliado recién creado para no dejarlo huérfano
           try { await afiliadosService.delete(created.id); } catch { /* ignorar error de rollback */ }
@@ -696,16 +745,35 @@ export default function AfiliadosPage() {
                   </div>
                 </div>
 
-                {/* Adherentes — solo al crear */}
-                {!editingAfiliado && (
-                  <>
-                    {/* Sección Adherentes */}
+                {/* Adherentes y Terceros Vinculados — disponibles en alta y edición */}
+                {/* Sección Adherentes */}
                     <div>
                       <h4 className="text-base font-semibold text-neutral-800 mb-1 pb-2 border-b flex items-center justify-between">
                         Adherentes
                         <span className="text-xs font-normal text-neutral-400">(opcional)</span>
                       </h4>
                       <p className="text-xs text-neutral-500 mb-3">Reciben los mismos servicios que el titular.</p>
+
+                      {editingAfiliado && loadingRelations && (
+                        <p className="text-xs text-neutral-400 mb-3">Cargando adherentes...</p>
+                      )}
+
+                      {editingAfiliado && existingAdherentes.filter(a => !adherentesToRemove.includes(a.id)).length > 0 && (
+                        <div className="mb-3 rounded-lg border border-neutral-200 bg-white p-3">
+                          <p className="text-xs font-semibold text-neutral-500 mb-2">Ya vinculados</p>
+                          <ul className="space-y-1">
+                            {existingAdherentes.filter(a => !adherentesToRemove.includes(a.id)).map((a) => (
+                              <li key={a.id} className="flex items-center justify-between text-sm">
+                                <span className="text-neutral-700"><strong>{a.apellido}, {a.nombre}</strong> — {a.caracterAfiliado}</span>
+                                <button type="button" onClick={() => setAdherentesToRemove(prev => [...prev, a.id])}
+                                  className="text-neutral-400 hover:text-red-500 ml-2" title="Quitar">
+                                  <XMarkIcon className="w-4 h-4" />
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
 
                       {pendingAdherentes.length > 0 && (
                         <div className="mb-3 rounded-lg border border-blue-200 bg-blue-50 p-3">
@@ -803,6 +871,27 @@ export default function AfiliadosPage() {
                       </h4>
                       <p className="text-xs text-neutral-500 mb-3">Pueden no recibir servicios del titular.</p>
 
+                      {editingAfiliado && loadingRelations && (
+                        <p className="text-xs text-neutral-400 mb-3">Cargando terceros vinculados...</p>
+                      )}
+
+                      {editingAfiliado && existingTerceros.filter(r => !tercerosToRemove.includes(r.id)).length > 0 && (
+                        <div className="mb-3 rounded-lg border border-neutral-200 bg-white p-3">
+                          <p className="text-xs font-semibold text-neutral-500 mb-2">Ya vinculados</p>
+                          <ul className="space-y-1">
+                            {existingTerceros.filter(r => !tercerosToRemove.includes(r.id)).map((r) => (
+                              <li key={r.id} className="flex items-center justify-between text-sm">
+                                <span className="text-neutral-700"><strong>{r.tercerosVinculado ? `${r.tercerosVinculado.apellido}, ${r.tercerosVinculado.nombre}` : '—'}</strong> — {r.tipoRelacion}</span>
+                                <button type="button" onClick={() => setTercerosToRemove(prev => [...prev, r.id])}
+                                  className="text-neutral-400 hover:text-red-500 ml-2" title="Quitar">
+                                  <XMarkIcon className="w-4 h-4" />
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
                       {pendingTerceros.length > 0 && (
                         <div className="mb-3 rounded-lg border border-violet-200 bg-violet-50 p-3">
                           <ul className="space-y-1">
@@ -890,8 +979,7 @@ export default function AfiliadosPage() {
                         </button>
                       </div>
                     </div>
-                  </>
-                )}
+
               </div>
 
               {formError && (
