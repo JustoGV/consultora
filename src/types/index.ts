@@ -167,12 +167,12 @@ export interface LoginCredentials {
   password: string;
 }
 
+// El registro público solo crea usuarios rol=USER. El alta de ADMIN/SUPERADMIN
+// (con rol + administradoraId) se hace vía POST /auth/usuarios (solo SUPERADMIN).
 export interface RegisterData {
   email: string;
   password: string;
   nombre: string;
-  rol?: UserRole;
-  administradoraId?: string | null; // Requerido si rol === 'admin'
 }
 
 export interface Categoria {
