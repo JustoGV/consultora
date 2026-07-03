@@ -1,12 +1,24 @@
 'use client';
 
 import { useMemo } from 'react';
+import dynamic from 'next/dynamic';
 import { useAuth } from '@/contexts/AuthContext';
 import { mockPatients } from '@/lib/mockData';
 import { getUserAdministradoraId } from '@/lib/userHelpers';
-import PatientMetrics from '@/components/PatientMetrics';
 import { ArrowLeftIcon } from '@heroicons/react/24/outline';
 import Link from 'next/link';
+
+// Lazy-load PatientMetrics: it pulls in recharts (heavy charting lib) and is
+// already a client component, so ssr: false is safe here and keeps recharts
+// out of the initial bundle.
+const PatientMetrics = dynamic(() => import('@/components/PatientMetrics'), {
+  ssr: false,
+  loading: () => (
+    <div className="bg-white rounded-xl shadow-md p-12 text-center text-gray-500">
+      Cargando gráficos...
+    </div>
+  ),
+});
 
 export default function MetricsPage() {
   const { user, isSuperAdmin } = useAuth();
