@@ -225,9 +225,14 @@ export default function AfiliadosPage() {
   };
 
   // Crea en el backend los adherentes/terceros que quedaron pendientes (alta y edición).
+  // Cada adherente y cada tercero son independientes entre sí, así que se disparan en paralelo
+  // con Promise.all. Dentro de un tercero "nuevo" sí hay dependencia real (crear el tercero
+  // vinculado antes de crear la relación con su id), esa parte se mantiene en serie por item.
+  // Promise.all falla rápido ante el primer error, igual que el for..of secuencial anterior:
+  // el caller (handleSubmit) ya envuelve esto en try/catch con rollback, así que la semántica
+  // de error no cambia.
   const createPendingRelations = async (afiliadoId: string) => {
-    // Adherentes via /aderentes
-    for (const pa of pendingAdherentes) {
+    const adherentePromises = pendingAdherentes.map((pa) => {
       const adDto: CreateAderenteDto = {
         nombre: pa.nombre,
         apellido: pa.apellido,
@@ -240,10 +245,11 @@ export default function AfiliadosPage() {
         codigoPostal: pa.codigoPostal || undefined,
         activo: true,
       };
-      await aderentesService.create(adDto);
-    }
+      return aderentesService.create(adDto);
+    });
+
     // Terceros Vinculados via /terceros-vinculado + /persona-terceros-vinculado
-    for (const pt of pendingTerceros) {
+    const terceroPromises = pendingTerceros.map(async (pt) => {
       let tvId = pt.tercerosVinculadoId!;
       if (pt.modo === 'nuevo' && pt.nuevoDatos) {
         const nuevo = await tercerosVinculadoService.create({
@@ -256,7 +262,7 @@ export default function AfiliadosPage() {
         });
         tvId = nuevo.id;
       }
-      await personaTercerosService.create({
+      return personaTercerosService.create({
         afiliadoId,
         tercerosVinculadoId: tvId,
         tipoRelacion: pt.tipoRelacion,
@@ -264,17 +270,18 @@ export default function AfiliadosPage() {
         administradoraId: user?.administradoraId || '',
         activo: true,
       });
-    }
+    });
+
+    await Promise.all([...adherentePromises, ...terceroPromises]);
   };
 
   // Da de baja (soft delete) los adherentes/terceros marcados al editar.
+  // Todos los deletes son independientes entre sí, se disparan en paralelo.
   const removeMarkedRelations = async () => {
-    for (const aderenteId of adherentesToRemove) {
-      await aderentesService.delete(aderenteId);
-    }
-    for (const relacionId of tercerosToRemove) {
-      await personaTercerosService.delete(relacionId);
-    }
+    await Promise.all([
+      ...adherentesToRemove.map((aderenteId) => aderentesService.delete(aderenteId)),
+      ...tercerosToRemove.map((relacionId) => personaTercerosService.delete(relacionId)),
+    ]);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {

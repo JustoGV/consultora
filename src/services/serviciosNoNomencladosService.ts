@@ -1,45 +1,26 @@
 import api from '@/lib/axios';
+import { createCrudService } from '@/lib/crudFactory';
 import {
   ServicioNoNomenclado,
   CreateServicioNoNomencladoDto,
   UpdateServicioNoNomencladoDto,
-  PaginatedResponse,
-  PaginationParams,
 } from '@/types';
 
 interface GetServiciosNoNomencladosParams {
   administradoraId?: string;
 }
 
+const base = createCrudService<ServicioNoNomenclado, CreateServicioNoNomencladoDto, UpdateServicioNoNomencladoDto, GetServiciosNoNomencladosParams>('/servicios-no-nomenclados');
+
 export const serviciosNoNomencladosService = {
-  async getAll(params?: GetServiciosNoNomencladosParams): Promise<ServicioNoNomenclado[]> {
-    const response = await api.get<ServicioNoNomenclado[]>('/servicios-no-nomenclados', { params });
-    return response.data;
-  },
-
-  /** Paginación server-side opt-in. No reemplaza a getAll(); usar cuando se migre la UI. */
-  async getPaginated(params: GetServiciosNoNomencladosParams & PaginationParams): Promise<PaginatedResponse<ServicioNoNomenclado>> {
-    const response = await api.get<PaginatedResponse<ServicioNoNomenclado>>('/servicios-no-nomenclados', { params });
-    return response.data;
-  },
-
-  async getById(id: string): Promise<ServicioNoNomenclado> {
-    const response = await api.get<ServicioNoNomenclado>(`/servicios-no-nomenclados/${id}`);
-    return response.data;
-  },
+  getAll: base.getAll,
+  getPaginated: base.getPaginated,
+  getById: base.getById,
+  create: base.create,
+  update: base.update,
 
   async getByPrestador(prestadorId: string): Promise<ServicioNoNomenclado[]> {
     const response = await api.get<ServicioNoNomenclado[]>(`/servicios-no-nomenclados/prestador/${prestadorId}`);
-    return response.data;
-  },
-
-  async create(data: CreateServicioNoNomencladoDto): Promise<ServicioNoNomenclado> {
-    const response = await api.post<ServicioNoNomenclado>('/servicios-no-nomenclados', data);
-    return response.data;
-  },
-
-  async update(id: string, data: UpdateServicioNoNomencladoDto): Promise<ServicioNoNomenclado> {
-    const response = await api.patch<ServicioNoNomenclado>(`/servicios-no-nomenclados/${id}`, data);
     return response.data;
   },
 

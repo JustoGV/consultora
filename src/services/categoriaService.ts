@@ -1,36 +1,16 @@
 import api from '@/lib/axios';
-import { Categoria, CreateCategoriaDto, UpdateCategoriaDto, PaginatedResponse, PaginationParams } from '@/types';
+import { createCrudService } from '@/lib/crudFactory';
+import { Categoria, CreateCategoriaDto, UpdateCategoriaDto } from '@/types';
+
+const base = createCrudService<Categoria, CreateCategoriaDto, UpdateCategoriaDto>('/categorias');
 
 export const categoriaService = {
-  async getAll(): Promise<Categoria[]> {
-    const response = await api.get<Categoria[]>('/categorias');
-    return response.data;
-  },
-
-  /** Paginación server-side opt-in. No reemplaza a getAll(); usar cuando se migre la UI. */
-  async getPaginated(params: PaginationParams): Promise<PaginatedResponse<Categoria>> {
-    const response = await api.get<PaginatedResponse<Categoria>>('/categorias', { params });
-    return response.data;
-  },
-
-  async getById(id: string): Promise<Categoria> {
-    const response = await api.get<Categoria>(`/categorias/${id}`);
-    return response.data;
-  },
-
-  async create(data: CreateCategoriaDto): Promise<Categoria> {
-    const response = await api.post<Categoria>('/categorias', data);
-    return response.data;
-  },
-
-  async update(id: string, data: UpdateCategoriaDto): Promise<Categoria> {
-    const response = await api.patch<Categoria>(`/categorias/${id}`, data);
-    return response.data;
-  },
-
-  async delete(id: string): Promise<void> {
-    await api.delete(`/categorias/${id}`);
-  },
+  getAll: base.getAll,
+  getPaginated: base.getPaginated,
+  getById: base.getById,
+  create: base.create,
+  update: base.update,
+  delete: base.delete,
 
   async restore(id: string): Promise<Categoria> {
     const response = await api.patch<Categoria>(`/categorias/${id}/restore`);

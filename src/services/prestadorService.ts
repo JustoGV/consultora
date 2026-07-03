@@ -1,39 +1,22 @@
 import api from '@/lib/axios';
-import { Prestador, CreatePrestadorDto, UpdatePrestadorDto, PaginatedResponse, PaginationParams } from '@/types';
+import { createCrudService } from '@/lib/crudFactory';
+import { Prestador, CreatePrestadorDto, UpdatePrestadorDto } from '@/types';
 
 interface GetPrestadoresParams {
   administradoraId?: string;
 }
 
+const base = createCrudService<Prestador, CreatePrestadorDto, UpdatePrestadorDto, GetPrestadoresParams>('/prestadores');
+
 export const prestadorService = {
-  async getAll(params?: GetPrestadoresParams): Promise<Prestador[]> {
-    const response = await api.get<Prestador[]>('/prestadores', { params });
-    return response.data;
-  },
-
-  /** Paginación server-side opt-in. No reemplaza a getAll(); usar cuando se migre la UI. */
-  async getPaginated(params: GetPrestadoresParams & PaginationParams): Promise<PaginatedResponse<Prestador>> {
-    const response = await api.get<PaginatedResponse<Prestador>>('/prestadores', { params });
-    return response.data;
-  },
-
-  async getById(id: string): Promise<Prestador> {
-    const response = await api.get<Prestador>(`/prestadores/${id}`);
-    return response.data;
-  },
+  getAll: base.getAll,
+  getPaginated: base.getPaginated,
+  getById: base.getById,
+  create: base.create,
+  update: base.update,
 
   async getByAdministradora(administradoraId: string): Promise<Prestador[]> {
     const response = await api.get<Prestador[]>(`/prestadores/administradora/${administradoraId}`);
-    return response.data;
-  },
-
-  async create(data: CreatePrestadorDto): Promise<Prestador> {
-    const response = await api.post<Prestador>('/prestadores', data);
-    return response.data;
-  },
-
-  async update(id: string, data: UpdatePrestadorDto): Promise<Prestador> {
-    const response = await api.patch<Prestador>(`/prestadores/${id}`, data);
     return response.data;
   },
 
