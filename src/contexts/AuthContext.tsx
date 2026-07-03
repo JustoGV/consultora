@@ -37,14 +37,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
       setLoading(true);
-      console.log('🔐 AuthContext: Iniciando login...', email);
+      // NOTE: do not log credentials, tokens, or user payloads (AUD-17).
       const response = await authService.login({ email, password });
-      console.log('✅ AuthContext: Login exitoso, usuario:', response.usuario);
       setUser(response.usuario); // Backend devuelve 'usuario'
-      console.log('✅ AuthContext: Estado de usuario actualizado');
       return true;
-    } catch (error) {
-      console.error('❌ AuthContext: Error en login:', error);
+    } catch {
       return false;
     } finally {
       setLoading(false);

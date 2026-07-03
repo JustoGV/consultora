@@ -5,8 +5,7 @@ import Image from 'next/image';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { AxiosError } from 'axios';
-import { keepAliveService } from '@/lib/keepAlive';
-import { 
+import {
   ArrowRightIcon
 } from '@heroicons/react/24/outline';
 
@@ -27,11 +26,6 @@ export default function LoginPage() {
         localStorage.removeItem('auth_user');
         localStorage.removeItem('token');
       }
-
-      // Iniciar keep-alive service
-      if (!keepAliveService.isActive()) {
-        keepAliveService.start();
-      }
     }
   }, []);
 
@@ -42,9 +36,8 @@ export default function LoginPage() {
     setLoadingMessage('Autenticando...');
 
     try {
-      console.log('🔐 Login: Intentando login con:', { email });
       const success = await login(email, password);
-      
+
       if (success) {
         setLoadingMessage('¡Acceso concedido!');
         router.push('/dashboard');
@@ -52,9 +45,9 @@ export default function LoginPage() {
         setError('Credenciales inválidas. Por favor, verifica tu email y contraseña.');
       }
     } catch (err) {
+      // NOTE: do not log the full error object — it may include request config/headers with the auth token (AUD-17).
       const error = err as AxiosError;
-      console.error('❌ Login error:', error);
-      
+
       if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
         setError('Tiempo de espera agotado. Por favor, intenta nuevamente.');
       } else if (error.response?.status === 401) {
