@@ -1,9 +1,15 @@
 import api from '@/lib/axios';
-import { Aderente, CreateAderenteDto, UpdateAderenteDto } from '@/types';
+import { Aderente, CreateAderenteDto, UpdateAderenteDto, PaginatedResponse, PaginationParams } from '@/types';
 
 class AderentesService {
   async getAll(): Promise<Aderente[]> {
     const response = await api.get<Aderente[]>('/aderentes');
+    return response.data;
+  }
+
+  /** Paginación server-side opt-in. No reemplaza a getAll(); usar cuando se migre la UI. */
+  async getPaginated(params: PaginationParams): Promise<PaginatedResponse<Aderente>> {
+    const response = await api.get<PaginatedResponse<Aderente>>('/aderentes', { params });
     return response.data;
   }
 

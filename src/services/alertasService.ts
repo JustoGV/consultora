@@ -1,5 +1,5 @@
 import api from '@/lib/axios';
-import { Alerta, DashboardAlertas, CodigoAlerta, AlertasQueryParams } from '@/types';
+import { Alerta, DashboardAlertas, CodigoAlerta, AlertasQueryParams, PaginatedResponse, PaginationParams } from '@/types';
 
 export const alertasService = {
   async getDashboard(): Promise<DashboardAlertas> {
@@ -14,6 +14,12 @@ export const alertasService = {
 
   async getAlertas(params?: AlertasQueryParams): Promise<Alerta[]> {
     const response = await api.get<Alerta[]>('/alertas', { params });
+    return response.data;
+  },
+
+  /** Paginación server-side opt-in. No reemplaza a getAlertas(); usar cuando se migre la UI. */
+  async getAlertasPaginated(params: AlertasQueryParams & PaginationParams): Promise<PaginatedResponse<Alerta>> {
+    const response = await api.get<PaginatedResponse<Alerta>>('/alertas', { params });
     return response.data;
   },
 

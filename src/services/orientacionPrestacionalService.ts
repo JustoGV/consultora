@@ -5,12 +5,20 @@ import {
   UpdateOrientacionPrestacionalDto,
   AddServicioDto,
   AddServicioNoNomencladoDto,
-  AddCertificadoDto
+  AddCertificadoDto,
+  PaginatedResponse,
+  PaginationParams
 } from '@/types';
 
 export const orientacionPrestacionalService = {
   async getAll(): Promise<OrientacionPrestacional[]> {
     const response = await api.get<OrientacionPrestacional[]>('/orientacion-prestacional');
+    return response.data;
+  },
+
+  /** Paginación server-side opt-in. No reemplaza a getAll(); usar cuando se migre la UI. */
+  async getPaginated(params: PaginationParams): Promise<PaginatedResponse<OrientacionPrestacional>> {
+    const response = await api.get<PaginatedResponse<OrientacionPrestacional>>('/orientacion-prestacional', { params });
     return response.data;
   },
 

@@ -1,9 +1,15 @@
 import api from '@/lib/axios';
-import { Categoria, CreateCategoriaDto, UpdateCategoriaDto } from '@/types';
+import { Categoria, CreateCategoriaDto, UpdateCategoriaDto, PaginatedResponse, PaginationParams } from '@/types';
 
 export const categoriaService = {
   async getAll(): Promise<Categoria[]> {
     const response = await api.get<Categoria[]>('/categorias');
+    return response.data;
+  },
+
+  /** Paginación server-side opt-in. No reemplaza a getAll(); usar cuando se migre la UI. */
+  async getPaginated(params: PaginationParams): Promise<PaginatedResponse<Categoria>> {
+    const response = await api.get<PaginatedResponse<Categoria>>('/categorias', { params });
     return response.data;
   },
 

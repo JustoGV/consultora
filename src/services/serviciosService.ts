@@ -1,5 +1,5 @@
 import api from '@/lib/axios';
-import { Servicio, CreateServicioDto, UpdateServicioDto } from '@/types';
+import { Servicio, CreateServicioDto, UpdateServicioDto, PaginatedResponse, PaginationParams } from '@/types';
 
 interface GetServiciosParams {
   administradoraId?: string;
@@ -8,6 +8,12 @@ interface GetServiciosParams {
 export const serviciosService = {
   async getAll(params?: GetServiciosParams): Promise<Servicio[]> {
     const response = await api.get<Servicio[]>('/servicios', { params });
+    return response.data;
+  },
+
+  /** Paginación server-side opt-in. No reemplaza a getAll(); usar cuando se migre la UI. */
+  async getPaginated(params: GetServiciosParams & PaginationParams): Promise<PaginatedResponse<Servicio>> {
+    const response = await api.get<PaginatedResponse<Servicio>>('/servicios', { params });
     return response.data;
   },
 

@@ -1,9 +1,15 @@
 import api from '@/lib/axios';
-import { Administradora, CreateAdministradoraDto, UpdateAdministradoraDto } from '@/types';
+import { Administradora, CreateAdministradoraDto, UpdateAdministradoraDto, PaginatedResponse, PaginationParams } from '@/types';
 
 export const administradoraService = {
   async getAll(): Promise<Administradora[]> {
     const response = await api.get<Administradora[]>('/administradoras');
+    return response.data;
+  },
+
+  /** Paginación server-side opt-in. No reemplaza a getAll(); usar cuando se migre la UI. */
+  async getPaginated(params: PaginationParams): Promise<PaginatedResponse<Administradora>> {
+    const response = await api.get<PaginatedResponse<Administradora>>('/administradoras', { params });
     return response.data;
   },
 

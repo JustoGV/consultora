@@ -5,6 +5,27 @@
 export type UserRole = 'superadmin' | 'admin' | 'user';
 
 // ============================================
+// PAGINACIÓN SERVER-SIDE (OPT-IN)
+// ============================================
+// El backend expone paginación opt-in en los listados: sin `?page=&limit=`
+// devuelve el array completo (comportamiento actual, sin cambios). Pasando
+// esos params devuelve el envelope `PaginatedResponse<T>` de abajo.
+// Ver AUD-24 / docs de handoff para el listado de endpoints habilitados.
+
+export interface PaginationParams {
+  page?: number;
+  limit?: number;
+}
+
+export interface PaginatedResponse<T> {
+  data: T[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+// ============================================
 // MÓDULO DE ALERTAS
 // ============================================
 

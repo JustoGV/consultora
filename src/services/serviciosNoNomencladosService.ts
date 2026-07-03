@@ -3,6 +3,8 @@ import {
   ServicioNoNomenclado,
   CreateServicioNoNomencladoDto,
   UpdateServicioNoNomencladoDto,
+  PaginatedResponse,
+  PaginationParams,
 } from '@/types';
 
 interface GetServiciosNoNomencladosParams {
@@ -12,6 +14,12 @@ interface GetServiciosNoNomencladosParams {
 export const serviciosNoNomencladosService = {
   async getAll(params?: GetServiciosNoNomencladosParams): Promise<ServicioNoNomenclado[]> {
     const response = await api.get<ServicioNoNomenclado[]>('/servicios-no-nomenclados', { params });
+    return response.data;
+  },
+
+  /** Paginación server-side opt-in. No reemplaza a getAll(); usar cuando se migre la UI. */
+  async getPaginated(params: GetServiciosNoNomencladosParams & PaginationParams): Promise<PaginatedResponse<ServicioNoNomenclado>> {
+    const response = await api.get<PaginatedResponse<ServicioNoNomenclado>>('/servicios-no-nomenclados', { params });
     return response.data;
   },
 

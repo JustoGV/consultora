@@ -1,9 +1,15 @@
 import api from '@/lib/axios';
-import { EstadoCivil, CreateEstadoCivilDto, UpdateEstadoCivilDto } from '@/types';
+import { EstadoCivil, CreateEstadoCivilDto, UpdateEstadoCivilDto, PaginatedResponse, PaginationParams } from '@/types';
 
 class EstadoCivilService {
   async getAll(): Promise<EstadoCivil[]> {
     const response = await api.get<EstadoCivil[]>('/estado-civil');
+    return response.data;
+  }
+
+  /** Paginación server-side opt-in. No reemplaza a getAll(); usar cuando se migre la UI. */
+  async getPaginated(params: PaginationParams): Promise<PaginatedResponse<EstadoCivil>> {
+    const response = await api.get<PaginatedResponse<EstadoCivil>>('/estado-civil', { params });
     return response.data;
   }
 

@@ -1,9 +1,15 @@
 import api from '@/lib/axios';
-import { TercerosVinculado, CreateTercerosVinculadoDto, UpdateTercerosVinculadoDto } from '@/types';
+import { TercerosVinculado, CreateTercerosVinculadoDto, UpdateTercerosVinculadoDto, PaginatedResponse, PaginationParams } from '@/types';
 
 class TercerosVinculadoService {
   async getAll(): Promise<TercerosVinculado[]> {
     const response = await api.get<TercerosVinculado[]>('/terceros-vinculado');
+    return response.data;
+  }
+
+  /** Paginación server-side opt-in. No reemplaza a getAll(); usar cuando se migre la UI. */
+  async getPaginated(params: PaginationParams): Promise<PaginatedResponse<TercerosVinculado>> {
+    const response = await api.get<PaginatedResponse<TercerosVinculado>>('/terceros-vinculado', { params });
     return response.data;
   }
 

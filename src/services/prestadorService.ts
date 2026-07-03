@@ -1,5 +1,5 @@
 import api from '@/lib/axios';
-import { Prestador, CreatePrestadorDto, UpdatePrestadorDto } from '@/types';
+import { Prestador, CreatePrestadorDto, UpdatePrestadorDto, PaginatedResponse, PaginationParams } from '@/types';
 
 interface GetPrestadoresParams {
   administradoraId?: string;
@@ -8,6 +8,12 @@ interface GetPrestadoresParams {
 export const prestadorService = {
   async getAll(params?: GetPrestadoresParams): Promise<Prestador[]> {
     const response = await api.get<Prestador[]>('/prestadores', { params });
+    return response.data;
+  },
+
+  /** Paginación server-side opt-in. No reemplaza a getAll(); usar cuando se migre la UI. */
+  async getPaginated(params: GetPrestadoresParams & PaginationParams): Promise<PaginatedResponse<Prestador>> {
+    const response = await api.get<PaginatedResponse<Prestador>>('/prestadores', { params });
     return response.data;
   },
 

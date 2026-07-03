@@ -1,9 +1,15 @@
 import api from '@/lib/axios';
-import { TipoDiscapacidad, CreateTipoDiscapacidadDto, UpdateTipoDiscapacidadDto } from '@/types';
+import { TipoDiscapacidad, CreateTipoDiscapacidadDto, UpdateTipoDiscapacidadDto, PaginatedResponse, PaginationParams } from '@/types';
 
 class TipoDiscapacidadService {
   async getAll(): Promise<TipoDiscapacidad[]> {
     const response = await api.get<TipoDiscapacidad[]>('/tipo-discapacidad');
+    return response.data;
+  }
+
+  /** Paginación server-side opt-in. No reemplaza a getAll(); usar cuando se migre la UI. */
+  async getPaginated(params: PaginationParams): Promise<PaginatedResponse<TipoDiscapacidad>> {
+    const response = await api.get<PaginatedResponse<TipoDiscapacidad>>('/tipo-discapacidad', { params });
     return response.data;
   }
 
