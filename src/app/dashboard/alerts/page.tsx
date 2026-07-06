@@ -1,543 +1,483 @@
-"use client";
+'use client';
 
-import { useEffect, useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import Link from 'next/link';
+import {
+  CheckCircle2,
+  Eye,
+  Loader2,
+  RefreshCw,
+  XCircle,
+} from 'lucide-react';
+
 import { alertasService } from '@/services/alertasService';
+import { extractErrorMessage } from '@/lib/errorUtils';
+import { timeAgo } from '@/lib/timeAgo';
+import { priorityToTone, TONE_VARS, type SeverityTone } from '@/lib/severity';
+import { cn } from '@/lib/utils';
+import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
-  Alerta,
-  CodigoAlerta,
-  DashboardAlertas,
-  EstadoAlerta,
-  PrioridadAlerta,
-  PosibleSolucion
-} from '@/types';
-import {
-  BellIcon,
-  CheckCircleIcon,
-  ChevronDownIcon,
-  ChevronUpIcon,
-  ClockIcon,
-  ExclamationTriangleIcon,
-  LightBulbIcon,
-  XCircleIcon
-} from '@heroicons/react/24/outline';
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import Pagination from '@/components/Pagination';
 import SearchableSelect from '@/components/SearchableSelect';
+import type { Alerta, DashboardAlertas, EstadoAlerta, PrioridadAlerta } from '@/types';
 
-const estadoOptions: { value: EstadoAlerta | 'ALL'; label: string }[] = [
-  { value: 'ALL', label: 'Todos' },
+const DEBOUNCE_MS = 300;
+
+/** Filtro de semáforo (chip). "TODAS" no filtra por prioridad. */
+type SemaforoFiltro = 'TODAS' | SeverityTone;
+
+const SEMAFORO_CHIPS: { value: SemaforoFiltro; label: string }[] = [
+  { value: 'TODAS', label: 'Todas' },
+  { value: 'critica', label: 'Rojas' },
+  { value: 'media', label: 'Ámbar' },
+  { value: 'baja', label: 'Verdes' },
+];
+
+const estadoOptions: { value: EstadoAlerta | ''; label: string }[] = [
+  { value: '', label: 'Todos los estados' },
   { value: 'PENDIENTE', label: 'Pendiente' },
   { value: 'VISTA', label: 'Vista' },
   { value: 'RESUELTA', label: 'Resuelta' },
-  { value: 'DESCARTADA', label: 'Descartada' }
+  { value: 'DESCARTADA', label: 'Descartada' },
 ];
 
-const prioridadOptions: { value: PrioridadAlerta | 'ALL'; label: string }[] = [
-  { value: 'ALL', label: 'Todas' },
-  { value: 'CRITICA', label: 'Crítica' },
-  { value: 'ALTA', label: 'Alta' },
-  { value: 'MEDIA', label: 'Media' },
-  { value: 'BAJA', label: 'Baja' },
-  { value: 'INFO', label: 'Info' }
-];
-
-const prioridadColorMap: Record<PrioridadAlerta, string> = {
-  CRITICA: 'bg-red-100 text-red-700 border-red-200',
-  ALTA: 'bg-amber-100 text-amber-700 border-amber-200',
-  MEDIA: 'bg-yellow-100 text-yellow-700 border-yellow-200',
-  BAJA: 'bg-sky-100 text-sky-700 border-sky-200',
-  INFO: 'bg-blue-100 text-blue-700 border-blue-200'
+const estadoBadge: Record<EstadoAlerta, string> = {
+  PENDIENTE: 'text-[var(--fg-muted)] border-[var(--border-strong)]',
+  VISTA: 'text-[var(--primary-700)] border-[var(--primary-200)] bg-[var(--primary-50)]',
+  RESUELTA: 'text-[var(--sev-baja-fg)] border-transparent bg-[var(--sev-baja-bg)]',
+  DESCARTADA: 'text-[var(--fg-subtle)] border-[var(--border)] bg-[var(--surface-sunken)]',
 };
 
-const estadoColorMap: Record<EstadoAlerta, string> = {
-  PENDIENTE: 'bg-neutral-100 text-neutral-700 border-neutral-200',
-  VISTA: 'bg-indigo-100 text-indigo-700 border-indigo-200',
-  RESUELTA: 'bg-emerald-100 text-emerald-700 border-emerald-200',
-  DESCARTADA: 'bg-gray-100 text-gray-700 border-gray-200'
-};
-
-const formatDate = (value?: string) => {
-  if (!value) return '-';
-  const date = new Date(value);
-  return date.toLocaleDateString('es-AR', {
+const formatFecha = (value?: string | null) => {
+  if (!value) return '—';
+  return new Date(value).toLocaleDateString('es-AR', {
     year: 'numeric',
     month: 'short',
-    day: 'numeric'
+    day: 'numeric',
   });
 };
 
-function getSolucionesForAlerta(alerta: Alerta): string[] {
-  // Use real posiblesSoluciones from backend if available
-  if (alerta.codigoAlerta?.posiblesSoluciones?.length) {
-    return alerta.codigoAlerta.posiblesSoluciones.map((s) => s.texto);
-  }
-  // Fallback for alertas without posiblesSoluciones populated
-  return ['Revisar la información del afiliado y confirmar que esté actualizada.',
-          'Contactar al afiliado para informar la situación y coordinar una solución.'];
+/** Mapea el chip de semáforo a la prioridad exacta que soporta el backend (RN-11). */
+function tonesForFilter(f: SemaforoFiltro): PrioridadAlerta[] | null {
+  if (f === 'critica') return ['CRITICA', 'ALTA'];
+  if (f === 'media') return ['MEDIA'];
+  if (f === 'baja') return ['BAJA', 'INFO'];
+  return null;
 }
 
 export default function AlertsPage() {
   const router = useRouter();
-  const [allAlertas, setAllAlertas] = useState<Alerta[]>([]);
-  const [codigos, setCodigos] = useState<CodigoAlerta[]>([]);
-  const [dashboard, setDashboard] = useState<DashboardAlertas | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [loadingAction, setLoadingAction] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [estado, setEstado] = useState<EstadoAlerta | 'ALL'>('ALL');
-  const [prioridad, setPrioridad] = useState<PrioridadAlerta | 'ALL'>('ALL');
-  const [codigoNumerico, setCodigoNumerico] = useState<'ALL' | string>('ALL');
-  const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [notasModal, setNotasModal] = useState<{ id: string; tipo: 'resolver' | 'descartar' } | null>(null);
-  const [notasResolucion, setNotasResolucion] = useState('');
+  const searchParams = useSearchParams();
 
-  const loadData = async () => {
+  const [dashboard, setDashboard] = useState<DashboardAlertas | null>(null);
+  const [alertas, setAlertas] = useState<Alerta[]>([]);
+  const [totalItems, setTotalItems] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const [search, setSearch] = useState('');
+  const [semaforo, setSemaforo] = useState<SemaforoFiltro>('TODAS');
+  const [estado, setEstado] = useState<EstadoAlerta | ''>('');
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(20);
+
+  const [notasModal, setNotasModal] = useState<{ id: string; tipo: 'resolver' | 'descartar' } | null>(null);
+  const [notas, setNotas] = useState('');
+  const [busyId, setBusyId] = useState<string | null>(null);
+
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Query param inicial desde el hero de /dashboard (UX-5): ?semaforo=critica|media|baja
+  useEffect(() => {
+    const q = searchParams.get('semaforo');
+    if (q === 'critica' || q === 'media' || q === 'baja') {
+      setSemaforo(q);
+    }
+  }, [searchParams]);
+
+  const loadDashboard = useCallback(async () => {
     try {
-      setLoading(true);
-      const [dashboardData, alertasData, codigosData] = await Promise.all([
-        alertasService.getDashboard(),
-        alertasService.getAlertas(),
-        alertasService.getCodigos()
-      ]);
-      setDashboard(dashboardData);
-      setAllAlertas(alertasData);
-      setCodigos(codigosData);
-    } catch (error) {
-      console.error('Error al cargar alertas:', error);
+      setDashboard(await alertasService.getDashboard());
+    } catch {
+      // el header de contadores no debe romper la página si falla
+    }
+  }, []);
+
+  // El backend NO soporta filtro por prioridad múltiple (chip rojo = CRITICA+ALTA) ni
+  // búsqueda de texto en /alertas — se resuelven client-side sobre la página cargada
+  // (desvío documentado en el reporte final). Sí soporta paginación server-side
+  // (page/limit) y filtro por `estado` — esos van directo al query.
+  const loadAlertas = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await alertasService.getAlertasPaginated({
+        estado: estado || undefined,
+        page,
+        limit,
+      });
+      setAlertas(result.data);
+      setTotalItems(result.total);
+      setTotalPages(result.totalPages);
+    } catch (err) {
+      setError(extractErrorMessage(err, 'No se pudieron cargar las alertas'));
     } finally {
       setLoading(false);
     }
-  };
+  }, [estado, page, limit]);
 
   useEffect(() => {
-    loadData();
-  }, []);
+    loadDashboard();
+  }, [loadDashboard]);
 
-  const filteredAlertas = useMemo(() => {
-    return allAlertas.filter((alerta) => {
-      if (estado !== 'ALL' && alerta.estado !== estado) return false;
-      if (prioridad !== 'ALL' && alerta.prioridad !== prioridad) return false;
-      if (codigoNumerico !== 'ALL' && String(alerta.codigoAlerta?.codigo) !== codigoNumerico) return false;
-      if (searchTerm) {
-        const term = searchTerm.toLowerCase();
-        const fullName = `${alerta.persona?.nombre ?? ''} ${alerta.persona?.apellido ?? ''}`.toLowerCase();
-        const matches =
-          alerta.titulo.toLowerCase().includes(term) ||
-          alerta.mensaje.toLowerCase().includes(term) ||
-          fullName.includes(term) ||
-          (alerta.persona?.numeroDocumento ?? '').toLowerCase().includes(term) ||
-          (alerta.codigoAlerta?.descripcion ?? '').toLowerCase().includes(term);
-        if (!matches) return false;
+  useEffect(() => {
+    loadAlertas();
+  }, [loadAlertas]);
+
+  const handleSearchChange = (value: string) => {
+    setSearch(value);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => setPage(1), DEBOUNCE_MS);
+  };
+
+  const refetchAll = useCallback(() => {
+    loadDashboard();
+    loadAlertas();
+  }, [loadDashboard, loadAlertas]);
+
+  // Filtro de semáforo + búsqueda de texto: client-side sobre la página actual
+  // (el backend pagina por estado, no por prioridad agrupada ni texto libre).
+  const visibleAlertas = useMemo(() => {
+    const tones = tonesForFilter(semaforo);
+    const term = search.trim().toLowerCase();
+    return alertas.filter((a) => {
+      if (tones && !tones.includes(a.prioridad)) return false;
+      if (term) {
+        const persona = a.persona ? `${a.persona.nombre} ${a.persona.apellido}` : '';
+        const haystack = `${a.titulo} ${a.mensaje} ${persona} ${a.persona?.numeroDocumento ?? ''}`.toLowerCase();
+        if (!haystack.includes(term)) return false;
       }
       return true;
     });
-  }, [allAlertas, searchTerm, estado, prioridad, codigoNumerico]);
+  }, [alertas, semaforo, search]);
 
-  const handleVista = async (id: string) => {
+  const chipCount = (f: SemaforoFiltro): number | null => {
+    if (!dashboard) return null;
+    if (f === 'TODAS') return dashboard.pendientes;
+    if (f === 'critica') return dashboard.porPrioridad.critica + dashboard.porPrioridad.alta;
+    if (f === 'media') return dashboard.porPrioridad.media;
+    return dashboard.porPrioridad.baja + dashboard.porPrioridad.info;
+  };
+
+  const runAction = async (id: string, fn: () => Promise<unknown>) => {
+    setBusyId(id);
     try {
-      setLoadingAction(true);
-      await alertasService.marcarVista(id);
-      await loadData();
-    } catch (error) {
-      console.error('Error al marcar vista:', error);
+      await fn();
+      refetchAll();
+    } catch (err) {
+      setError(extractErrorMessage(err, 'No se pudo completar la acción'));
     } finally {
-      setLoadingAction(false);
+      setBusyId(null);
     }
   };
 
-  const handleResolver = async (id: string, notas?: string) => {
-    try {
-      setLoadingAction(true);
-      await alertasService.resolver(id, notas);
-      await loadData();
+  const handleVista = (id: string) => runAction(id, () => alertasService.marcarVista(id));
+
+  const handleConfirmModal = () => {
+    if (!notasModal) return;
+    const { id, tipo } = notasModal;
+    runAction(id, async () => {
+      if (tipo === 'resolver') await alertasService.resolver(id, notas.trim() || undefined);
+      else await alertasService.descartar(id, notas.trim() || undefined);
       setNotasModal(null);
-      setNotasResolucion('');
-    } catch (error) {
-      console.error('Error al resolver:', error);
-    } finally {
-      setLoadingAction(false);
-    }
+      setNotas('');
+    });
   };
 
-  const handleDescartar = async (id: string, notas?: string) => {
-    try {
-      setLoadingAction(true);
-      await alertasService.descartar(id, notas);
-      await loadData();
-      setNotasModal(null);
-      setNotasResolucion('');
-    } catch (error) {
-      console.error('Error al descartar:', error);
-    } finally {
-      setLoadingAction(false);
-    }
-  };
-
-  const navegar = (accion: PosibleSolucion['accion'], _entidadOrigenId: string) => {
-    switch (accion) {
-      case 'ver_certificado':
-      case 'renovar_certificado':
-      case 'cargar_certificado':
-        router.push('/dashboard/certificados-discapacidad');
-        break;
-      case 'ver_orientacion':
-      case 'listar_orientaciones':
-        router.push('/dashboard/orientacion-prestacional');
-        break;
-      default:
-        break;
-    }
-  };
-
-  const codigoOptions = [
-    { value: 'ALL', label: 'Todos' },
-    ...codigos.map((c) => ({ value: String(c.codigo), label: `${c.codigo} - ${c.descripcion}` }))
+  const columns: DataTableColumn<Alerta>[] = [
+    {
+      id: 'severidad',
+      header: 'Severidad',
+      cell: (a) => {
+        const tone = priorityToTone(a.prioridad);
+        return <Badge variant={tone}>{a.prioridad}</Badge>;
+      },
+    },
+    {
+      id: 'titulo',
+      header: 'Alerta',
+      cell: (a) => (
+        <div className="max-w-md">
+          <p className="font-medium text-[var(--fg)]">{a.titulo}</p>
+          <p className="mt-0.5 line-clamp-1 text-xs text-[var(--fg-muted)]">{a.mensaje}</p>
+        </div>
+      ),
+    },
+    {
+      id: 'paciente',
+      header: 'Paciente',
+      cell: (a) =>
+        a.personaId ? (
+          <Link
+            href={`/dashboard/pacientes/${a.personaId}`}
+            onClick={(e) => e.stopPropagation()}
+            className="font-medium text-[var(--primary-700)] hover:underline"
+          >
+            {a.persona ? `${a.persona.apellido}, ${a.persona.nombre}` : 'Ver ficha'}
+          </Link>
+        ) : (
+          <span className="text-[var(--fg-subtle)]">—</span>
+        ),
+    },
+    {
+      id: 'estado',
+      header: 'Estado',
+      cell: (a) => (
+        <span
+          className={cn(
+            'inline-flex items-center rounded-sm border px-2 py-0.5 text-xs font-medium',
+            estadoBadge[a.estado]
+          )}
+        >
+          {a.estado}
+        </span>
+      ),
+    },
+    {
+      id: 'hace',
+      header: 'Hace cuánto',
+      cell: (a) => timeAgo(a.createdAt),
+      numeric: true,
+      align: 'right',
+    },
+    {
+      id: 'fecha',
+      header: 'Fecha objetivo',
+      cell: (a) => formatFecha(a.fechaObjetivo ?? a.createdAt),
+      numeric: true,
+      align: 'right',
+    },
+    {
+      id: 'acciones',
+      header: 'Acciones',
+      align: 'right',
+      cell: (a) => {
+        const isBusy = busyId === a.id;
+        return (
+          <div className="flex justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
+            {a.estado === 'PENDIENTE' && (
+              <button
+                type="button"
+                onClick={() => handleVista(a.id)}
+                disabled={isBusy}
+                title="Marcar vista"
+                className="inline-flex size-7 items-center justify-center rounded-sm text-[var(--fg-muted)] transition-colors hover:bg-[var(--surface-sunken)] hover:text-[var(--fg)] disabled:opacity-50"
+              >
+                {isBusy ? <Loader2 className="size-4 animate-spin" /> : <Eye className="size-4" />}
+              </button>
+            )}
+            {a.estado !== 'RESUELTA' && (
+              <button
+                type="button"
+                onClick={() => {
+                  setNotas('');
+                  setNotasModal({ id: a.id, tipo: 'resolver' });
+                }}
+                disabled={isBusy}
+                title="Resolver"
+                className="inline-flex size-7 items-center justify-center rounded-sm text-[var(--primary-700)] transition-colors hover:bg-[var(--primary-50)] disabled:opacity-50"
+              >
+                <CheckCircle2 className="size-4" />
+              </button>
+            )}
+            {a.estado !== 'DESCARTADA' && (
+              <button
+                type="button"
+                onClick={() => {
+                  setNotas('');
+                  setNotasModal({ id: a.id, tipo: 'descartar' });
+                }}
+                disabled={isBusy}
+                title="Descartar"
+                className="inline-flex size-7 items-center justify-center rounded-sm text-[var(--fg-subtle)] transition-colors hover:bg-[var(--surface-sunken)] hover:text-[var(--sev-critica-fg)] disabled:opacity-50"
+              >
+                <XCircle className="size-4" />
+              </button>
+            )}
+          </div>
+        );
+      },
+    },
   ];
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-neutral-900">Alertas</h1>
-          <p className="text-neutral-600 mt-2">
+          <h1 className="text-3xl font-semibold text-[var(--fg)]">Alertas</h1>
+          <p className="mt-1 text-sm text-[var(--fg-muted)]">
             Gestión de alertas generadas por reglas del sistema.
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <button
-            onClick={loadData}
-            disabled={loading}
-            className="btn-primary flex items-center gap-2"
-          >
-            <ClockIcon className="h-5 w-5" />
-            Actualizar
-          </button>
-        </div>
+        <Button variant="outline" onClick={refetchAll} disabled={loading}>
+          <RefreshCw className={cn('size-4', loading && 'animate-spin')} />
+          Actualizar
+        </Button>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-        <div className="premium-card p-4">
-          <p className="text-sm text-neutral-500">Total</p>
-          <p className="text-2xl font-semibold text-neutral-900">{dashboard?.total ?? '-'}</p>
-        </div>
-        <div className="premium-card p-4">
-          <p className="text-sm text-neutral-500">Pendientes</p>
-          <p className="text-2xl font-semibold text-neutral-900">{dashboard?.pendientes ?? '-'}</p>
-        </div>
-        <div className="premium-card p-4">
-          <p className="text-sm text-neutral-500">Críticas</p>
-          <p className="text-2xl font-semibold text-neutral-900">{dashboard?.porPrioridad?.critica ?? '-'}</p>
-        </div>
-        <div className="premium-card p-4">
-          <p className="text-sm text-neutral-500">Resueltas</p>
-          <p className="text-2xl font-semibold text-neutral-900">{dashboard?.resueltas ?? '-'}</p>
-        </div>
-      </div>
-
-      <div className="premium-card p-4 space-y-4">
-        <div className="grid gap-4 md:grid-cols-4">
-          <div>
-            <label className="text-sm font-medium text-neutral-700">Buscar</label>
-            <input
-              value={searchTerm}
-              onChange={(event) => setSearchTerm(event.target.value)}
-              className="input-premium mt-2 w-full"
-              placeholder="Título, afiliado, DNI..."
-            />
-          </div>
-          <div>
-            <label className="text-sm font-medium text-neutral-700">Estado</label>
-            <div className="mt-2">
-              <SearchableSelect
-                options={estadoOptions}
-                value={estado}
-                onChange={(value) => setEstado(value as EstadoAlerta | 'ALL')}
-                placeholder="Seleccionar estado..."
-              />
-            </div>
-          </div>
-          <div>
-            <label className="text-sm font-medium text-neutral-700">Prioridad</label>
-            <div className="mt-2">
-              <SearchableSelect
-                options={prioridadOptions}
-                value={prioridad}
-                onChange={(value) => setPrioridad(value as PrioridadAlerta | 'ALL')}
-                placeholder="Seleccionar prioridad..."
-              />
-            </div>
-          </div>
-          <div>
-            <label className="text-sm font-medium text-neutral-700">Código</label>
-            <div className="mt-2">
-              <SearchableSelect
-                options={codigoOptions}
-                value={codigoNumerico}
-                onChange={setCodigoNumerico}
-                placeholder="Seleccionar código..."
-              />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="premium-card overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-neutral-200">
-            <thead className="bg-neutral-50">
-              <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">
-                  Alerta
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">
-                  Afiliado
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">
-                  Prioridad
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">
-                  Estado
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">
-                  Código
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">
-                  Fecha
-                </th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-neutral-500 uppercase tracking-wider">
-                  Acciones
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-neutral-200 bg-white">
-              {loading ? (
-                <tr>
-                  <td colSpan={7} className="px-4 py-8 text-center text-neutral-500">
-                    Cargando alertas...
-                  </td>
-                </tr>
-              ) : filteredAlertas.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="px-4 py-8 text-center text-neutral-500">
-                    No hay alertas con esos filtros.
-                  </td>
-                </tr>
-              ) : (
-                filteredAlertas.map((alerta) => {
-                  const isExpanded = expandedId === alerta.id;
-                  const soluciones = alerta.codigoAlerta?.posiblesSoluciones ?? [];
-                  return (
-                    <>
-                      <tr
-                        key={alerta.id}
-                        className={`cursor-pointer transition-colors ${isExpanded ? 'bg-amber-50' : 'hover:bg-neutral-50'}`}
-                        onClick={() => setExpandedId(isExpanded ? null : alerta.id)}
-                      >
-                        <td className="px-4 py-4">
-                          <div className="flex items-start gap-3">
-                            <div className="mt-1">
-                              {alerta.prioridad === 'CRITICA' ? (
-                                <ExclamationTriangleIcon className="h-5 w-5 text-red-500" />
-                              ) : (
-                                <BellIcon className="h-5 w-5 text-neutral-400" />
-                              )}
-                            </div>
-                            <div>
-                              <p className="font-medium text-neutral-900">{alerta.titulo}</p>
-                              <p className="text-sm text-neutral-600 mt-1 line-clamp-2">
-                                {alerta.mensaje}
-                              </p>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-4 py-4 text-sm text-neutral-700">
-                          <div>
-                            <p className="font-medium text-neutral-800">
-                              {alerta.persona
-                                ? `${alerta.persona.nombre} ${alerta.persona.apellido}`
-                                : 'Sin afiliado'}
-                            </p>
-                            {alerta.persona?.numeroDocumento && (
-                              <p className="text-xs text-neutral-500">DNI {alerta.persona.numeroDocumento}</p>
-                            )}
-                          </div>
-                        </td>
-                        <td className="px-4 py-4">
-                          <span
-                            className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium ${
-                              prioridadColorMap[alerta.prioridad]
-                            }`}
-                          >
-                            {alerta.prioridad}
-                          </span>
-                        </td>
-                        <td className="px-4 py-4">
-                          <span
-                            className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium ${
-                              estadoColorMap[alerta.estado]
-                            }`}
-                          >
-                            {alerta.estado}
-                          </span>
-                        </td>
-                        <td className="px-4 py-4 text-sm text-neutral-700">
-                          {alerta.codigoAlerta?.codigo} - {alerta.codigoAlerta?.descripcion}
-                        </td>
-                        <td className="px-4 py-4 text-sm text-neutral-700">
-                          {formatDate(alerta.fechaObjetivo ?? alerta.createdAt)}
-                        </td>
-                        <td className="px-4 py-4">
-                          <div className="flex justify-end items-center gap-2">
-                            {alerta.estado === 'PENDIENTE' && (
-                              <button
-                                onClick={(e) => { e.stopPropagation(); handleVista(alerta.id); }}
-                                className="btn-secondary flex items-center gap-1"
-                                disabled={loadingAction}
-                              >
-                                <CheckCircleIcon className="h-4 w-4" />
-                                Vista
-                              </button>
-                            )}
-                            {alerta.estado !== 'RESUELTA' && (
-                              <button
-                                onClick={(e) => { e.stopPropagation(); setNotasResolucion(''); setNotasModal({ id: alerta.id, tipo: 'resolver' }); }}
-                                className="btn-primary flex items-center gap-1"
-                                disabled={loadingAction}
-                              >
-                                <CheckCircleIcon className="h-4 w-4" />
-                                Resolver
-                              </button>
-                            )}
-                            {alerta.estado !== 'DESCARTADA' && (
-                              <button
-                                onClick={(e) => { e.stopPropagation(); setNotasResolucion(''); setNotasModal({ id: alerta.id, tipo: 'descartar' }); }}
-                                className="btn-danger flex items-center gap-1"
-                                disabled={loadingAction}
-                              >
-                                <XCircleIcon className="h-4 w-4" />
-                                Descartar
-                              </button>
-                            )}
-                            <button
-                              onClick={(e) => { e.stopPropagation(); setExpandedId(isExpanded ? null : alerta.id); }}
-                              className="p-1.5 rounded-lg text-amber-600 hover:bg-amber-100 transition-colors"
-                              title="Ver posibles soluciones"
-                            >
-                              {isExpanded ? <ChevronUpIcon className="h-4 w-4" /> : <ChevronDownIcon className="h-4 w-4" />}
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                      {isExpanded && (
-                        <tr key={`${alerta.id}-soluciones`} className="bg-amber-50 border-t border-amber-100">
-                          <td colSpan={7} className="px-6 py-4">
-                            <div className="flex items-start gap-3">
-                              <LightBulbIcon className="h-5 w-5 text-amber-500 mt-0.5 flex-shrink-0" />
-                              <div className="w-full">
-                                <p className="text-sm font-semibold text-amber-800 mb-2">Posibles soluciones</p>
-                                {soluciones.length > 0 ? (
-                                  <ul className="space-y-2">
-                                    {soluciones.map((sol, idx) => (
-                                      <li key={idx} className="flex items-start gap-2 text-sm text-amber-900">
-                                        <span className="mt-1 flex-shrink-0 w-4 h-4 rounded-full bg-amber-200 text-amber-700 text-xs flex items-center justify-center font-bold">
-                                          {idx + 1}
-                                        </span>
-                                        <div className="flex items-center gap-2 flex-wrap">
-                                          <span>{sol.texto}</span>
-                                          {sol.accion && (
-                                            <button
-                                              onClick={(e) => { e.stopPropagation(); navegar(sol.accion, alerta.entidadOrigenId); }}
-                                              className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-semibold rounded-full bg-amber-600 text-white hover:bg-amber-700 transition-colors"
-                                            >
-                                              Ir →
-                                            </button>
-                                          )}
-                                        </div>
-                                      </li>
-                                    ))}
-                                  </ul>
-                                ) : (
-                                  <p className="text-sm text-amber-700">No hay soluciones registradas para este código.</p>
-                                )}
-                                {alerta.notasResolucion && (
-                                  <div className="mt-3 p-2 bg-amber-100 rounded-lg">
-                                    <p className="text-xs font-semibold text-amber-800">Notas de resolución:</p>
-                                    <p className="text-sm text-amber-900 mt-0.5">{alerta.notasResolucion}</p>
-                                  </div>
-                                )}
-                                {alerta.codigoAlerta?.validezHoras && (
-                                  <p className="mt-2 text-xs text-amber-600">
-                                    Esta alerta tiene validez de {alerta.codigoAlerta.validezHoras}hs desde su generación.
-                                  </p>
-                                )}
-                              </div>
-                            </div>
-                          </td>
-                        </tr>
-                      )}
-                    </>
-                  );
-                })
+      {/* Chips de semáforo con contadores (RN-11, desde getDashboard) */}
+      <div className="flex flex-wrap items-center gap-2">
+        {SEMAFORO_CHIPS.map((chip) => {
+          const active = semaforo === chip.value;
+          const count = chipCount(chip.value);
+          const tone = chip.value === 'TODAS' ? null : chip.value;
+          return (
+            <button
+              key={chip.value}
+              type="button"
+              onClick={() => {
+                setSemaforo(chip.value);
+                router.replace(
+                  chip.value === 'TODAS' ? '/dashboard/alerts' : `/dashboard/alerts?semaforo=${chip.value}`
+                );
+              }}
+              className={cn(
+                'inline-flex items-center gap-2 rounded-md border px-3 py-1.5 text-sm font-medium transition-colors',
+                active
+                  ? 'border-[var(--primary-600)] bg-[var(--primary-50)] text-[var(--primary-700)]'
+                  : 'border-[var(--border)] bg-[var(--surface)] text-[var(--fg-muted)] hover:bg-[var(--surface-sunken)]'
               )}
-            </tbody>
-          </table>
-        </div>
+            >
+              {tone && (
+                <span
+                  className="size-2 rounded-full"
+                  style={{ backgroundColor: TONE_VARS[tone].solid }}
+                  aria-hidden
+                />
+              )}
+              {chip.label}
+              {count !== null && <span className="tabular-nums text-xs opacity-80">{count}</span>}
+            </button>
+          );
+        })}
       </div>
 
-      {/* Modal notas de resolución/descarte */}
-      {notasModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4">
-            <div className="flex items-center justify-between p-6 border-b border-neutral-200">
-              <h2 className="text-lg font-semibold text-neutral-900">
-                {notasModal.tipo === 'resolver' ? 'Resolver alerta' : 'Descartar alerta'}
-              </h2>
-              <button
-                onClick={() => { setNotasModal(null); setNotasResolucion(''); }}
-                className="p-2 text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 rounded-lg transition-colors"
-              >
-                <XCircleIcon className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-neutral-700 mb-1">
-                  Notas de resolución <span className="text-neutral-400 font-normal">(opcional)</span>
-                </label>
-                <textarea
-                  value={notasResolucion}
-                  onChange={(e) => setNotasResolucion(e.target.value)}
-                  maxLength={1000}
-                  rows={4}
-                  placeholder="Descripción de la acción tomada..."
-                  className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none"
-                />
-                <p className="text-xs text-neutral-400 mt-1">{notasResolucion.length}/1000</p>
-              </div>
-              <div className="flex justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={() => { setNotasModal(null); setNotasResolucion(''); }}
-                  className="px-4 py-2 text-sm font-medium text-neutral-700 bg-neutral-100 hover:bg-neutral-200 rounded-lg transition-colors"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="button"
-                  disabled={loadingAction}
-                  onClick={() => {
-                    if (notasModal.tipo === 'resolver') handleResolver(notasModal.id, notasResolucion || undefined);
-                    else handleDescartar(notasModal.id, notasResolucion || undefined);
-                  }}
-                  className={notasModal.tipo === 'resolver' ? 'btn-primary flex items-center gap-2' : 'btn-danger flex items-center gap-2'}
-                >
-                  {loadingAction ? <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" /> : null}
-                  {notasModal.tipo === 'resolver' ? 'Confirmar resolución' : 'Confirmar descarte'}
-                </button>
-              </div>
-            </div>
-          </div>
+      {/* Filtro por estado. Obra social omitido: QueryAlertasDto no expone ese filtro
+          (el backend resuelve multi-tenancy automáticamente por el usuario logueado,
+          no como filtro elegible en /alertas). */}
+      <div className="w-56">
+        <SearchableSelect
+          options={estadoOptions}
+          value={estado}
+          onChange={(v) => {
+            setEstado(v as EstadoAlerta | '');
+            setPage(1);
+          }}
+          placeholder="Estado"
+        />
+      </div>
+
+      {error && (
+        <div className="rounded-md border border-[var(--sev-critica-bg)] bg-[var(--sev-critica-bg)] px-3 py-2 text-sm text-[var(--sev-critica-fg)]">
+          {error}
         </div>
       )}
+
+      <DataTable
+        columns={columns}
+        data={visibleAlertas}
+        getRowId={(a) => a.id}
+        loading={loading}
+        searchable
+        searchValue={search}
+        onSearchChange={handleSearchChange}
+        searchPlaceholder="Buscar por título, paciente, DNI…"
+        pagination={
+          <Pagination
+            currentPage={page}
+            totalPages={totalPages}
+            totalItems={totalItems}
+            itemsPerPage={limit}
+            onPageChange={setPage}
+            onItemsPerPageChange={(v) => {
+              setLimit(v);
+              setPage(1);
+            }}
+          />
+        }
+        emptyTitle="Sin alertas"
+        emptyDescription="No hay alertas con los filtros actuales."
+      />
+
+      {/* Modal de resolución/descarte con notas (se mantiene el flujo actual) */}
+      <Dialog
+        open={notasModal !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setNotasModal(null);
+            setNotas('');
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {notasModal?.tipo === 'resolver' ? 'Resolver alerta' : 'Descartar alerta'}
+            </DialogTitle>
+            <DialogDescription>
+              Las notas quedan asociadas a la alerta como registro de la acción tomada.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-1.5">
+            <label className="block text-sm font-medium text-[var(--fg-muted)]">
+              Notas de resolución <span className="font-normal text-[var(--fg-subtle)]">(opcional)</span>
+            </label>
+            <textarea
+              value={notas}
+              onChange={(e) => setNotas(e.target.value)}
+              maxLength={1000}
+              rows={4}
+              autoFocus
+              placeholder="Descripción de la acción tomada…"
+              className="w-full resize-none rounded-md border border-[var(--border-strong)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--fg)] outline-none placeholder:text-[var(--fg-subtle)] focus-visible:border-[var(--primary-600)] focus-visible:ring-[3px] focus-visible:ring-[color-mix(in_srgb,var(--primary-600)_18%,transparent)]"
+            />
+            <p className="text-right text-xs text-[var(--fg-subtle)] tabular-nums">{notas.length}/1000</p>
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setNotasModal(null);
+                setNotas('');
+              }}
+              disabled={busyId !== null}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              variant={notasModal?.tipo === 'descartar' ? 'destructive' : 'default'}
+              onClick={handleConfirmModal}
+              disabled={busyId !== null}
+            >
+              {busyId !== null && <Loader2 className="size-4 animate-spin" />}
+              {notasModal?.tipo === 'resolver' ? 'Confirmar resolución' : 'Confirmar descarte'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

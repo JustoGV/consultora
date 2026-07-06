@@ -2,10 +2,11 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Bell, ArrowRight } from "lucide-react";
+import { Bell, ArrowRight, Eye, CheckCircle2, XCircle, Loader2 } from "lucide-react";
 
 import { alertasService } from "@/services/alertasService";
 import type { Alerta, DashboardAlertas } from "@/types";
+import { extractErrorMessage } from "@/lib/errorUtils";
 import {
   maxToneFromCounts,
   priorityToTone,
@@ -28,12 +29,14 @@ const REFETCH_MS = 60_000; // polling suave (UX-4) — sin websockets por ahora
 const MAX_ITEMS = 8;
 
 /**
- * AlertBell — campana de alertas del topbar (versión básica UX-1; la gestión
- * inline llega en UX-4).
+ * AlertBell — campana de alertas del topbar (UX-4: bandeja completa).
  *
  * - Badge numérico = total PENDIENTE, coloreado por la severidad máxima presente
  *   (rojo si CRITICA/ALTA, ámbar si MEDIA, verde si solo BAJA/INFO — RN-11).
  * - Refetch cada 60s del dashboard; al abrir la bandeja trae las últimas alertas.
+ * - Acciones inline por alerta: Vista / Resolver (con notas) / Descartar (confirma).
+ *   Al accionar: refetch inmediato del badge + de la lista (U3 — sin toasts de
+ *   alertas nuevas; el feedback de la acción es el propio cambio de estado en la fila).
  * - Pulso único cuando sube la severidad máxima (moment de hand-craft).
  */
 export default function AlertBell() {
@@ -63,6 +66,34 @@ export default function AlertBell() {
     }
   }, []);
 
+  const fetchList = useCallback(async () => {
+    setLoadingList(true);
+    try {
+      const list = await alertasService.getAlertas({ estado: "PENDIENTE" });
+      const sorted = [...list].sort((a, b) => {
+        const ra =
+          priorityToTone(a.prioridad) === "critica"
+            ? 3
+            : priorityToTone(a.prioridad) === "media"
+              ? 2
+              : 1;
+        const rb =
+          priorityToTone(b.prioridad) === "critica"
+            ? 3
+            : priorityToTone(b.prioridad) === "media"
+              ? 2
+              : 1;
+        if (rb !== ra) return rb - ra;
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      });
+      setAlertas(sorted.slice(0, MAX_ITEMS));
+    } catch {
+      setAlertas([]);
+    } finally {
+      setLoadingList(false);
+    }
+  }, []);
+
   // Polling del dashboard (badge + color). El primer fetch se difiere para no
   // llamar setState de forma síncrona dentro del effect (patrón del repo).
   useEffect(() => {
@@ -80,37 +111,19 @@ export default function AlertBell() {
   const pendientes = dashboard?.pendientes ?? 0;
 
   // Al abrir la bandeja, traer las últimas PENDIENTE
-  const handleOpenChange = useCallback((next: boolean) => {
-    setOpen(next);
-    if (next) {
-      setLoadingList(true);
-      alertasService
-        .getAlertas({ estado: "PENDIENTE" })
-        .then((list) => {
-          const sorted = [...list].sort((a, b) => {
-            const ra =
-              priorityToTone(a.prioridad) === "critica"
-                ? 3
-                : priorityToTone(a.prioridad) === "media"
-                  ? 2
-                  : 1;
-            const rb =
-              priorityToTone(b.prioridad) === "critica"
-                ? 3
-                : priorityToTone(b.prioridad) === "media"
-                  ? 2
-                  : 1;
-            if (rb !== ra) return rb - ra;
-            return (
-              new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-            );
-          });
-          setAlertas(sorted.slice(0, MAX_ITEMS));
-        })
-        .catch(() => setAlertas([]))
-        .finally(() => setLoadingList(false));
-    }
-  }, []);
+  const handleOpenChange = useCallback(
+    (next: boolean) => {
+      setOpen(next);
+      if (next) fetchList();
+    },
+    [fetchList]
+  );
+
+  // Refetch inmediato de badge + lista tras cualquier acción sobre una alerta.
+  const handleActed = useCallback(() => {
+    fetchDashboard();
+    fetchList();
+  }, [fetchDashboard, fetchList]);
 
   const badgeColor = tone ? TONE_VARS[tone].solid : "var(--neutral-400)";
 
@@ -139,7 +152,7 @@ export default function AlertBell() {
       </button>
 
       <Sheet open={open} onOpenChange={handleOpenChange}>
-        <SheetContent side="right" className="gap-0">
+        <SheetContent side="right" className="gap-0 sm:max-w-lg">
           <SheetHeader>
             <SheetTitle>Alertas pendientes</SheetTitle>
             <SheetDescription>
@@ -174,7 +187,12 @@ export default function AlertBell() {
             ) : (
               <ul className="divide-y divide-[var(--border)]">
                 {alertas.map((a) => (
-                  <AlertRow key={a.id} alerta={a} onNavigate={() => setOpen(false)} />
+                  <AlertRow
+                    key={a.id}
+                    alerta={a}
+                    onNavigate={() => setOpen(false)}
+                    onActed={handleActed}
+                  />
                 ))}
               </ul>
             )}
@@ -194,14 +212,24 @@ export default function AlertBell() {
   );
 }
 
-/** Fila de alerta en la bandeja: color semáforo, título, persona, hace cuánto. */
+/**
+ * Fila de alerta en la bandeja: color semáforo, título, persona, hace cuánto,
+ * y acciones inline (Vista / Resolver / Descartar).
+ */
 function AlertRow({
   alerta,
   onNavigate,
+  onActed,
 }: {
   alerta: Alerta;
   onNavigate: () => void;
+  onActed: () => void;
 }) {
+  const [mode, setMode] = useState<"idle" | "resolver" | "descartar">("idle");
+  const [notas, setNotas] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
   const tone = priorityToTone(alerta.prioridad);
   const persona = alerta.persona
     ? `${alerta.persona.apellido ?? ""}, ${alerta.persona.nombre ?? ""}`.replace(
@@ -209,6 +237,35 @@ function AlertRow({
         ""
       )
     : null;
+
+  const runAction = async (fn: () => Promise<unknown>) => {
+    setBusy(true);
+    setError(null);
+    try {
+      await fn();
+      onActed();
+    } catch (err) {
+      setError(extractErrorMessage(err, "No se pudo completar la acción"));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleVista = () => runAction(() => alertasService.marcarVista(alerta.id));
+
+  const handleConfirmResolver = () =>
+    runAction(async () => {
+      await alertasService.resolver(alerta.id, notas.trim() || undefined);
+      setMode("idle");
+      setNotas("");
+    });
+
+  const handleConfirmDescartar = () =>
+    runAction(async () => {
+      await alertasService.descartar(alerta.id, notas.trim() || undefined);
+      setMode("idle");
+      setNotas("");
+    });
 
   const inner = (
     <div className="flex gap-3">
@@ -230,19 +287,122 @@ function AlertRow({
     </div>
   );
 
-  // Link a la ficha del paciente.
-  if (alerta.personaId) {
-    return (
-      <li>
+  return (
+    <li className="px-5 py-3.5">
+      {alerta.personaId ? (
         <Link
           href={`/dashboard/pacientes/${alerta.personaId}`}
           onClick={onNavigate}
-          className="block px-5 py-3.5 transition-colors hover:bg-[var(--surface-sunken)]"
+          className="-mx-1 block rounded-md px-1 py-0.5 transition-colors hover:bg-[var(--surface-sunken)]"
         >
           {inner}
         </Link>
-      </li>
-    );
-  }
-  return <li className="px-5 py-3.5">{inner}</li>;
+      ) : (
+        inner
+      )}
+
+      {/* Acciones inline (UX-4) */}
+      <div className="ml-5 mt-2">
+        {mode === "idle" && (
+          <div className="flex flex-wrap items-center gap-1.5">
+            <button
+              type="button"
+              onClick={handleVista}
+              disabled={busy}
+              className="inline-flex items-center gap-1 rounded-sm border border-[var(--border-strong)] bg-[var(--surface)] px-2 py-1 text-xs font-medium text-[var(--fg-muted)] transition-colors hover:bg-[var(--surface-sunken)] hover:text-[var(--fg)] disabled:opacity-50"
+            >
+              {busy ? <Loader2 className="size-3 animate-spin" /> : <Eye className="size-3" />}
+              Vista
+            </button>
+            <button
+              type="button"
+              onClick={() => setMode("resolver")}
+              disabled={busy}
+              className="inline-flex items-center gap-1 rounded-sm border border-transparent bg-[var(--primary-50)] px-2 py-1 text-xs font-medium text-[var(--primary-700)] transition-colors hover:bg-[var(--primary-100)] disabled:opacity-50"
+            >
+              <CheckCircle2 className="size-3" />
+              Resolver
+            </button>
+            <button
+              type="button"
+              onClick={() => setMode("descartar")}
+              disabled={busy}
+              className="inline-flex items-center gap-1 rounded-sm border border-transparent px-2 py-1 text-xs font-medium text-[var(--fg-subtle)] transition-colors hover:bg-[var(--surface-sunken)] hover:text-[var(--sev-critica-fg)] disabled:opacity-50"
+            >
+              <XCircle className="size-3" />
+              Descartar
+            </button>
+          </div>
+        )}
+
+        {mode === "resolver" && (
+          <div className="space-y-2 rounded-md border border-[var(--border)] bg-[var(--surface-sunken)] p-2.5">
+            <label className="block text-xs font-medium text-[var(--fg-muted)]">
+              Notas de resolución <span className="text-[var(--fg-subtle)] font-normal">(opcional)</span>
+            </label>
+            <textarea
+              value={notas}
+              onChange={(e) => setNotas(e.target.value)}
+              maxLength={1000}
+              rows={2}
+              autoFocus
+              placeholder="Descripción de la acción tomada…"
+              className="w-full resize-none rounded-md border border-[var(--border-strong)] bg-[var(--surface)] px-2 py-1.5 text-xs text-[var(--fg)] outline-none placeholder:text-[var(--fg-subtle)] focus-visible:border-[var(--primary-600)] focus-visible:ring-[3px] focus-visible:ring-[color-mix(in_srgb,var(--primary-600)_18%,transparent)]"
+            />
+            <div className="flex justify-end gap-1.5">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setMode("idle");
+                  setNotas("");
+                  setError(null);
+                }}
+                disabled={busy}
+              >
+                Cancelar
+              </Button>
+              <Button type="button" size="sm" onClick={handleConfirmResolver} disabled={busy}>
+                {busy && <Loader2 className="size-3 animate-spin" />}
+                Confirmar
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {mode === "descartar" && (
+          <div className="space-y-2 rounded-md border border-[var(--border)] bg-[var(--surface-sunken)] p-2.5">
+            <p className="text-xs text-[var(--fg-muted)]">¿Descartar esta alerta?</p>
+            <div className="flex justify-end gap-1.5">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setMode("idle");
+                  setError(null);
+                }}
+                disabled={busy}
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="button"
+                variant="destructive"
+                size="sm"
+                onClick={handleConfirmDescartar}
+                disabled={busy}
+              >
+                {busy && <Loader2 className="size-3 animate-spin" />}
+                Descartar
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {error && <p className="mt-1.5 text-xs text-[var(--sev-critica-fg)]">{error}</p>}
+      </div>
+    </li>
+  );
 }
