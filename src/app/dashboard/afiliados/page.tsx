@@ -24,6 +24,7 @@ import { usePagination } from '@/hooks/usePagination';
 import Link from 'next/link';
 import { extractErrorMessage, mapServerErrors } from '@/lib/errorUtils';
 import { handleEnterAsTab } from '@/lib/formUtils';
+import AderenteEditModal from '@/components/AderenteEditModal';
 
 export default function AfiliadosPage() {
   const { user, isAdmin, isSuperAdmin } = useAuth();
@@ -71,6 +72,9 @@ export default function AfiliadosPage() {
   const [existingTerceros, setExistingTerceros] = useState<PersonaTercerosVinculado[]>([]);
   const [adherentesToRemove, setAdherentesToRemove] = useState<string[]>([]);
   const [tercerosToRemove, setTercerosToRemove] = useState<string[]>([]);
+
+  // Modal de edición de adherente (reusado desde la lista "Ya vinculados")
+  const [editingAderenteDetail, setEditingAderenteDetail] = useState<Aderente | null>(null);
   const [loadingRelations, setLoadingRelations] = useState(false);
 
   const [formData, setFormData] = useState<CreateAfiliadoDto>({
@@ -777,7 +781,14 @@ export default function AfiliadosPage() {
                           <ul className="space-y-1">
                             {existingAdherentes.filter(a => !adherentesToRemove.includes(a.id)).map((a) => (
                               <li key={a.id} className="flex items-center justify-between text-sm">
-                                <span className="text-neutral-700"><strong>{a.apellido}, {a.nombre}</strong> — {a.caracterAfiliado}</span>
+                                <button
+                                  type="button"
+                                  onClick={() => setEditingAderenteDetail(a)}
+                                  className="text-neutral-700 hover:text-primary-700 hover:underline text-left"
+                                  title="Editar adherente"
+                                >
+                                  <strong>{a.apellido}, {a.nombre}</strong> — {a.caracterAfiliado}
+                                </button>
                                 <button type="button" onClick={() => setAdherentesToRemove(prev => [...prev, a.id])}
                                   className="text-neutral-400 hover:text-red-500 ml-2" title="Quitar">
                                   <XMarkIcon className="w-4 h-4" />
@@ -1025,6 +1036,17 @@ export default function AfiliadosPage() {
             </form>
           </div>
         </div>
+      )}
+
+      {editingAderenteDetail && (
+        <AderenteEditModal
+          aderente={editingAderenteDetail}
+          onClose={() => setEditingAderenteDetail(null)}
+          onSaved={(updated) => {
+            setExistingAdherentes((prev) => prev.map((a) => (a.id === updated.id ? { ...a, ...updated } : a)));
+            setEditingAderenteDetail(null);
+          }}
+        />
       )}
     </div>
   );

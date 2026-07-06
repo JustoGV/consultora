@@ -48,9 +48,10 @@ export default function Sidebar() {
     { name: 'Métricas', href: '/dashboard/metrics', icon: ChartPieIcon, section: 'main' },
     
     { name: 'Afiliados', href: '/dashboard/afiliados', icon: IdentificationIcon, section: 'gestion' },
+    { name: 'Adherentes', href: '/dashboard/aderentes', icon: UserGroupIcon, section: 'gestion' },
     { name: 'Terceros Vinculados', href: '/dashboard/terceros-vinculados', icon: UserGroupIcon, section: 'gestion' },
     { name: 'Relaciones Afiliado-Tercero', href: '/dashboard/persona-terceros', icon: LinkIcon, section: 'gestion' },
-    
+
     { name: 'Certificados Discapacidad', href: '/dashboard/certificados-discapacidad', icon: DocumentTextIcon, section: 'certificados' },
     { name: 'Certificados', href: '/dashboard/certificates', icon: FolderOpenIcon, section: 'certificados' },
 
@@ -63,7 +64,7 @@ export default function Sidebar() {
     { name: 'Efectores', href: '/dashboard/efectores', icon: BuildingOffice2Icon, section: 'catalogos' },
     { name: 'Prestadores', href: '/dashboard/prestadores', icon: UsersIcon, section: 'catalogos' },
     { name: 'Orientación Prestacional', href: '/dashboard/orientacion-prestacional', icon: LinkIcon, section: 'catalogos' },
-    
+
     { name: 'Configuración', href: '/dashboard/settings', icon: CogIcon, section: 'config' },
   ];
 
@@ -71,8 +72,9 @@ export default function Sidebar() {
   const adminObraSocialMenuItems = [
     { name: 'Inicio', href: '/dashboard', icon: HomeIcon, section: 'main' },
     { name: 'Alertas', href: '/dashboard/alerts', icon: BellIcon, section: 'main' },
-    
+
     { name: 'Afiliados', href: '/dashboard/afiliados', icon: IdentificationIcon, section: 'gestion' },
+    { name: 'Adherentes', href: '/dashboard/aderentes', icon: UserGroupIcon, section: 'gestion' },
     { name: 'Terceros Vinculados', href: '/dashboard/terceros-vinculados', icon: UserGroupIcon, section: 'gestion' },
     { name: 'Relaciones Afiliado-Tercero', href: '/dashboard/persona-terceros', icon: LinkIcon, section: 'gestion' },
     
