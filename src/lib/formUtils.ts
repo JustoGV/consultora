@@ -40,3 +40,56 @@ export function handleEnterAsTab(e: React.KeyboardEvent<HTMLFormElement>) {
     next.focus();
   }
 }
+
+/**
+ * Convierte una fecha tipeada como 8 dígitos seguidos sin separadores
+ * (ddmmaaaa) a `yyyy-mm-dd`, para alimentar el estado que respalda un
+ * `<input type="date">`.
+ *
+ * LIMITACIÓN HONESTA: un `<input type="date">` nativo NO permite tipear 8
+ * dígitos corridos de forma directa en todos los navegadores — el widget
+ * segmentado del picker (día/mes/año por separado) es el que exponen Chrome,
+ * Firefox y Edge, y no hay forma portable de interceptar "el usuario tipeó
+ * 8 dígitos seguidos" dentro de ESE widget. Esta función NO resuelve eso.
+ *
+ * Lo que sí resuelve, de forma verificable: dado un input `type="text"` con
+ * patrón numérico (ej. `inputMode="numeric"` + `maxLength={8}`) donde el
+ * usuario tipea literalmente "06072026", esta función pura lo convierte a
+ * "2026-07-06" para setear el estado que alimenta un `<input type="date">`
+ * controlado en paralelo (patrón: input de texto visible + date oculto/sync,
+ * o simplemente usar el string resultante como value del date). Es una
+ * función pura y testeable, deliberadamente NO atada a ningún tipo de input
+ * específico — la integración con el DOM queda a criterio del consumidor.
+ *
+ * Si `rawValue` no son exactamente 8 dígitos, o no representan una fecha
+ * válida (ej. 31 de febrero), devuelve el `rawValue` sin modificar.
+ *
+ * @example
+ * parseDateInput('06072026') // -> '2026-07-06'
+ * parseDateInput('31022026') // -> '31022026' (fecha inválida, no se transforma)
+ * parseDateInput('2026-07-06') // -> '2026-07-06' (no son 8 dígitos corridos, pasa igual)
+ */
+export function parseDateInput(rawValue: string): string {
+  if (!/^\d{8}$/.test(rawValue)) return rawValue;
+
+  const dd = rawValue.slice(0, 2);
+  const mm = rawValue.slice(2, 4);
+  const yyyy = rawValue.slice(4, 8);
+
+  const day = Number(dd);
+  const month = Number(mm);
+  const year = Number(yyyy);
+
+  // Validación básica de fecha real (incluye años bisiestos) usando el
+  // comportamiento de normalización de Date: si los componentes no calzan
+  // (ej. 31/02), el día "se corre" de mes al reconstruirlo.
+  const candidate = new Date(year, month - 1, day);
+  const isValid =
+    candidate.getFullYear() === year &&
+    candidate.getMonth() === month - 1 &&
+    candidate.getDate() === day;
+
+  if (!isValid) return rawValue;
+
+  return `${yyyy}-${mm}-${dd}`;
+}
