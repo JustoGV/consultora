@@ -18,7 +18,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Consultora Salud",
+  title: "GV-G Consulting — Gestión de salud",
   description: "Sistema de gestión de certificados de discapacidad",
 };
 

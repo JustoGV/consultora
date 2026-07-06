@@ -1,4 +1,4 @@
-# DESIGN.md — Consultora Salud (Design System · UX-1)
+# DESIGN.md — GV-G Consulting (Design System · UX-1)
 
 Sistema de diseño del frontend. **Toda pantalla nueva o retocada respeta este
 documento.** Ninguna pantalla usa colores, espaciados, radios o tipografías

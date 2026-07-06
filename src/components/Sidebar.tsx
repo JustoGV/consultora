@@ -200,7 +200,7 @@ export default function Sidebar({
         </div>
         {!collapsed && (
           <div className="leading-tight">
-            <p className="text-sm font-semibold text-white">Consultora Salud</p>
+            <p className="text-sm font-semibold text-white">GV-G Consulting</p>
             <p className="text-[11px] text-[var(--sidebar-fg-muted)]">
               Sistema de gestión
             </p>

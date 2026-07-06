@@ -354,7 +354,7 @@ export default function ReportesPage() {
       <div className="print-area space-y-6">
         {/* Encabezado exclusivo de impresión: nombre del tenant + fecha + filtro */}
         <div className="print-header mb-6 hidden border-b border-black/20 pb-3">
-          <h1 className="text-xl font-semibold">Consultora Salud — Reporte de resultante</h1>
+          <h1 className="text-xl font-semibold">GV-G Consulting — Reporte de resultante</h1>
           <p className="text-sm">
             Generado el {fechaGeneracion} · Filtro: {filtroLabel}
           </p>

@@ -20,7 +20,7 @@ export default function SettingsPage() {
               </label>
               <input
                 type="text"
-                defaultValue="Consultora Salud"
+                defaultValue="GV-G Consulting"
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900"
               />
             </div>
