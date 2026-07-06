@@ -119,12 +119,12 @@ export default function AlertsPage() {
       if (codigoNumerico !== 'ALL' && String(alerta.codigoAlerta?.codigo) !== codigoNumerico) return false;
       if (searchTerm) {
         const term = searchTerm.toLowerCase();
-        const fullName = `${alerta.afiliado?.nombre ?? ''} ${alerta.afiliado?.apellido ?? ''}`.toLowerCase();
+        const fullName = `${alerta.persona?.nombre ?? ''} ${alerta.persona?.apellido ?? ''}`.toLowerCase();
         const matches =
           alerta.titulo.toLowerCase().includes(term) ||
           alerta.mensaje.toLowerCase().includes(term) ||
           fullName.includes(term) ||
-          (alerta.afiliado?.dni ?? '').toLowerCase().includes(term) ||
+          (alerta.persona?.numeroDocumento ?? '').toLowerCase().includes(term) ||
           (alerta.codigoAlerta?.descripcion ?? '').toLowerCase().includes(term);
         if (!matches) return false;
       }
@@ -352,12 +352,12 @@ export default function AlertsPage() {
                         <td className="px-4 py-4 text-sm text-neutral-700">
                           <div>
                             <p className="font-medium text-neutral-800">
-                              {alerta.afiliado
-                                ? `${alerta.afiliado.nombre} ${alerta.afiliado.apellido}`
+                              {alerta.persona
+                                ? `${alerta.persona.nombre} ${alerta.persona.apellido}`
                                 : 'Sin afiliado'}
                             </p>
-                            {alerta.afiliado?.dni && (
-                              <p className="text-xs text-neutral-500">DNI {alerta.afiliado.dni}</p>
+                            {alerta.persona?.numeroDocumento && (
+                              <p className="text-xs text-neutral-500">DNI {alerta.persona.numeroDocumento}</p>
                             )}
                           </div>
                         </td>

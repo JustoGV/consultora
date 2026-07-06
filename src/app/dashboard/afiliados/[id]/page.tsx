@@ -107,11 +107,11 @@ export default function AfiliadoDetailPage({ params }: { params: Promise<{ id: s
         afiliadosService.getById(id),
         certificadosDiscapacidadService.getAll(),
         personaTercerosService.getAll(),
-        alertasService.getAlertasByAfiliado(id).catch(() => [] as Alerta[]),
+        alertasService.getAlertasByPersona(id).catch(() => [] as Alerta[]),
         tercerosVinculadoService.getAll(),
       ]);
       setAfiliado(afiliadoData);
-      setCertificados(allCerts.filter((c) => c.afiliadoId === id));
+      setCertificados(allCerts.filter((c) => c.personaId === id));
       setRelaciones(allRelaciones.filter((r) => r.afiliadoId === id));
       setAlertas(allAlertas);
       setTerceros(tercerosData);

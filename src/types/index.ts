@@ -60,8 +60,8 @@ export interface Alerta {
   id: string;
   codigoAlertaId: string;
   codigoAlerta: CodigoAlerta;
-  afiliadoId: string;
-  afiliado: Afiliado;
+  personaId: string;
+  persona: Persona;
   titulo: string;
   mensaje: string;
   prioridad: PrioridadAlerta;
@@ -99,7 +99,7 @@ export interface DashboardAlertas {
 export interface AlertasQueryParams {
   estado?: EstadoAlerta;
   prioridad?: PrioridadAlerta;
-  afiliadoId?: string;
+  personaId?: string;
   codigoNumerico?: number;
   entidadOrigenId?: string;
 }
@@ -726,8 +726,8 @@ export interface CertificadoDiscapacidad {
   grado: string;
   observaciones?: string;
   antecedentes?: string;
-  afiliadoId: string;
-  afiliado?: Afiliado;
+  personaId: string;
+  persona?: Persona;
   tipoDiscapacidadId: string;
   tipoDiscapacidadIds?: string[];
   tipoDiscapacidad?: TipoDiscapacidad;
@@ -749,7 +749,7 @@ export interface CreateCertificadoDiscapacidadDto {
   grado: string;
   observaciones?: string;
   antecedentes?: string;
-  afiliadoId: string;
+  personaId: string;
   tipoDiscapacidadId?: string;
   tipoDiscapacidadIds: string[];
   diagnosticoId?: string;
@@ -763,7 +763,7 @@ export interface UpdateCertificadoDiscapacidadDto {
   fechaEmision?: string;
   fechaVencimiento?: string;
   grado?: string;
-  afiliadoId?: string;
+  personaId?: string;
   antecedentes?: string;
   tipoDiscapacidadId?: string;
   tipoDiscapacidadIds?: string[];
@@ -848,4 +848,214 @@ export interface UpdateAderenteDto {
   email?: string;
   codigoPostal?: string;
   activo?: boolean;
+}
+
+// ============================================
+// MÓDULOS DE LA REFORMA (F-4) — Persona / Afiliacion / Parentesco / Profesional
+// ============================================
+// RN-21 (terminología): en código (estos types, services, rutas de API) todo
+// se llama `persona`/`personas`. En UI visible (labels, textos) todo dice
+// "Paciente"/"Pacientes" — eso se aplica recién en F-5, acá solo el modelo.
+
+export type TipoDocumento = 'DNI' | 'CUIL' | 'PASAPORTE' | 'OTRO';
+
+/**
+ * Persona — reemplazo de `Afiliado` en la reforma B-4. Identidad de la persona,
+ * separada de su membresía con obras sociales (ver `Afiliacion`).
+ * NO tiene `edad` (se calcula en frontend desde `fechaNacimiento`) ni
+ * `numeroAfiliado`/`plan` (viven en `Afiliacion`).
+ */
+export interface Persona {
+  id: string;
+  nombre: string;
+  apellido: string;
+  tipoDocumento: TipoDocumento;
+  numeroDocumento: string;
+  cuil?: string;
+  fechaNacimiento: string;
+  sexo?: string;
+  email?: string;
+  telefono?: string;
+  celular?: string;
+  direccion?: string;
+  localidad?: string;
+  provincia?: string;
+  codigoPostal?: string;
+  estadoCivilId?: string;
+  estadoCivil?: EstadoCivil;
+  activo: boolean;
+  administradoraId: string;
+  administradora?: Administradora;
+  afiliaciones?: Afiliacion[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreatePersonaDto {
+  nombre: string;
+  apellido: string;
+  tipoDocumento?: TipoDocumento;
+  numeroDocumento: string;
+  cuil?: string;
+  fechaNacimiento: string;
+  sexo?: string;
+  email?: string;
+  telefono?: string;
+  celular?: string;
+  direccion?: string;
+  localidad?: string;
+  provincia?: string;
+  codigoPostal?: string;
+  estadoCivilId?: string;
+  administradoraId: string;
+  activo?: boolean;
+}
+
+export type UpdatePersonaDto = Partial<CreatePersonaDto>;
+
+export interface FindPersonasQuery {
+  search?: string;
+  rol?: 'TITULAR' | 'ADHERENTE' | 'SIN_AFILIACION';
+  obraSocialId?: string;
+}
+
+export type RolAfiliacion = 'TITULAR' | 'ADHERENTE';
+
+/**
+ * Afiliacion — membresía de una `Persona` con una `ObraSocial` (carnet propio +
+ * rol). Separada de la identidad (Persona) y de la dependencia (AfiliacionVinculo).
+ */
+export interface Afiliacion {
+  id: string;
+  personaId: string;
+  persona?: Persona;
+  obraSocialId: string;
+  obraSocial?: ObraSocial;
+  rol: RolAfiliacion;
+  numeroAfiliado?: string;
+  plan?: string;
+  fechaAlta?: string;
+  observaciones?: string;
+  activo: boolean;
+  administradoraId: string;
+  administradora?: Administradora;
+  vinculosComoTitular?: AfiliacionVinculo[];
+  vinculosComoAdherente?: AfiliacionVinculo[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateAfiliacionDto {
+  personaId: string;
+  obraSocialId: string;
+  rol: RolAfiliacion;
+  numeroAfiliado?: string;
+  plan?: string;
+  fechaAlta?: string;
+  observaciones?: string;
+  administradoraId: string;
+  activo?: boolean;
+}
+
+export type UpdateAfiliacionDto = Partial<CreateAfiliacionDto>;
+
+export interface FindAfiliacionesQuery {
+  personaId?: string;
+  obraSocialId?: string;
+  rol?: RolAfiliacion;
+}
+
+/**
+ * AfiliacionVinculo — dependencia ("a cargo de") entre dos afiliaciones de la
+ * MISMA obra social (titular <-> adherente).
+ */
+export interface AfiliacionVinculo {
+  id: string;
+  afiliacionAdherenteId: string;
+  afiliacionAdherente?: Afiliacion;
+  afiliacionTitularId: string;
+  afiliacionTitular?: Afiliacion;
+  parentescoId: string;
+  parentesco?: Parentesco;
+  observaciones?: string;
+  activo: boolean;
+  administradoraId: string;
+  administradora?: Administradora;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * CreateVinculoDto — NO lleva `afiliacionAdherenteId`: se infiere del `:id` de
+ * la URL (`POST /afiliaciones/:id/vinculos`, donde `:id` es la afiliación adherente).
+ */
+export interface CreateVinculoDto {
+  afiliacionTitularId: string;
+  parentescoId: string;
+  observaciones?: string;
+}
+
+/** Parentesco — catálogo GLOBAL (sin administradoraId). */
+export interface Parentesco {
+  id: string;
+  nombre: string;
+  codigo: string;
+  descripcion?: string;
+  activo: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateParentescoDto {
+  nombre: string;
+  codigo: string;
+  descripcion?: string;
+}
+
+export type UpdateParentescoDto = Partial<CreateParentescoDto>;
+
+/**
+ * Profesional — quien EJECUTA la prestación (a diferencia de `Efector`, quien
+ * FACTURA). Con administradoraId.
+ */
+export interface Profesional {
+  id: string;
+  nombre: string;
+  apellido: string;
+  matricula: string;
+  especialidad?: string;
+  cuit?: string;
+  tipoDocumento?: TipoDocumento;
+  numeroDocumento?: string;
+  telefono?: string;
+  email?: string;
+  direccion?: string;
+  localidad?: string;
+  activo: boolean;
+  administradoraId: string;
+  administradora?: Administradora;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateProfesionalDto {
+  nombre: string;
+  apellido: string;
+  matricula: string;
+  especialidad?: string;
+  cuit?: string;
+  tipoDocumento?: TipoDocumento;
+  numeroDocumento?: string;
+  telefono?: string;
+  email?: string;
+  direccion?: string;
+  localidad?: string;
+  administradoraId: string;
+  activo?: boolean;
+}
+
+export type UpdateProfesionalDto = Partial<CreateProfesionalDto>;
+
+export interface FindProfesionalesQuery {
+  search?: string;
 }

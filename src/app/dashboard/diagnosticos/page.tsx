@@ -51,7 +51,7 @@ export default function DiagnosticosPage() {
 
     return certificados
       .filter((cert) => {
-        const afiliado = afiliados.find((a) => a.id === cert.afiliadoId);
+        const afiliado = afiliados.find((a) => a.id === cert.personaId);
         const nombreCompleto = afiliado
           ? `${afiliado.nombre} ${afiliado.apellido}`.toLowerCase()
           : '';
@@ -60,7 +60,7 @@ export default function DiagnosticosPage() {
       })
       .map((cert) => ({
         certificado: cert,
-        afiliado: afiliados.find((a) => a.id === cert.afiliadoId),
+        afiliado: afiliados.find((a) => a.id === cert.personaId),
         diagnostico: diagnosticos.find((d) => d.id === cert.diagnosticoId),
       }));
   }, [searchTerm, certificados, afiliados, diagnosticos]);

@@ -44,7 +44,7 @@ export default function CertificadosDiscapacidadPage() {
     grado: '',
     observaciones: '',
     antecedentes: '',
-    afiliadoId: '',
+    personaId: '',
     tipoDiscapacidadId: '',
     administradoraId: user?.administradoraId || '',
     activo: true,
@@ -97,7 +97,7 @@ export default function CertificadosDiscapacidadPage() {
         grado: certificado.grado,
         observaciones: certificado.observaciones || '',
         antecedentes: certificado.antecedentes || '',
-        afiliadoId: certificado.afiliadoId,
+        personaId: certificado.personaId,
         tipoDiscapacidadId: tiposIds[0] || '',
         administradoraId: certificado.administradoraId,
         activo: certificado.activo,
@@ -115,7 +115,7 @@ export default function CertificadosDiscapacidadPage() {
         grado: '',
         observaciones: '',
         antecedentes: '',
-        afiliadoId: '',
+        personaId: '',
         tipoDiscapacidadId: '',
         administradoraId: user?.administradoraId || '',
         activo: true,
@@ -139,7 +139,7 @@ export default function CertificadosDiscapacidadPage() {
     if (!formData.numeroCertificado) errors.numeroCertificado = 'Requerido';
     if (!formData.fechaEmision) errors.fechaEmision = 'Requerido';
     if (!formData.grado) errors.grado = 'Requerido';
-    if (!formData.afiliadoId) errors.afiliadoId = 'Requerido';
+    if (!formData.personaId) errors.personaId = 'Requerido';
     if (selectedTiposIds.length === 0) errors.tipoDiscapacidadId = 'Seleccione al menos un tipo';
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors);
@@ -200,8 +200,8 @@ export default function CertificadosDiscapacidadPage() {
     }
   };
 
-  const getAfiliadoNombre = (afiliadoId: string) => {
-    const afiliado = afiliados.find((a) => a.id === afiliadoId);
+  const getAfiliadoNombre = (personaId: string) => {
+    const afiliado = afiliados.find((a) => a.id === personaId);
     return afiliado ? `${afiliado.apellido}, ${afiliado.nombre}` : '-';
   };
 
@@ -218,7 +218,7 @@ export default function CertificadosDiscapacidadPage() {
   };
 
   const filteredCertificados = certificados.filter((cert) => {
-    const afiliadoNombre = getAfiliadoNombre(cert.afiliadoId).toLowerCase();
+    const afiliadoNombre = getAfiliadoNombre(cert.personaId).toLowerCase();
     const tipoNombre = getTipoDiscapacidadNombre(cert.tipoDiscapacidadId || '', cert.tipoDiscapacidadIds).toLowerCase();
     const search = searchTerm.toLowerCase();
     return (
@@ -308,7 +308,7 @@ export default function CertificadosDiscapacidadPage() {
                       {certificado.numeroCertificado}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-neutral-600">
-                      {getAfiliadoNombre(certificado.afiliadoId)}
+                      {getAfiliadoNombre(certificado.personaId)}
                     </td>
                     <td className="px-6 py-4 text-sm text-neutral-600">
                       {getTipoDiscapacidadNombre(certificado.tipoDiscapacidadId, certificado.tipoDiscapacidadIds)}
@@ -399,8 +399,8 @@ export default function CertificadosDiscapacidadPage() {
                   <label className="block text-sm font-medium text-neutral-700 mb-1">Afiliado *</label>
                   <SearchableSelect
                     options={afiliadoOptions}
-                    value={formData.afiliadoId}
-                    onChange={(value) => setFormData({ ...formData, afiliadoId: value })}
+                    value={formData.personaId}
+                    onChange={(value) => setFormData({ ...formData, personaId: value })}
                     placeholder="Seleccionar afiliado..."
                     required
                   />

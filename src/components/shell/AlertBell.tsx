@@ -203,8 +203,8 @@ function AlertRow({
   onNavigate: () => void;
 }) {
   const tone = priorityToTone(alerta.prioridad);
-  const persona = alerta.afiliado
-    ? `${alerta.afiliado.apellido ?? ""}, ${alerta.afiliado.nombre ?? ""}`.replace(
+  const persona = alerta.persona
+    ? `${alerta.persona.apellido ?? ""}, ${alerta.persona.nombre ?? ""}`.replace(
         /^,\s*|,\s*$/g,
         ""
       )
@@ -230,12 +230,14 @@ function AlertRow({
     </div>
   );
 
-  // Link a la ficha de la persona si tenemos el id
-  if (alerta.afiliadoId) {
+  // Link a la ficha de la persona si tenemos el id.
+  // OJO: la ruta de destino sigue siendo /dashboard/afiliados/:id (la página de
+  // detalle de personas todavía no existe, es F-5) — solo cambia la fuente del id.
+  if (alerta.personaId) {
     return (
       <li>
         <Link
-          href={`/dashboard/afiliados/${alerta.afiliadoId}`}
+          href={`/dashboard/afiliados/${alerta.personaId}`}
           onClick={onNavigate}
           className="block px-5 py-3.5 transition-colors hover:bg-[var(--surface-sunken)]"
         >

@@ -23,8 +23,8 @@ export const alertasService = {
     return response.data;
   },
 
-  async getAlertasByAfiliado(afiliadoId: string): Promise<Alerta[]> {
-    const response = await api.get<Alerta[]>(`/alertas/afiliado/${afiliadoId}`);
+  async getAlertasByPersona(personaId: string): Promise<Alerta[]> {
+    const response = await api.get<Alerta[]>(`/alertas/persona/${personaId}`);
     return response.data;
   },
 

@@ -45,7 +45,7 @@ export default function CertificatesPage() {
 
       // Combinar datos
       const certificadosConInfo = certificadosData.map(cert => {
-        const afiliado = afiliadosData.find(a => a.id === cert.afiliadoId);
+        const afiliado = afiliadosData.find(a => a.id === cert.personaId);
         const ids = cert.tipoDiscapacidadIds && cert.tipoDiscapacidadIds.length > 0
           ? cert.tipoDiscapacidadIds
           : cert.tipoDiscapacidadId ? [cert.tipoDiscapacidadId] : [];

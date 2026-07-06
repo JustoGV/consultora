@@ -50,7 +50,7 @@ export default function UploadPage() {
   });
 
   // Formulario del Certificado
-  const [certificadoData, setCertificadoData] = useState<Omit<CreateCertificadoDiscapacidadDto, 'afiliadoId' | 'tipoDiscapacidadIds'> & { tipoDiscapacidadId: string }>({
+  const [certificadoData, setCertificadoData] = useState<Omit<CreateCertificadoDiscapacidadDto, 'personaId' | 'tipoDiscapacidadIds'> & { tipoDiscapacidadId: string }>({
     numeroCertificado: '',
     fechaEmision: '',
     fechaVencimiento: '',
@@ -173,7 +173,7 @@ export default function UploadPage() {
       const { tipoDiscapacidadId, ...certRest } = certificadoData;
       const certificadoToCreate: CreateCertificadoDiscapacidadDto = {
         ...certRest,
-        afiliadoId: nuevoAfiliado.id,
+        personaId: nuevoAfiliado.id,
         tipoDiscapacidadIds: [tipoDiscapacidadId],
         fechaVencimiento: certificadoData.fechaVencimiento || undefined,
         observaciones: certificadoData.observaciones || undefined,
