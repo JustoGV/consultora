@@ -1,267 +1,408 @@
 'use client';
 
-import { useMemo, useEffect, useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { personasService } from '@/services/personasService';
-import { certificadosDiscapacidadService } from '@/services/certificadosDiscapacidadService';
+import { useCallback, useEffect, useState } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
-  UsersIcon,
-  DocumentTextIcon,
-  ClipboardDocumentListIcon,
-  ChartBarIcon,
-  ArrowTrendingUpIcon,
-  CheckCircleIcon
-} from '@heroicons/react/24/outline';
-import { Persona, CertificadoDiscapacidad } from '@/types';
+  AlertTriangle,
+  CalendarClock,
+  Clock,
+  FileText,
+  Search,
+  UserPlus,
+  Users,
+} from 'lucide-react';
+
+import { useAuth } from '@/contexts/AuthContext';
+import { alertasService } from '@/services/alertasService';
+import { personasService } from '@/services/personasService';
+import { afiliacionesService } from '@/services/afiliacionesService';
+import { certificadosDiscapacidadService } from '@/services/certificadosDiscapacidadService';
+import { extractErrorMessage } from '@/lib/errorUtils';
+import { timeAgo } from '@/lib/timeAgo';
+import { cn } from '@/lib/utils';
+import type { Alerta, DashboardAlertas } from '@/types';
+
+/** Días restantes hasta la fecha objetivo de una alerta (código 30 = vencimiento de certificado). */
+function diasRestantes(fechaObjetivo: string | null): number | null {
+  if (!fechaObjetivo) return null;
+  const ms = new Date(fechaObjetivo).getTime() - Date.now();
+  return Math.ceil(ms / (1000 * 60 * 60 * 24));
+}
+
+const formatFecha = (value?: string | null) => {
+  if (!value) return '—';
+  return new Date(value).toLocaleDateString('es-AR', { year: 'numeric', month: 'short', day: 'numeric' });
+};
+
+interface OperativoCounts {
+  personas: number | null;
+  afiliaciones: number | null;
+  certificados: number | null;
+}
 
 export default function DashboardPage() {
   const { user, isAdmin } = useAuth();
+  const router = useRouter();
+
+  const [dashboard, setDashboard] = useState<DashboardAlertas | null>(null);
+  const [vencePronto, setVencePronto] = useState<Alerta[]>([]);
+  const [pendientesAntiguas, setPendientesAntiguas] = useState<Alerta[]>([]);
+  const [operativo, setOperativo] = useState<OperativoCounts>({
+    personas: null,
+    afiliaciones: null,
+    certificados: null,
+  });
   const [loading, setLoading] = useState(true);
-  const [pacientes, setPacientes] = useState<Persona[]>([]);
-  const [certificados, setCertificados] = useState<CertificadoDiscapacidad[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = async () => {
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
     try {
-      setLoading(true);
-      const [pacientesData, certificadosData] = await Promise.all([
-        personasService.getAll(),
-        certificadosDiscapacidadService.getAll(),
+      const [dashboardData, venceProntoData, pendientesData] = await Promise.all([
+        alertasService.getDashboard(),
+        // Código 30 = certificado vence en ≤30 días (ver 05-ux-spec.md UX-5.2).
+        alertasService.getAlertas({ estado: 'PENDIENTE', codigoNumerico: 30 }),
+        alertasService.getAlertas({ estado: 'PENDIENTE' }),
       ]);
-      setPacientes(pacientesData);
-      setCertificados(certificadosData);
-    } catch (error) {
-      console.error('Error al cargar datos del dashboard:', error);
+      setDashboard(dashboardData);
+      setVencePronto(
+        [...venceProntoData]
+          .sort((a, b) => (diasRestantes(a.fechaObjetivo) ?? Infinity) - (diasRestantes(b.fechaObjetivo) ?? Infinity))
+          .slice(0, 6)
+      );
+      setPendientesAntiguas(
+        [...pendientesData]
+          .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+          .slice(0, 5)
+      );
+    } catch (err) {
+      setError(extractErrorMessage(err, 'No se pudo cargar la información del día'));
     } finally {
       setLoading(false);
     }
+  }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  // Mini-panel operativo: contadores secos vía getPaginated({limit:1}).total (sin gráficos).
+  useEffect(() => {
+    personasService
+      .getPaginated({ limit: 1 })
+      .then((r) => setOperativo((prev) => ({ ...prev, personas: r.total })))
+      .catch(() => setOperativo((prev) => ({ ...prev, personas: null })));
+    afiliacionesService
+      .getPaginated({ limit: 1 })
+      .then((r) => setOperativo((prev) => ({ ...prev, afiliaciones: r.total })))
+      .catch(() => setOperativo((prev) => ({ ...prev, afiliaciones: null })));
+    certificadosDiscapacidadService
+      .getPaginated({ limit: 1 })
+      .then((r) => setOperativo((prev) => ({ ...prev, certificados: r.total })))
+      .catch(() => setOperativo((prev) => ({ ...prev, certificados: null })));
+  }, []);
+
+  const criticas = (dashboard?.porPrioridad.critica ?? 0) + (dashboard?.porPrioridad.alta ?? 0);
+  const media = dashboard?.porPrioridad.media ?? 0;
+  const info = (dashboard?.porPrioridad.baja ?? 0) + (dashboard?.porPrioridad.info ?? 0);
+
+  const focusSearch = () => {
+    const input = document.querySelector<HTMLInputElement>('input[aria-label="Buscar paciente"]');
+    if (input) {
+      input.focus();
+      return;
+    }
+    router.push('/dashboard/pacientes');
   };
 
-  // Calcular estadísticas
-  const administradoraStats = useMemo(() => {
-    if (!user) return { patients: 0, certificates: 0, categories: 0, nomenclators: 0 };
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-semibold text-[var(--fg)]">
+            Hola, {user?.nombre?.split(' ')[0] ?? ''}
+          </h1>
+          <p className="mt-1 text-sm text-[var(--fg-muted)]">Lo urgente del día.</p>
+        </div>
+      </div>
 
-    return {
-      patients: pacientes.length,
-      certificates: certificados.length,
-      categories: 0, // TODO: Conectar con API de categorías
-      nomenclators: 0, // TODO: Conectar con API de nomencladores
-    };
-  }, [user, pacientes, certificados]);
+      {error && (
+        <div className="rounded-md border border-[var(--sev-critica-bg)] bg-[var(--sev-critica-bg)] px-3 py-2 text-sm text-[var(--sev-critica-fg)]">
+          {error}
+        </div>
+      )}
 
-  const stats = isAdmin ? [
-    {
-      name: 'Pacientes Registrados',
-      value: administradoraStats.patients,
-      icon: UsersIcon,
-      change: '+12.5%',
-      trend: 'up' as const,
-      description: 'vs mes anterior',
-      color: '#4680ff',
-      bgColor: 'bg-blue-50'
+      {/* 1. Franja semáforo (hero) — 3 tarjetas grandes clickeables */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <SemaforoCard
+          tone="critica"
+          label="Críticas"
+          count={criticas}
+          loading={loading}
+          href="/dashboard/alerts?semaforo=critica"
+        />
+        <SemaforoCard
+          tone="media"
+          label="Media"
+          count={media}
+          loading={loading}
+          href="/dashboard/alerts?semaforo=media"
+        />
+        <SemaforoCard
+          tone="baja"
+          label="Info"
+          count={info}
+          loading={loading}
+          href="/dashboard/alerts?semaforo=baja"
+        />
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        {/* 2. Vence pronto — alertas código 30 (certificados ≤30 días), PENDIENTE */}
+        <section className="flex flex-col rounded-lg border border-[var(--border)] bg-[var(--surface)] shadow-[var(--shadow-sm)]">
+          <header className="flex items-center gap-2 border-b border-[var(--border)] px-4 py-3">
+            <CalendarClock className="size-4 text-[var(--sev-critica-fg)]" />
+            <h2 className="text-sm font-semibold text-[var(--fg)]">Vence pronto</h2>
+            <span className="ml-auto text-xs text-[var(--fg-subtle)]">Certificados ≤30 días</span>
+          </header>
+          <div className="flex-1">
+            {loading ? (
+              <SkeletonList rows={4} />
+            ) : vencePronto.length === 0 ? (
+              <EmptyRow text="Sin certificados por vencer en los próximos 30 días." />
+            ) : (
+              <ul className="divide-y divide-[var(--border)]">
+                {vencePronto.map((a) => {
+                  const dias = diasRestantes(a.fechaObjetivo);
+                  return (
+                    <li key={a.id} className="px-4 py-2.5">
+                      <Link
+                        href={a.personaId ? `/dashboard/pacientes/${a.personaId}` : '/dashboard/alerts'}
+                        className="flex items-center justify-between gap-3 hover:text-[var(--primary-700)]"
+                      >
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-medium text-[var(--fg)]">
+                            {a.persona ? `${a.persona.apellido}, ${a.persona.nombre}` : a.titulo}
+                          </p>
+                          <p className="truncate text-xs text-[var(--fg-muted)]">{a.titulo}</p>
+                        </div>
+                        <span
+                          className={cn(
+                            'shrink-0 rounded-sm px-2 py-0.5 text-xs font-semibold tabular-nums',
+                            dias !== null && dias <= 7
+                              ? 'bg-[var(--sev-critica-bg)] text-[var(--sev-critica-fg)]'
+                              : 'bg-[var(--sev-media-bg)] text-[var(--sev-media-fg)]'
+                          )}
+                        >
+                          {dias !== null ? `${dias}d` : formatFecha(a.fechaObjetivo)}
+                        </span>
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
+        </section>
+
+        {/* 3. Pendientes más antiguas */}
+        <section className="flex flex-col rounded-lg border border-[var(--border)] bg-[var(--surface)] shadow-[var(--shadow-sm)]">
+          <header className="flex items-center gap-2 border-b border-[var(--border)] px-4 py-3">
+            <Clock className="size-4 text-[var(--fg-muted)]" />
+            <h2 className="text-sm font-semibold text-[var(--fg)]">Pendientes más antiguas</h2>
+            <Link
+              href="/dashboard/alerts"
+              className="ml-auto text-xs font-medium text-[var(--primary-700)] hover:underline"
+            >
+              Ver todas
+            </Link>
+          </header>
+          <div className="flex-1">
+            {loading ? (
+              <SkeletonList rows={4} />
+            ) : pendientesAntiguas.length === 0 ? (
+              <EmptyRow text="No hay alertas pendientes sin atender." />
+            ) : (
+              <ul className="divide-y divide-[var(--border)]">
+                {pendientesAntiguas.map((a) => (
+                  <li key={a.id} className="px-4 py-2.5">
+                    <Link
+                      href={a.personaId ? `/dashboard/pacientes/${a.personaId}` : '/dashboard/alerts'}
+                      className="flex items-center justify-between gap-3 hover:text-[var(--primary-700)]"
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium text-[var(--fg)]">{a.titulo}</p>
+                        <p className="truncate text-xs text-[var(--fg-muted)]">
+                          {a.persona ? `${a.persona.apellido}, ${a.persona.nombre}` : 'Sin paciente asociado'}
+                        </p>
+                      </div>
+                      <span className="shrink-0 text-xs tabular-nums text-[var(--fg-subtle)]">
+                        {timeAgo(a.createdAt)}
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </section>
+      </div>
+
+      {/* 4. Mini-panel operativo — contadores secos, sin gráficos */}
+      <section className="flex flex-wrap items-center gap-x-8 gap-y-3 rounded-lg border border-[var(--border)] bg-[var(--surface-sunken)] px-5 py-3.5">
+        <OperativoStat icon={Users} label="Pacientes activos" value={operativo.personas} />
+        <OperativoStat icon={FileText} label="Afiliaciones" value={operativo.afiliaciones} />
+        <OperativoStat icon={AlertTriangle} label="Certificados" value={operativo.certificados} />
+      </section>
+
+      {/* 5. Accesos rápidos */}
+      <section className="flex flex-wrap items-center gap-3">
+        {isAdmin ? (
+          <>
+            <Link
+              href="/dashboard/pacientes"
+              className="inline-flex items-center gap-2 rounded-md border border-[var(--border-strong)] bg-[var(--surface)] px-4 py-2 text-sm font-medium text-[var(--fg)] transition-colors hover:bg-[var(--surface-sunken)]"
+            >
+              <UserPlus className="size-4" />
+              Nuevo paciente
+            </Link>
+            <button
+              type="button"
+              onClick={focusSearch}
+              className="inline-flex items-center gap-2 rounded-md border border-[var(--border-strong)] bg-[var(--surface)] px-4 py-2 text-sm font-medium text-[var(--fg)] transition-colors hover:bg-[var(--surface-sunken)]"
+            >
+              <Search className="size-4" />
+              Buscar
+            </button>
+            <Link
+              href="/dashboard/certificados-discapacidad"
+              className="inline-flex items-center gap-2 rounded-md border border-[var(--border-strong)] bg-[var(--surface)] px-4 py-2 text-sm font-medium text-[var(--fg)] transition-colors hover:bg-[var(--surface-sunken)]"
+            >
+              <FileText className="size-4" />
+              Cargar certificado
+            </Link>
+          </>
+        ) : (
+          <>
+            <Link
+              href="/dashboard/certificados-discapacidad"
+              className="inline-flex items-center gap-2 rounded-md border border-[var(--border-strong)] bg-[var(--surface)] px-4 py-2 text-sm font-medium text-[var(--fg)] transition-colors hover:bg-[var(--surface-sunken)]"
+            >
+              <FileText className="size-4" />
+              Mis certificados
+            </Link>
+            <button
+              type="button"
+              onClick={focusSearch}
+              className="inline-flex items-center gap-2 rounded-md border border-[var(--border-strong)] bg-[var(--surface)] px-4 py-2 text-sm font-medium text-[var(--fg)] transition-colors hover:bg-[var(--surface-sunken)]"
+            >
+              <Search className="size-4" />
+              Buscar paciente
+            </button>
+          </>
+        )}
+      </section>
+    </div>
+  );
+}
+
+/** Tarjeta grande del hero de semáforo (RN-11) — clickeable, filtra /dashboard/alerts. */
+function SemaforoCard({
+  tone,
+  label,
+  count,
+  loading,
+  href,
+}: {
+  tone: 'critica' | 'media' | 'baja';
+  label: string;
+  count: number;
+  loading: boolean;
+  href: string;
+}) {
+  const toneStyles = {
+    critica: {
+      bg: 'var(--sev-critica-bg)',
+      fg: 'var(--sev-critica-fg)',
+      solid: 'var(--sev-critica)',
     },
-    {
-      name: 'Certificados Vigentes',
-      value: administradoraStats.certificates,
-      icon: DocumentTextIcon,
-      change: '+8.2%',
-      trend: 'up' as const,
-      description: 'activos en sistema',
-      color: '#2ed8b6',
-      bgColor: 'bg-teal-50'
+    media: {
+      bg: 'var(--sev-media-bg)',
+      fg: 'var(--sev-media-fg)',
+      solid: 'var(--sev-media)',
     },
-    {
-      name: 'Categorías Activas',
-      value: administradoraStats.categories,
-      icon: ClipboardDocumentListIcon,
-      change: '0%',
-      trend: 'neutral' as const,
-      description: 'clasificaciones',
-      color: '#6c757d',
-      bgColor: 'bg-gray-100'
+    baja: {
+      bg: 'var(--sev-baja-bg)',
+      fg: 'var(--sev-baja-fg)',
+      solid: 'var(--sev-baja)',
     },
-    {
-      name: 'Nomencladores',
-      value: administradoraStats.nomenclators,
-      icon: ChartBarIcon,
-      change: '+3.1%',
-      trend: 'up' as const,
-      description: 'en configuración',
-      color: '#ffb64d',
-      bgColor: 'bg-orange-50'
-    },
-  ] : [
-    {
-      name: 'Certificados Asignados',
-      value: administradoraStats.certificates,
-      icon: DocumentTextIcon,
-      change: 'Actualizado',
-      trend: 'neutral' as const,
-      description: 'tu cuenta',
-      color: '#4680ff',
-      bgColor: 'bg-blue-50'
-    },
-    {
-      name: 'Pacientes en Cartera',
-      value: administradoraStats.patients,
-      icon: UsersIcon,
-      change: 'Vigente',
-      trend: 'neutral' as const,
-      description: 'bajo tu gestión',
-      color: '#2ed8b6',
-      bgColor: 'bg-teal-50'
-    },
-  ];
+  }[tone];
 
   return (
-    <div className="space-y-8">
-      {/* Header Moderno */}
-      <div className="relative">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-4xl font-black bg-gradient-to-r from-slate-700 via-slate-800 to-slate-900 bg-clip-text text-transparent">
-              Dashboard
-            </h1>
-            <p className="text-gray-600 mt-2 flex items-center gap-2">
-              {isAdmin 
-                ? (
-                  <>
-                    <span className="inline-flex items-center px-3 py-1 rounded-full bg-gradient-to-r from-blue-600 to-indigo-700 text-white text-xs font-bold uppercase tracking-wide shadow-lg">
-                      Admin
-                    </span>
-                    <span className="font-medium">Vista Completa del Sistema</span>
-                  </>
-                )
-                : (
-                  <>
-                    <span className="inline-flex items-center px-3 py-1 rounded-full bg-gradient-to-r from-slate-600 to-slate-800 text-white text-xs font-bold uppercase tracking-wide shadow-lg">
-                      Usuario
-                    </span>
-                    <span className="font-medium">Mis Certificaciones</span>
-                  </>
-                )}
-            </p>
-          </div>
-          <div className="text-right">
-            <p className="text-sm text-gray-500">Bienvenido/a,</p>
-            <p className="text-xl font-bold text-gray-900">{user?.nombre}</p>
-          </div>
-        </div>
+    <Link
+      href={href}
+      className="group flex items-center justify-between rounded-lg border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[var(--shadow-sm)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[var(--shadow-md)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)]"
+    >
+      <div>
+        <p className="text-sm font-medium text-[var(--fg-muted)]">{label}</p>
+        <p
+          className="mt-1 text-4xl font-semibold tabular-nums"
+          style={{ color: toneStyles.fg }}
+        >
+          {loading ? <span className="skeleton inline-block h-9 w-12 rounded" /> : count}
+        </p>
       </div>
+      <span
+        className="flex size-11 shrink-0 items-center justify-center rounded-full transition-transform duration-200 group-hover:scale-105"
+        style={{ backgroundColor: toneStyles.bg }}
+      >
+        <span className="size-3 rounded-full" style={{ backgroundColor: toneStyles.solid }} aria-hidden />
+      </span>
+    </Link>
+  );
+}
 
-      {/* Loading State */}
-      {loading ? (
-        <div className="flex justify-center items-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-        </div>
-      ) : (
-        <>
-          {/* KPIs Grid - Diseño Elegante */}
-          <div className={`grid grid-cols-1 ${isAdmin ? 'md:grid-cols-2 lg:grid-cols-4' : 'md:grid-cols-2'} gap-4`}>
-        {stats.map((stat) => {
-          const Icon = stat.icon;
-          
-          return (
-            <div key={stat.name} className="bg-white rounded-lg p-5 shadow-sm hover:shadow-md transition-shadow">
-              <div className="flex items-center justify-between mb-4">
-                <div className={`p-2.5 ${stat.bgColor} rounded-lg`}>
-                  <Icon className="w-6 h-6" style={{ color: stat.color }} />
-                </div>
-                {stat.trend === 'up' && (
-                  <div className="flex items-center gap-1 text-teal-600 bg-teal-50 px-2.5 py-1 rounded-md">
-                    <ArrowTrendingUpIcon className="w-3.5 h-3.5" />
-                    <span className="text-xs font-semibold">{stat.change}</span>
-                  </div>
-                )}
-                {stat.trend === 'neutral' && (
-                  <div className="flex items-center gap-1 text-gray-600 bg-gray-100 px-2.5 py-1 rounded-md">
-                    <CheckCircleIcon className="w-3.5 h-3.5" />
-                    <span className="text-xs font-semibold">{stat.change}</span>
-                  </div>
-                )}
-              </div>
-              <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">{stat.name}</p>
-              <p className="text-3xl font-bold text-gray-900">{stat.value}</p>
-              <p className="text-xs text-gray-400 mt-2">{stat.description}</p>
-            </div>
-          );
-        })}
+function OperativoStat({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  value: number | null;
+}) {
+  return (
+    <div className="flex items-center gap-2.5">
+      <Icon className="size-4 text-[var(--fg-subtle)]" />
+      <div className="leading-tight">
+        <p className="text-lg font-semibold tabular-nums text-[var(--fg)]">
+          {value === null ? <span className="skeleton inline-block h-5 w-8 rounded" /> : value}
+        </p>
+        <p className="text-xs text-[var(--fg-muted)]">{label}</p>
       </div>
+    </div>
+  );
+}
 
-      {/* Actividad Reciente - Diseño Moderno */}
-      <div className="bg-white rounded-2xl shadow-xl p-6 border border-gray-100">
-        <div className="mb-6">
-          <h2 className="text-2xl font-bold text-gray-900">Actividad Reciente</h2>
-          <p className="text-gray-500 mt-1">Últimas acciones en el sistema</p>
-        </div>
-        <div className="space-y-3">
-          {isAdmin ? (
-            <>
-              <div className="flex items-center gap-4 p-4 rounded-xl hover:bg-gray-50 transition-all group border-l-4 border-l-transparent hover:border-l-blue-500">
-                <div className="p-3 bg-gradient-to-br from-blue-500 to-blue-700 rounded-xl group-hover:scale-110 transition-transform">
-                  <CheckCircleIcon className="w-6 h-6 text-white" />
-                </div>
-                <div className="flex-1">
-                  <p className="font-bold text-gray-900">Certificado procesado exitosamente</p>
-                  <p className="text-sm text-gray-600">María González - Discapacidad motriz certificada</p>
-                </div>
-                <span className="text-sm text-gray-500 font-semibold">Hace 2h</span>
-              </div>
-              
-              <div className="flex items-center gap-4 p-4 rounded-xl hover:bg-gray-50 transition-all group border-l-4 border-l-transparent hover:border-l-emerald-500">
-                <div className="p-3 bg-gradient-to-br from-emerald-500 to-emerald-700 rounded-xl group-hover:scale-110 transition-transform">
-                  <DocumentTextIcon className="w-6 h-6 text-white" />
-                </div>
-                <div className="flex-1">
-                  <p className="font-bold text-gray-900">Actualización de categoría</p>
-                  <p className="text-sm text-gray-600">Discapacidad Sensorial - Parámetros modificados</p>
-                </div>
-                <span className="text-sm text-gray-500 font-semibold">Hace 5h</span>
-              </div>
-              
-              <div className="flex items-center gap-4 p-4 rounded-xl hover:bg-gray-50 transition-all group border-l-4 border-l-transparent hover:border-l-indigo-500">
-                <div className="p-3 bg-gradient-to-br from-indigo-500 to-indigo-700 rounded-xl group-hover:scale-110 transition-transform">
-                  <ClipboardDocumentListIcon className="w-6 h-6 text-white" />
-                </div>
-                <div className="flex-1">
-                  <p className="font-bold text-gray-900">Nomenclador agregado</p>
-                  <p className="text-sm text-gray-600">NOM-005 - Prótesis de miembro inferior configurada</p>
-                </div>
-                <span className="text-sm text-gray-500 font-semibold">Ayer</span>
-              </div>
-            </>
-          ) : (
-            <>
-              <div className="flex items-center gap-4 p-4 rounded-xl hover:bg-gray-50 transition-all group border-l-4 border-l-transparent hover:border-l-blue-500">
-                <div className="p-3 bg-gradient-to-br from-blue-500 to-blue-700 rounded-xl group-hover:scale-110 transition-transform">
-                  <CheckCircleIcon className="w-6 h-6 text-white" />
-                </div>
-                <div className="flex-1">
-                  <p className="font-bold text-gray-900">Certificado procesado</p>
-                  <p className="text-sm text-gray-600">Documentación validada y archivada correctamente</p>
-                </div>
-                <span className="text-sm text-gray-500 font-semibold">Hace 1 día</span>
-              </div>
-              
-              <div className="flex items-center gap-4 p-4 rounded-xl hover:bg-gray-50 transition-all group border-l-4 border-l-transparent hover:border-l-emerald-500">
-                <div className="p-3 bg-gradient-to-br from-emerald-500 to-emerald-700 rounded-xl group-hover:scale-110 transition-transform">
-                  <UsersIcon className="w-6 h-6 text-white" />
-                </div>
-                <div className="flex-1">
-                  <p className="font-bold text-gray-900">Acceso al sistema</p>
-                  <p className="text-sm text-gray-600">Inicio de sesión exitoso en la plataforma</p>
-                </div>
-                <span className="text-sm text-gray-500 font-semibold">Hace 3 días</span>
-              </div>
-            </>
-          )}
-        </div>
-      </div>
-        </>
-      )}
+function SkeletonList({ rows }: { rows: number }) {
+  return (
+    <ul className="divide-y divide-[var(--border)]">
+      {Array.from({ length: rows }).map((_, i) => (
+        <li key={i} className="flex items-center justify-between px-4 py-2.5">
+          <span className="skeleton block h-3.5 w-2/3 rounded" style={{ opacity: 1 - i * 0.08 }} />
+          <span className="skeleton block h-3.5 w-8 rounded" style={{ opacity: 1 - i * 0.08 }} />
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function EmptyRow({ text }: { text: string }) {
+  return (
+    <div className="flex flex-col items-center justify-center gap-2 px-6 py-10 text-center">
+      <p className="text-sm text-[var(--fg-muted)]">{text}</p>
     </div>
   );
 }
