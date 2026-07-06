@@ -1,24 +1,24 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import Image from 'next/image';
+import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { AxiosError } from 'axios';
-import {
-  ArrowRightIcon
-} from '@heroicons/react/24/outline';
+import { Eye, EyeOff, Loader2, ShieldCheck, WifiOff } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
+  const [errorKind, setErrorKind] = useState<'credenciales' | 'red' | null>(null);
   const [loading, setLoading] = useState(false);
-  const [loadingMessage, setLoadingMessage] = useState('Conectando...');
   const { login } = useAuth();
   const router = useRouter();
 
-  // Limpiar localStorage al montar
+  // Limpiar localStorage corrupto al montar
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const userJson = localStorage.getItem('auth_user');
@@ -32,187 +32,170 @@ export default function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setErrorKind(null);
     setLoading(true);
-    setLoadingMessage('Autenticando...');
 
     try {
       const success = await login(email, password);
 
       if (success) {
-        setLoadingMessage('¡Acceso concedido!');
         router.push('/dashboard');
-      } else {
-        setError('Credenciales inválidas. Por favor, verifica tu email y contraseña.');
+        return;
       }
+
+      setErrorKind('credenciales');
+      setError('Correo o contraseña incorrectos.');
     } catch (err) {
-      // NOTE: do not log the full error object — it may include request config/headers with the auth token (AUD-17).
+      // NOTE: no loguear el objeto de error completo — puede incluir config/headers con el token (AUD-17).
       const error = err as AxiosError;
 
       if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
-        setError('Tiempo de espera agotado. Por favor, intenta nuevamente.');
+        setErrorKind('red');
+        setError('Tiempo de espera agotado. Intentá nuevamente.');
       } else if (error.response?.status === 401) {
-        setError('Email o contraseña incorrectos. Verifica tus credenciales.');
-      } else if (error.response?.status === 404) {
-        setError('El endpoint de login no existe. Verifica la configuración del backend.');
+        setErrorKind('credenciales');
+        setError('Correo o contraseña incorrectos.');
       } else if (!error.response) {
-        setError('No se pudo conectar con el servidor. Verifica tu conexión a internet.');
+        setErrorKind('red');
+        setError('No se pudo conectar con el servidor. Verificá tu conexión.');
       } else {
-        setError(`Error del servidor (${error.response?.status}). Intenta de nuevo.`);
+        setErrorKind('red');
+        setError('Error del servidor. Intentá de nuevo en unos minutos.');
       }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleQuickLogin = async (userEmail: string, userPassword: string) => {
-    setEmail(userEmail);
-    setPassword(userPassword);
-    setError('');
-    setLoading(true);
-    setLoadingMessage('Autenticando...');
-
-    try {
-      const success = await login(userEmail, userPassword);
-      if (success) {
-        setLoadingMessage('¡Acceso concedido!');
-        router.push('/dashboard');
-      }
-    } catch {
-      setError('Error de conexión. Por favor, verifica tus credenciales e intenta nuevamente.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-[#4A5EB5] flex items-center justify-center p-8">
-      {/* Main Card */}
-      <div className="w-full max-w-5xl bg-white rounded-lg shadow-2xl overflow-hidden grid md:grid-cols-2">
-        
-        {/* Left side - Illustration */}
-        <div className="bg-[#A4D0ED] p-12 flex items-center justify-center">
-          <div className="relative w-full max-w-md h-80">
-            <Image 
-              src="https://st4.depositphotos.com/6940196/29282/v/450/depositphotos_292822068-stock-illustration-the-working-environment-on-the.jpg"
-              alt="Working Environment"
-              fill
-              className="object-contain"
-              priority
-            />
-          </div>
+    <div className="min-h-screen w-full flex bg-[var(--bg)]">
+      {/* Panel de marca — oculto en mobile, presencia sobria en desktop */}
+      <div className="hidden lg:flex lg:w-[44%] xl:w-2/5 relative flex-col justify-between bg-[var(--primary-900)] px-12 py-12 overflow-hidden">
+        {/* Textura sutil: veladura radial, sin ilustraciones de stock */}
+        <div
+          className="pointer-events-none absolute inset-0 opacity-40"
+          style={{
+            background:
+              'radial-gradient(60% 50% at 15% 10%, var(--primary-800) 0%, transparent 60%), radial-gradient(50% 40% at 90% 90%, var(--primary-950) 0%, transparent 60%)',
+          }}
+        />
+
+        <div className="relative">
+          <span className="text-lg font-semibold tracking-tight text-white">
+            Consultora Salud
+          </span>
         </div>
 
-        {/* Right side - Login form */}
-        <div className="p-12 flex flex-col justify-center bg-white">
-          
-          <div className="mb-8">
-            <h2 className="text-2xl font-bold text-gray-800 mb-2">Login to Dashboard</h2>
+        <div className="relative max-w-sm">
+          <h1 className="text-[1.75rem] font-semibold leading-tight tracking-[-0.011em] text-white">
+            Gestión de discapacidad para financiadores de salud
+          </h1>
+          <p className="mt-4 text-sm leading-relaxed text-[var(--primary-200)]">
+            Certificados, orientaciones prestacionales y alertas proactivas de
+            vencimiento en un solo lugar.
+          </p>
+        </div>
+
+        <div className="relative text-xs text-[var(--primary-300)]">
+          Acceso exclusivo para personal autorizado.
+        </div>
+      </div>
+
+      {/* Formulario */}
+      <div className="flex flex-1 items-center justify-center px-6 py-12">
+        <div className="w-full max-w-sm">
+          {/* Wordmark visible en mobile (sin panel de marca) */}
+          <div className="mb-8 lg:hidden">
+            <span className="text-lg font-semibold tracking-tight text-[var(--primary-900)]">
+              Consultora Salud
+            </span>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="mb-8">
+            <h2 className="text-2xl font-semibold tracking-[-0.011em] text-[var(--fg)]">
+              Iniciar sesión
+            </h2>
+            <p className="mt-1.5 text-sm text-[var(--fg-muted)]">
+              Ingresá tus credenciales para acceder al sistema.
+            </p>
+          </div>
+
+          <form onSubmit={handleSubmit} noValidate className="space-y-5">
             <div>
-              <label htmlFor="email" className="block text-xs font-semibold text-gray-600 mb-2 uppercase tracking-wider">
-                Username/Email address
+              <label
+                htmlFor="email"
+                className="mb-1.5 block text-xs font-semibold text-[var(--fg-muted)]"
+              >
+                Correo electrónico
               </label>
-              <input
+              <Input
                 id="email"
                 type="email"
+                autoComplete="email"
+                autoFocus
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-3 border-2 border-gray-200 rounded-md focus:border-blue-600 focus:outline-none transition-colors text-gray-800"
-                placeholder=""
+                placeholder="nombre@organizacion.com"
+                aria-invalid={errorKind === 'credenciales' || undefined}
                 required
               />
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-xs font-semibold text-gray-600 mb-2 uppercase tracking-wider">
-                Password
-              </label>
-              <input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-3 border-2 border-gray-200 rounded-md focus:border-blue-600 focus:outline-none transition-colors text-gray-800"
-                placeholder=""
-                required
-              />
-            </div>
-
-            <div className="flex items-center justify-between text-xs">
-              <label className="flex items-center text-gray-600">
-                <input type="checkbox" className="mr-2 w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500" />
-                Remember me
-              </label>
+              <div className="mb-1.5 flex items-center justify-between">
+                <label htmlFor="password" className="block text-xs font-semibold text-[var(--fg-muted)]">
+                  Contraseña
+                </label>
+              </div>
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  aria-invalid={errorKind === 'credenciales' || undefined}
+                  className="pr-10"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  tabIndex={-1}
+                  aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                  className="absolute inset-y-0 right-0 flex w-9 items-center justify-center text-[var(--fg-subtle)] outline-none transition-colors hover:text-[var(--fg-muted)] focus-visible:text-[var(--primary-600)]"
+                >
+                  {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                </button>
+              </div>
             </div>
 
             {error && (
-              <div className="bg-red-50 border-l-4 border-red-500 p-3 animate-shake">
-                <p className="text-sm text-red-700">{error}</p>
+              <div
+                role="alert"
+                className="flex items-start gap-2 rounded-md border-l-4 border-[var(--sev-critica)] bg-[var(--sev-critica-bg)] p-3 animate-shake"
+              >
+                {errorKind === 'red' ? (
+                  <WifiOff className="mt-0.5 size-4 shrink-0 text-[var(--sev-critica-fg)]" />
+                ) : (
+                  <ShieldCheck className="mt-0.5 size-4 shrink-0 text-[var(--sev-critica-fg)]" />
+                )}
+                <p className="text-sm text-[var(--sev-critica-fg)]">{error}</p>
               </div>
             )}
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-[#002B7A] hover:bg-[#001F5C] text-white font-bold py-3 px-4 rounded-full transition-colors disabled:opacity-50 uppercase text-sm tracking-wider flex items-center justify-center gap-2"
-            >
+            <Button type="submit" disabled={loading} size="lg" className="w-full">
               {loading ? (
                 <>
-                  <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  <span>{loadingMessage}</span>
+                  <Loader2 className="size-4 animate-spin" />
+                  <span>Ingresando…</span>
                 </>
               ) : (
-                'Login'
+                'Ingresar'
               )}
-            </button>
-
-            <div className="text-center mt-4">
-              <a href="#" className="text-sm text-blue-600 hover:text-blue-800">
-                Don&apos;t have an account? Sign up
-              </a>
-            </div>
+            </Button>
           </form>
-
-          <div className="mt-8 pt-6 border-t border-gray-200">
-            <p className="text-xs font-semibold text-gray-500 mb-4 uppercase tracking-wider">🚀 Demo Access</p>
-            
-            {/* Superadmin */}
-            <button
-              type="button"
-              onClick={() => handleQuickLogin('consultora@admin.com', 'consultora123')}
-              disabled={loading}
-              className="group w-full p-3 bg-purple-50 border border-purple-200 rounded-lg hover:bg-purple-100 hover:border-purple-300 transition-all text-left mb-3"
-            >
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-semibold text-gray-800 text-sm">🛡️ Superadmin</p>
-                  <p className="text-xs text-gray-600">consultora@admin.com</p>
-                </div>
-                <ArrowRightIcon className="w-4 h-4 text-purple-600 group-hover:translate-x-1 transition-transform" />
-              </div>
-            </button>
-
-            {/* Admin */}
-            <button
-              type="button"
-              onClick={() => handleQuickLogin('admin@jerarquicos.com', 'password123')}
-              disabled={loading}
-              className="group w-full p-3 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 hover:border-blue-300 transition-all text-left"
-            >
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-semibold text-gray-800 text-sm">👑 Admin</p>
-                  <p className="text-xs text-gray-600">admin@jerarquicos.com</p>
-                </div>
-                <ArrowRightIcon className="w-4 h-4 text-blue-600 group-hover:translate-x-1 transition-transform" />
-              </div>
-            </button>
-          </div>
         </div>
       </div>
     </div>
