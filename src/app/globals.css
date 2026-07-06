@@ -1,85 +1,220 @@
 @import "tailwindcss";
+@import "tw-animate-css";
 
-/* ============================================
-   CONSULTORA SALUD - ADMINDEK STYLE
-   Clean Professional Dashboard Design
-   ============================================ */
+/* ============================================================
+   CONSULTORA SALUD — DESIGN SYSTEM (UX-1)
+   Identidad sobria de salud: teal profundo + neutrales cálidos.
+   Semáforo (rojo/ámbar/verde) reservado EXCLUSIVAMENTE a severidad.
+   Regla madre: denso con jerarquía, desktop-first, teclado-first.
+   Documentado en /DESIGN.md — no usar colores/espaciados fuera de tokens.
+   ============================================================ */
+
+@custom-variant dark (&:where(.dark, .dark *));
 
 :root {
-  /* Primary Brand - Admindek Blue */
-  --primary-50: #e8f0ff;
-  --primary-100: #d4e2ff;
-  --primary-200: #abc5ff;
-  --primary-300: #82a8ff;
-  --primary-400: #5c8bff;
-  --primary-500: #4680ff;  /* Main Admindek Blue */
-  --primary-600: #2f66e6;
-  --primary-700: #1e4fcc;
-  --primary-800: #1339b3;
-  --primary-900: #0a2899;
-  
-  /* Neutral Palette - Clean Grays */
-  --neutral-50: #f8f9fa;   /* Admindek background */
-  --neutral-100: #f1f3f5;
-  --neutral-200: #e9ecef;
-  --neutral-300: #dee2e6;
-  --neutral-400: #ced4da;
-  --neutral-500: #adb5bd;
-  --neutral-600: #6c757d;
-  --neutral-700: #495057;
-  --neutral-800: #343a40;
-  --neutral-900: #212529;
-  
-  /* Semantic Colors - Admindek Style */
-  --success: #2ed8b6;      /* Teal green */
-  --success-light: #e0f9f4;
-  --warning: #ffb64d;      /* Orange */
-  --warning-light: #fff3e0;
-  --error: #ff5370;        /* Red */
-  --error-light: #ffe5ea;
-  --info: #4680ff;         /* Primary blue */
-  --info-light: #e8f0ff;
-  
-  /* Surface Colors */
+  /* --- PRIMARY — Teal profundo de salud (identidad propia, NO azul admin) ---
+     Reemplaza el viejo "Admindek Blue". El nombre de la escala --primary-N se
+     conserva para que las ~20 páginas que la referencian adopten el teal sin
+     tocar su JSX. 600 = color principal. */
+  --primary-50:  #ecfdf9;
+  --primary-100: #d0faf0;
+  --primary-200: #a4f2e1;
+  --primary-300: #6ee3ce;
+  --primary-400: #34ccb4;
+  --primary-500: #16a394;   /* teal medio (acento vivo, hover claro) */
+  --primary-600: #0f766e;   /* MAIN — teal profundo de marca */
+  --primary-700: #115e57;
+  --primary-800: #134e49;
+  --primary-900: #134039;
+  --primary-950: #042f2a;
+
+  /* --- NEUTRALES CÁLIDOS — piedra/stone con una pizca de temperatura
+     (no el gris muerto de slate). Reemplaza los --neutral-N fríos. --- */
+  --neutral-50:  #faf9f7;
+  --neutral-100: #f4f2ee;
+  --neutral-200: #e8e5df;
+  --neutral-300: #d6d1c7;
+  --neutral-400: #a8a196;
+  --neutral-500: #7c766b;
+  --neutral-600: #5c574e;
+  --neutral-700: #443f38;
+  --neutral-800: #2b2823;
+  --neutral-900: #1c1a16;
+
+  /* --- SEMÁFORO DE SEVERIDAD (RN-11) — uso EXCLUSIVO para prioridad de alerta.
+     CRITICA/ALTA = rojo · MEDIA = ámbar · BAJA/INFO = verde.
+     Nunca decorativo. Cada color trae su par -bg (fondo suave) y -fg (texto). --- */
+  --sev-critica:     #dc2626;   /* red-600  */
+  --sev-critica-bg:  #fef2f2;   /* red-50   */
+  --sev-critica-fg:  #991b1b;   /* red-800  */
+  --sev-media:       #d97706;   /* amber-600 */
+  --sev-media-bg:    #fffbeb;   /* amber-50  */
+  --sev-media-fg:    #92400e;   /* amber-800 */
+  --sev-baja:        #16a34a;   /* green-600 */
+  --sev-baja-bg:     #f0fdf4;   /* green-50  */
+  --sev-baja-fg:     #166534;   /* green-800 */
+
+  /* --- Colores semánticos legacy (se mantienen los nombres, retintados) --- */
+  --success: var(--sev-baja);
+  --success-light: var(--sev-baja-bg);
+  --warning: var(--sev-media);
+  --warning-light: var(--sev-media-bg);
+  --error: var(--sev-critica);
+  --error-light: var(--sev-critica-bg);
+  --info: var(--primary-600);
+  --info-light: var(--primary-50);
+
+  /* --- Superficies --- */
   --surface-primary: #ffffff;
-  --surface-secondary: #f8f9fa;
+  --surface-secondary: var(--neutral-50);
   --surface-elevated: #ffffff;
-  
-  /* Text Colors */
-  --text-primary: #212529;
-  --text-secondary: #6c757d;
-  --text-tertiary: #adb5bd;
-  
-  /* Shadows - Subtle & Clean */
-  --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.04);
-  --shadow-md: 0 2px 8px 0 rgba(0, 0, 0, 0.08);
-  --shadow-lg: 0 4px 12px 0 rgba(0, 0, 0, 0.1);
-  --shadow-xl: 0 6px 20px 0 rgba(0, 0, 0, 0.12);
-  --shadow-2xl: 0 10px 30px 0 rgba(0, 0, 0, 0.15);
-  
-  /* Border Radius - Admindek Style */
-  --radius-sm: 0.25rem;    /* 4px */
-  --radius-md: 0.375rem;   /* 6px */
-  --radius-lg: 0.5rem;     /* 8px */
-  --radius-xl: 0.75rem;    /* 12px */
-  
-  /* Transitions */
-  --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
-  --transition-base: 200ms cubic-bezier(0.4, 0, 0.2, 1);
-  --transition-slow: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* --- Texto --- */
+  --text-primary: var(--neutral-900);
+  --text-secondary: var(--neutral-600);
+  --text-tertiary: var(--neutral-500);
+
+  /* --- Tokens semánticos del design system (los nuevos componentes usan estos) --- */
+  --bg: var(--surface-secondary);
+  --surface: var(--surface-primary);
+  --surface-sunken: var(--neutral-100);
+  --border: var(--neutral-200);
+  --border-strong: var(--neutral-300);
+  --fg: var(--text-primary);
+  --fg-muted: var(--text-secondary);
+  --fg-subtle: var(--text-tertiary);
+  --ring: var(--primary-600);
+
+  /* Shell */
+  --sidebar-bg: var(--neutral-900);
+  --sidebar-fg: var(--neutral-300);
+  --sidebar-fg-muted: var(--neutral-500);
+  --sidebar-active-bg: var(--primary-600);
+  --sidebar-hover-bg: var(--neutral-800);
+  --topbar-bg: var(--surface-primary);
+
+  /* --- Sombras — mayormente planas + una elevación considerada --- */
+  --shadow-sm: 0 1px 2px 0 rgba(28, 26, 22, 0.05);
+  --shadow-md: 0 2px 8px -2px rgba(28, 26, 22, 0.08);
+  --shadow-lg: 0 8px 24px -6px rgba(28, 26, 22, 0.10);
+  --shadow-xl: 0 12px 32px -8px rgba(28, 26, 22, 0.14);
+  --shadow-2xl: 0 20px 48px -12px rgba(28, 26, 22, 0.18);
+
+  /* --- Radios — escala deliberada, crisp (no rounded-2xl en todo) --- */
+  --radius-sm: 0.25rem;   /* 4px  — chips, badges */
+  --radius-md: 0.375rem;  /* 6px  — inputs, botones, celdas */
+  --radius-lg: 0.5rem;    /* 8px  — cards, modales */
+  --radius-xl: 0.75rem;   /* 12px — superficies grandes */
+  --radius: var(--radius-md); /* alias shadcn */
+
+  /* --- Transiciones — sutiles 150-250ms, sin animación gratuita --- */
+  --transition-fast: 150ms cubic-bezier(0.16, 1, 0.3, 1);
+  --transition-base: 200ms cubic-bezier(0.16, 1, 0.3, 1);
+  --transition-slow: 250ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+/* ============================================================
+   @theme — mapear tokens a utilidades Tailwind.
+   Punto clave para NO romper páginas viejas: se re-mapea la paleta
+   built-in `blue-*` de Tailwind al teal de marca, de modo que los
+   ~27 archivos con `bg-blue-600 / text-blue-600 / ring-blue-500 / border-blue-*`
+   hardcodeados adoptan la identidad sin editar su JSX.
+   ============================================================ */
 @theme inline {
-  --color-background: var(--surface-secondary);
-  --color-foreground: var(--text-primary);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-background: var(--bg);
+  --color-foreground: var(--fg);
+
+  /* Tokens semánticos → utilidades (bg-surface, text-fg-muted, border-border, etc.) */
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-sunken: var(--surface-sunken);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-fg: var(--fg);
+  --color-fg-muted: var(--fg-muted);
+  --color-fg-subtle: var(--fg-subtle);
+  --color-ring: var(--ring);
+
+  /* Semáforo de severidad como utilidades (text-sev-critica, bg-sev-critica-bg, …) */
+  --color-sev-critica: var(--sev-critica);
+  --color-sev-critica-bg: var(--sev-critica-bg);
+  --color-sev-critica-fg: var(--sev-critica-fg);
+  --color-sev-media: var(--sev-media);
+  --color-sev-media-bg: var(--sev-media-bg);
+  --color-sev-media-fg: var(--sev-media-fg);
+  --color-sev-baja: var(--sev-baja);
+  --color-sev-baja-bg: var(--sev-baja-bg);
+  --color-sev-baja-fg: var(--sev-baja-fg);
+
+  /* Tipografía — Lexend humanista (self-hosted vía Fontsource). NO Inter/Geist. */
+  --font-sans: "Lexend Variable", var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, "SFMono-Regular", monospace;
+
+  /* Radios shadcn */
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+  --radius-xl: var(--radius-xl);
+
+  /* Sombras */
+  --shadow-sm: var(--shadow-sm);
+  --shadow-md: var(--shadow-md);
+  --shadow-lg: var(--shadow-lg);
+  --shadow-xl: var(--shadow-xl);
+  --shadow-2xl: var(--shadow-2xl);
 }
 
-/* ============================================
-   GLOBAL STYLES
-   ============================================ */
+/* ============================================================
+   @theme (NO inline) — OVERRIDE de paletas built-in de Tailwind.
+   Con valores literales para reemplazar los defaults (`blue-600: #155dfc`,
+   stone frío, etc.). Es lo que hace que `bg-blue-600 / text-blue-600 /
+   ring-blue-500` de las páginas viejas rendericen en teal SIN tocar su JSX,
+   y que `neutral-*`/`primary-*` sean los tokens de marca.
+   (En @theme inline el override de un color default no reemplaza al built-in.)
+   ============================================================ */
+@theme {
+  /* Escala primary (teal de marca) */
+  --color-primary-50:  #ecfdf9;
+  --color-primary-100: #d0faf0;
+  --color-primary-200: #a4f2e1;
+  --color-primary-300: #6ee3ce;
+  --color-primary-400: #34ccb4;
+  --color-primary-500: #16a394;
+  --color-primary-600: #0f766e;
+  --color-primary-700: #115e57;
+  --color-primary-800: #134e49;
+  --color-primary-900: #134039;
+  --color-primary-950: #042f2a;
 
+  /* Neutrales cálidos (reemplazan el gris frío default) */
+  --color-neutral-50:  #faf9f7;
+  --color-neutral-100: #f4f2ee;
+  --color-neutral-200: #e8e5df;
+  --color-neutral-300: #d6d1c7;
+  --color-neutral-400: #a8a196;
+  --color-neutral-500: #7c766b;
+  --color-neutral-600: #5c574e;
+  --color-neutral-700: #443f38;
+  --color-neutral-800: #2b2823;
+  --color-neutral-900: #1c1a16;
+
+  /* Re-map blue-* a teal (compat: paginas viejas con bg-blue y text-blue hardcodeados) */
+  --color-blue-50:  #ecfdf9;
+  --color-blue-100: #d0faf0;
+  --color-blue-200: #a4f2e1;
+  --color-blue-300: #6ee3ce;
+  --color-blue-400: #34ccb4;
+  --color-blue-500: #16a394;
+  --color-blue-600: #0f766e;
+  --color-blue-700: #115e57;
+  --color-blue-800: #134e49;
+  --color-blue-900: #134039;
+  --color-blue-950: #042f2a;
+}
+
+/* ============================================================
+   BASE
+   ============================================================ */
 * {
   box-sizing: border-box;
 }
@@ -88,192 +223,190 @@ html {
   scroll-behavior: smooth;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  color-scheme: light;
 }
 
 body {
-  background: var(--surface-secondary);
-  color: var(--text-primary);
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-sans, "Lexend Variable", system-ui, sans-serif);
   line-height: 1.5;
   font-size: 14px;
   font-weight: 400;
+  text-rendering: optimizeLegibility;
 }
 
-/* ============================================
-   ADMINDEK COMPONENTS
-   ============================================ */
-
-/* Card - Admindek Style */
-.premium-card {
-  background: var(--surface-elevated);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
-  border: 1px solid var(--neutral-200);
-  transition: all var(--transition-base);
-}
-
-.premium-card:hover {
-  box-shadow: var(--shadow-md);
-}
-
-/* Primary Button - Admindek Blue */
-.btn-primary {
-  background: var(--primary-500);
-  color: white;
-  padding: 0.625rem 1.25rem;
-  border-radius: var(--radius-md);
-  font-weight: 500;
-  font-size: 14px;
-  box-shadow: var(--shadow-sm);
-  transition: all var(--transition-base);
-  border: none;
-  cursor: pointer;
-  letter-spacing: 0.025em;
-}
-
-.btn-primary:hover {
-  background: var(--primary-600);
-  box-shadow: var(--shadow-md);
-  transform: translateY(-1px);
-}
-
-.btn-primary:active {
-  background: var(--primary-700);
-  transform: translateY(0);
-}
-
-/* Secondary Button */
-.btn-secondary {
-  background: white;
-  color: var(--text-primary);
-  padding: 0.625rem 1.25rem;
-  border-radius: var(--radius-md);
-  font-weight: 500;
-  font-size: 14px;
-  border: 1px solid var(--neutral-300);
-  transition: all var(--transition-base);
-  cursor: pointer;
-}
-
-.btn-secondary:hover {
-  background: var(--neutral-50);
-  border-color: var(--neutral-400);
-}
-
-/* Input Fields - Admindek Style */
-.input-premium {
-  border: 1px solid var(--neutral-300);
-  border-radius: var(--radius-md);
-  padding: 0.625rem 0.875rem;
-  font-size: 14px;
-  transition: all var(--transition-base);
-  background: var(--surface-primary);
-  color: var(--text-primary);
-}
-
-.input-premium:focus {
-  outline: none;
-  border-color: var(--primary-500);
-  box-shadow: 0 0 0 3px rgba(70, 128, 255, 0.1);
-}
-
-.input-premium::placeholder {
-  color: var(--text-tertiary);
-}
-
-/* Smooth Animations */
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.fade-in {
-  animation: fadeIn var(--transition-slow) ease-out;
-}
-
-@keyframes slideInRight {
-  from {
-    opacity: 0;
-    transform: translateX(-20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-.slide-in-right {
-  animation: slideInRight var(--transition-slow) ease-out;
-}
-
-@keyframes shake {
-  0%, 100% {
-    transform: translateX(0);
-  }
-  10%, 30%, 50%, 70%, 90% {
-    transform: translateX(-5px);
-  }
-  20%, 40%, 60%, 80% {
-    transform: translateX(5px);
-  }
-}
-
-.animate-shake {
-  animation: shake 0.5s ease-in-out;
-}
-
-/* Custom Scrollbar - Minimalist */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-
-::-webkit-scrollbar-track {
-  background: var(--neutral-100);
-}
-
-::-webkit-scrollbar-thumb {
-  background: var(--neutral-300);
-  border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: var(--neutral-400);
-}
-
-/* Typography */
 h1, h2, h3, h4, h5, h6 {
   font-weight: 600;
-  color: var(--text-primary);
-  line-height: 1.3;
+  color: var(--fg);
+  line-height: 1.25;
+  letter-spacing: -0.011em; /* apretado sutil en titulares humanistas */
+  text-wrap: balance;
 }
 
-h1 { font-size: 2rem; }
-h2 { font-size: 1.5rem; }
-h3 { font-size: 1.25rem; }
-h4 { font-size: 1.125rem; }
-h5 { font-size: 1rem; }
+h1 { font-size: 1.75rem; }
+h2 { font-size: 1.375rem; }
+h3 { font-size: 1.125rem; }
+h4 { font-size: 1rem; }
+h5 { font-size: 0.9375rem; }
 h6 { font-size: 0.875rem; }
 
 p {
   font-size: 14px;
   line-height: 1.6;
-  color: var(--text-secondary);
+  color: var(--fg-muted);
 }
 
-/* Utility Classes */
-.text-muted {
-  color: var(--text-secondary);
+/* Foco visible SIEMPRE — accesibilidad AA, teclado-first. */
+:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
 }
 
-.text-light {
-  color: var(--text-tertiary);
+/* ============================================================
+   UTILIDADES DEL DESIGN SYSTEM
+   ============================================================ */
+
+/* Números tabulares — OBLIGATORIO en DNI, carnets, importes, contadores,
+   fechas y toda celda numérica de tabla (evita saltos de layout). */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+
+.text-muted { color: var(--fg-muted); }
+.text-light { color: var(--fg-subtle); }
+
+/* ============================================================
+   COMPONENTES LEGACY (se conservan los nombres — retintados al teal)
+   Usados por páginas que se reconstruyen en la Ola 2.
+   ============================================================ */
+.premium-card {
+  background: var(--surface-elevated);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border);
+  transition: box-shadow var(--transition-base);
+}
+.premium-card:hover { box-shadow: var(--shadow-md); }
+
+.btn-primary {
+  background: var(--primary-600);
+  color: white;
+  padding: 0.5rem 1.125rem;
+  border-radius: var(--radius-md);
+  font-weight: 500;
+  font-size: 14px;
+  box-shadow: var(--shadow-sm);
+  transition: background-color var(--transition-base), box-shadow var(--transition-base);
+  border: none;
+  cursor: pointer;
+}
+.btn-primary:hover { background: var(--primary-700); box-shadow: var(--shadow-md); }
+.btn-primary:active { background: var(--primary-800); }
+
+.btn-secondary {
+  background: white;
+  color: var(--fg);
+  padding: 0.5rem 1.125rem;
+  border-radius: var(--radius-md);
+  font-weight: 500;
+  font-size: 14px;
+  border: 1px solid var(--border-strong);
+  transition: background-color var(--transition-base), border-color var(--transition-base);
+  cursor: pointer;
+}
+.btn-secondary:hover { background: var(--neutral-50); border-color: var(--neutral-400); }
+
+.input-premium {
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  padding: 0.5rem 0.75rem;
+  font-size: 14px;
+  transition: border-color var(--transition-base), box-shadow var(--transition-base);
+  background: var(--surface-primary);
+  color: var(--fg);
+}
+.input-premium:focus {
+  outline: none;
+  border-color: var(--primary-600);
+  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.12);
+}
+.input-premium::placeholder { color: var(--fg-subtle); }
+
+/* ============================================================
+   ANIMACIONES (sutiles, 150-250ms)
+   ============================================================ */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.fade-in { animation: fadeIn var(--transition-slow) ease-out; }
+
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(-12px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+.slide-in-right { animation: slideInRight var(--transition-slow) ease-out; }
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-4px); }
+  20%, 40%, 60%, 80% { transform: translateX(4px); }
+}
+.animate-shake { animation: shake 0.4s ease-in-out; }
+
+/* Sheet lateral (bandeja de alertas) */
+@keyframes sheetIn {
+  from { transform: translateX(100%); }
+  to   { transform: translateX(0); }
+}
+.animate-sheet-in { animation: sheetIn var(--transition-slow) cubic-bezier(0.16, 1, 0.3, 1); }
+
+@keyframes overlayIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.animate-overlay-in { animation: overlayIn var(--transition-base) ease-out; }
+
+/* Skeleton shimmer para estados de carga */
+@keyframes shimmer {
+  0%   { background-position: -800px 0; }
+  100% { background-position: 800px 0; }
+}
+.skeleton {
+  background: linear-gradient(90deg, var(--neutral-100) 25%, var(--neutral-200) 37%, var(--neutral-100) 63%);
+  background-size: 800px 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+  border-radius: var(--radius-sm);
+}
+
+/* Pulso único de la campana al subir la severidad máxima (moment de hand-craft) */
+@keyframes bellPing {
+  0%   { transform: scale(1); }
+  30%  { transform: scale(1.15) rotate(-8deg); }
+  60%  { transform: scale(1.05) rotate(6deg); }
+  100% { transform: scale(1) rotate(0); }
+}
+.animate-bell-ping { animation: bellPing 0.55s cubic-bezier(0.16, 1, 0.3, 1); }
+
+/* ============================================================
+   SCROLLBAR minimalista
+   ============================================================ */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--neutral-300); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--neutral-400); }
+
+/* ============================================================
+   REDUCED MOTION — respetar preferencia del sistema
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

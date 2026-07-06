@@ -1,337 +1,253 @@
-'use client';
+"use client";
 
-import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
-import { useAuth } from '@/contexts/AuthContext';
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
+import type { LucideIcon } from "lucide-react";
 import {
-  HomeIcon,
-  DocumentPlusIcon,
-  FolderOpenIcon,
-  UsersIcon,
-  CogIcon,
-  ChartBarIcon,
-  ClipboardDocumentListIcon,
-  ArrowLeftOnRectangleIcon,
-  ChartPieIcon,
-  SparklesIcon,
-  BellIcon,
-  HeartIcon,
-  UserGroupIcon,
-  LinkIcon,
-  DocumentTextIcon,
-  IdentificationIcon,
-  AdjustmentsHorizontalIcon,
-  BuildingOffice2Icon,
-  BuildingLibraryIcon,
-} from '@heroicons/react/24/outline';
+  Home,
+  FilePlus2,
+  FolderOpen,
+  Users,
+  Settings,
+  BarChart3,
+  ClipboardList,
+  LogOut,
+  PieChart,
+  Activity,
+  Bell,
+  Heart,
+  UsersRound,
+  Link2,
+  FileText,
+  IdCard,
+  SlidersHorizontal,
+  Building2,
+  Landmark,
+} from "lucide-react";
 
-export default function Sidebar() {
+import { useAuth } from "@/contexts/AuthContext";
+import { cn } from "@/lib/utils";
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+} from "@/components/ui/tooltip";
+
+type MenuItem = {
+  name: string;
+  href: string;
+  icon: LucideIcon;
+  section: "main" | "gestion" | "certificados" | "catalogos" | "config";
+};
+
+const SECTION_LABELS: Record<MenuItem["section"], string> = {
+  main: "Principal",
+  gestion: "Gestión",
+  certificados: "Certificados",
+  catalogos: "Catálogos",
+  config: "Config",
+};
+
+/**
+ * Sidebar del shell (UX-1). Se conservan EXACTAMENTE los mismos items/hrefs por
+ * rol (solo cambia la piel: tokens del design system, agrupación por secciones,
+ * estado activo claro y modo colapsable icon-only). Íconos migrados a Lucide.
+ */
+export default function Sidebar({
+  collapsed = false,
+}: {
+  collapsed?: boolean;
+}) {
   const pathname = usePathname();
   const router = useRouter();
   const { logout, isAdmin, isSuperAdmin } = useAuth();
 
   const handleLogout = () => {
     logout();
-    router.push('/login');
+    router.push("/login");
   };
 
-  const userMenuItems = [
-    { name: 'Inicio', href: '/dashboard', icon: HomeIcon, section: 'main' },
-    { name: 'Alertas', href: '/dashboard/alerts', icon: BellIcon, section: 'main' },
-    { name: 'Nuevo Afiliado/Certificado', href: '/dashboard/upload', icon: DocumentPlusIcon, section: 'main' },
-    { name: 'Mis Certificados', href: '/dashboard/certificates', icon: FolderOpenIcon, section: 'main' },
+  const userMenuItems: MenuItem[] = [
+    { name: "Inicio", href: "/dashboard", icon: Home, section: "main" },
+    { name: "Alertas", href: "/dashboard/alerts", icon: Bell, section: "main" },
+    { name: "Nuevo Afiliado/Certificado", href: "/dashboard/upload", icon: FilePlus2, section: "main" },
+    { name: "Mis Certificados", href: "/dashboard/certificates", icon: FolderOpen, section: "main" },
   ];
 
-  // Menú para Superadmin (acceso completo)
-  const superAdminMenuItems = [
-    { name: 'Inicio', href: '/dashboard', icon: HomeIcon, section: 'main' },
-    { name: 'Alertas', href: '/dashboard/alerts', icon: BellIcon, section: 'main' },
-    { name: 'Métricas', href: '/dashboard/metrics', icon: ChartPieIcon, section: 'main' },
-    
-    { name: 'Afiliados', href: '/dashboard/afiliados', icon: IdentificationIcon, section: 'gestion' },
-    { name: 'Adherentes', href: '/dashboard/aderentes', icon: UserGroupIcon, section: 'gestion' },
-    { name: 'Terceros Vinculados', href: '/dashboard/terceros-vinculados', icon: UserGroupIcon, section: 'gestion' },
-    { name: 'Relaciones Afiliado-Tercero', href: '/dashboard/persona-terceros', icon: LinkIcon, section: 'gestion' },
+  // Menú Superadmin (acceso completo)
+  const superAdminMenuItems: MenuItem[] = [
+    { name: "Inicio", href: "/dashboard", icon: Home, section: "main" },
+    { name: "Alertas", href: "/dashboard/alerts", icon: Bell, section: "main" },
+    { name: "Métricas", href: "/dashboard/metrics", icon: PieChart, section: "main" },
 
-    { name: 'Certificados Discapacidad', href: '/dashboard/certificados-discapacidad', icon: DocumentTextIcon, section: 'certificados' },
-    { name: 'Certificados', href: '/dashboard/certificates', icon: FolderOpenIcon, section: 'certificados' },
+    { name: "Afiliados", href: "/dashboard/afiliados", icon: IdCard, section: "gestion" },
+    { name: "Adherentes", href: "/dashboard/aderentes", icon: UsersRound, section: "gestion" },
+    { name: "Terceros Vinculados", href: "/dashboard/terceros-vinculados", icon: UsersRound, section: "gestion" },
+    { name: "Relaciones Afiliado-Tercero", href: "/dashboard/persona-terceros", icon: Link2, section: "gestion" },
 
-    { name: 'Estado Civil', href: '/dashboard/estado-civil', icon: HeartIcon, section: 'catalogos' },
-    { name: 'Tipos de Discapacidad', href: '/dashboard/tipo-discapacidad', icon: AdjustmentsHorizontalIcon, section: 'catalogos' },
-    { name: 'Categorías', href: '/dashboard/categories', icon: ClipboardDocumentListIcon, section: 'catalogos' },
-    { name: 'Nomencladores', href: '/dashboard/nomenclators', icon: ChartBarIcon, section: 'catalogos' },
-    { name: 'Servicios', href: '/dashboard/servicios', icon: AdjustmentsHorizontalIcon, section: 'catalogos' },
-    { name: 'Servicios No Nomenclados', href: '/dashboard/servicios-no-nomenclados', icon: DocumentTextIcon, section: 'catalogos' },
-    { name: 'Efectores', href: '/dashboard/efectores', icon: BuildingOffice2Icon, section: 'catalogos' },
-    { name: 'Prestadores', href: '/dashboard/prestadores', icon: UsersIcon, section: 'catalogos' },
-    { name: 'Orientación Prestacional', href: '/dashboard/orientacion-prestacional', icon: LinkIcon, section: 'catalogos' },
-    { name: 'Obras Sociales', href: '/dashboard/obras-sociales', icon: BuildingLibraryIcon, section: 'catalogos' },
+    { name: "Certificados Discapacidad", href: "/dashboard/certificados-discapacidad", icon: FileText, section: "certificados" },
+    { name: "Certificados", href: "/dashboard/certificates", icon: FolderOpen, section: "certificados" },
 
-    { name: 'Configuración', href: '/dashboard/settings', icon: CogIcon, section: 'config' },
+    { name: "Estado Civil", href: "/dashboard/estado-civil", icon: Heart, section: "catalogos" },
+    { name: "Tipos de Discapacidad", href: "/dashboard/tipo-discapacidad", icon: SlidersHorizontal, section: "catalogos" },
+    { name: "Categorías", href: "/dashboard/categories", icon: ClipboardList, section: "catalogos" },
+    { name: "Nomencladores", href: "/dashboard/nomenclators", icon: BarChart3, section: "catalogos" },
+    { name: "Servicios", href: "/dashboard/servicios", icon: SlidersHorizontal, section: "catalogos" },
+    { name: "Servicios No Nomenclados", href: "/dashboard/servicios-no-nomenclados", icon: FileText, section: "catalogos" },
+    { name: "Efectores", href: "/dashboard/efectores", icon: Building2, section: "catalogos" },
+    { name: "Prestadores", href: "/dashboard/prestadores", icon: Users, section: "catalogos" },
+    { name: "Orientación Prestacional", href: "/dashboard/orientacion-prestacional", icon: Link2, section: "catalogos" },
+    { name: "Obras Sociales", href: "/dashboard/obras-sociales", icon: Landmark, section: "catalogos" },
+
+    { name: "Configuración", href: "/dashboard/settings", icon: Settings, section: "config" },
   ];
 
-  // Menú para Admin de Obra Social (sin métricas, sin modificar categorías/nomencladores)
-  const adminObraSocialMenuItems = [
-    { name: 'Inicio', href: '/dashboard', icon: HomeIcon, section: 'main' },
-    { name: 'Alertas', href: '/dashboard/alerts', icon: BellIcon, section: 'main' },
+  // Menú Admin de Obra Social (sin métricas)
+  const adminObraSocialMenuItems: MenuItem[] = [
+    { name: "Inicio", href: "/dashboard", icon: Home, section: "main" },
+    { name: "Alertas", href: "/dashboard/alerts", icon: Bell, section: "main" },
 
-    { name: 'Afiliados', href: '/dashboard/afiliados', icon: IdentificationIcon, section: 'gestion' },
-    { name: 'Adherentes', href: '/dashboard/aderentes', icon: UserGroupIcon, section: 'gestion' },
-    { name: 'Terceros Vinculados', href: '/dashboard/terceros-vinculados', icon: UserGroupIcon, section: 'gestion' },
-    { name: 'Relaciones Afiliado-Tercero', href: '/dashboard/persona-terceros', icon: LinkIcon, section: 'gestion' },
-    
-    { name: 'Certificados Discapacidad', href: '/dashboard/certificados-discapacidad', icon: DocumentTextIcon, section: 'certificados' },
-    { name: 'Certificados', href: '/dashboard/certificates', icon: FolderOpenIcon, section: 'certificados' },
+    { name: "Afiliados", href: "/dashboard/afiliados", icon: IdCard, section: "gestion" },
+    { name: "Adherentes", href: "/dashboard/aderentes", icon: UsersRound, section: "gestion" },
+    { name: "Terceros Vinculados", href: "/dashboard/terceros-vinculados", icon: UsersRound, section: "gestion" },
+    { name: "Relaciones Afiliado-Tercero", href: "/dashboard/persona-terceros", icon: Link2, section: "gestion" },
 
-    { name: 'Estado Civil', href: '/dashboard/estado-civil', icon: HeartIcon, section: 'catalogos' },
-    { name: 'Tipos de Discapacidad', href: '/dashboard/tipo-discapacidad', icon: AdjustmentsHorizontalIcon, section: 'catalogos' },
-    { name: 'Categorías', href: '/dashboard/categories', icon: ClipboardDocumentListIcon, section: 'catalogos' },
-    { name: 'Nomencladores', href: '/dashboard/nomenclators', icon: ChartBarIcon, section: 'catalogos' },
-    { name: 'Servicios', href: '/dashboard/servicios', icon: AdjustmentsHorizontalIcon, section: 'catalogos' },
-    { name: 'Servicios No Nomenclados', href: '/dashboard/servicios-no-nomenclados', icon: DocumentTextIcon, section: 'catalogos' },
-    { name: 'Efectores', href: '/dashboard/efectores', icon: BuildingOffice2Icon, section: 'catalogos' },
-    { name: 'Prestadores', href: '/dashboard/prestadores', icon: UsersIcon, section: 'catalogos' },
-    { name: 'Orientación Prestacional', href: '/dashboard/orientacion-prestacional', icon: LinkIcon, section: 'catalogos' },
-    { name: 'Obras Sociales', href: '/dashboard/obras-sociales', icon: BuildingLibraryIcon, section: 'catalogos' },
+    { name: "Certificados Discapacidad", href: "/dashboard/certificados-discapacidad", icon: FileText, section: "certificados" },
+    { name: "Certificados", href: "/dashboard/certificates", icon: FolderOpen, section: "certificados" },
 
-    { name: 'Configuración', href: '/dashboard/settings', icon: CogIcon, section: 'config' },
+    { name: "Estado Civil", href: "/dashboard/estado-civil", icon: Heart, section: "catalogos" },
+    { name: "Tipos de Discapacidad", href: "/dashboard/tipo-discapacidad", icon: SlidersHorizontal, section: "catalogos" },
+    { name: "Categorías", href: "/dashboard/categories", icon: ClipboardList, section: "catalogos" },
+    { name: "Nomencladores", href: "/dashboard/nomenclators", icon: BarChart3, section: "catalogos" },
+    { name: "Servicios", href: "/dashboard/servicios", icon: SlidersHorizontal, section: "catalogos" },
+    { name: "Servicios No Nomenclados", href: "/dashboard/servicios-no-nomenclados", icon: FileText, section: "catalogos" },
+    { name: "Efectores", href: "/dashboard/efectores", icon: Building2, section: "catalogos" },
+    { name: "Prestadores", href: "/dashboard/prestadores", icon: Users, section: "catalogos" },
+    { name: "Orientación Prestacional", href: "/dashboard/orientacion-prestacional", icon: Link2, section: "catalogos" },
+    { name: "Obras Sociales", href: "/dashboard/obras-sociales", icon: Landmark, section: "catalogos" },
+
+    { name: "Configuración", href: "/dashboard/settings", icon: Settings, section: "config" },
   ];
 
-  const menuItems = isSuperAdmin ? superAdminMenuItems : isAdmin ? adminObraSocialMenuItems : userMenuItems;
+  const menuItems = isSuperAdmin
+    ? superAdminMenuItems
+    : isAdmin
+      ? adminObraSocialMenuItems
+      : userMenuItems;
+
+  const isPrivileged = isAdmin || isSuperAdmin;
+  const sectionOrder: MenuItem["section"][] = isPrivileged
+    ? ["main", "gestion", "certificados", "catalogos", "config"]
+    : ["main"];
+
+  const renderItem = (item: MenuItem) => {
+    const isActive = pathname === item.href;
+    const Icon = item.icon;
+    const isAlerts = item.href === "/dashboard/alerts";
+
+    const link = (
+      <Link
+        key={item.name}
+        href={item.href}
+        aria-current={isActive ? "page" : undefined}
+        title={collapsed ? item.name : undefined}
+        className={cn(
+          "group relative flex items-center rounded-md text-sm transition-colors duration-150",
+          collapsed ? "justify-center px-0 py-2.5" : "gap-3 px-3 py-2",
+          isActive
+            ? "bg-[var(--sidebar-active-bg)] font-medium text-white"
+            : "text-[var(--sidebar-fg)] hover:bg-[var(--sidebar-hover-bg)] hover:text-white"
+        )}
+      >
+        {/* Barra de estado activo a la izquierda (grid-break sutil) */}
+        {isActive && !collapsed && (
+          <span className="absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-full bg-white/80" />
+        )}
+        <span className="relative shrink-0">
+          <Icon className="size-[18px]" />
+          {isAlerts && (
+            <span className="absolute -right-1 -top-1 size-2 rounded-full bg-[var(--sev-critica)]" />
+          )}
+        </span>
+        {!collapsed && <span className="truncate">{item.name}</span>}
+      </Link>
+    );
+
+    if (collapsed) {
+      return (
+        <Tooltip key={item.name}>
+          <TooltipTrigger asChild>{link}</TooltipTrigger>
+          <TooltipContent side="right">{item.name}</TooltipContent>
+        </Tooltip>
+      );
+    }
+    return link;
+  };
 
   return (
-    <div className="flex flex-col h-screen w-72 bg-gray-900 border-r border-gray-800 shadow-lg">
-      
-      {/* Logo Section */}
-      <div className="p-6 border-b border-gray-700 bg-gray-800/50">
-        <div className="flex items-center gap-3 mb-2">
-          <div className="w-10 h-10 rounded-lg bg-blue-600 flex items-center justify-center shadow-lg">
-            <SparklesIcon className="w-6 h-6 text-white" />
-          </div>
-          <div>
-            <span className="text-xl font-bold text-gray-100">
-              Consultora Salud
-            </span>
-          </div>
+    <aside
+      className={cn(
+        "flex h-screen shrink-0 flex-col border-r border-[var(--neutral-800)] bg-[var(--sidebar-bg)] transition-[width] duration-200",
+        collapsed ? "w-16" : "w-64"
+      )}
+    >
+      {/* Marca */}
+      <div
+        className={cn(
+          "flex h-14 shrink-0 items-center border-b border-[var(--neutral-800)]",
+          collapsed ? "justify-center px-0" : "gap-2.5 px-4"
+        )}
+      >
+        <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-[var(--primary-600)] shadow-sm">
+          <Activity className="size-[18px] text-white" />
         </div>
-        <p className="text-sm text-gray-300 ml-1 font-medium">
-          Sistema de Gestión
-        </p>
+        {!collapsed && (
+          <div className="leading-tight">
+            <p className="text-sm font-semibold text-white">Consultora Salud</p>
+            <p className="text-[11px] text-[var(--sidebar-fg-muted)]">
+              Sistema de gestión
+            </p>
+          </div>
+        )}
       </div>
 
-      {/* User Profile */}
-      {/* <div className="p-5 border-b border-gray-800 bg-gray-800/50">
-        <div className="flex items-center space-x-3">
-          <div className="relative">
-            <div className="w-10 h-10 rounded-lg bg-blue-600 flex items-center justify-center shadow-sm">
-              <span className="text-sm font-semibold text-white">
-                {user?.nombre ? `${user.nombre.charAt(0)}${(user.nombre.charAt(1) || '')}` : ''}
-              </span>
+      {/* Navegación agrupada */}
+      <nav className="flex-1 overflow-y-auto px-2.5 py-3">
+        {sectionOrder.map((section, idx) => {
+          const items = menuItems.filter((i) => i.section === section);
+          if (items.length === 0) return null;
+          return (
+            <div key={section} className={cn(idx > 0 && "mt-5")}>
+              {!collapsed && (
+                <p className="mb-1.5 px-3 text-[10px] font-semibold uppercase tracking-wider text-[var(--sidebar-fg-muted)]">
+                  {SECTION_LABELS[section]}
+                </p>
+              )}
+              {collapsed && idx > 0 && (
+                <div className="mx-2 mb-2 h-px bg-[var(--neutral-800)]" aria-hidden />
+              )}
+              <div className="space-y-0.5">{items.map(renderItem)}</div>
             </div>
-            <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-teal-500 rounded-full border-2 border-gray-900"></div>
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="font-bold text-base text-white truncate">
-              {user?.nombre}
-            </p>
-            <div className="flex items-center gap-2 mt-1">
-              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-blue-600/20 text-white border border-blue-600/30">
-                {user?.rol === 'superadmin' ? '🛡️ Superadmin' : user?.rol === 'admin' ? '👑 Admin' : '👤 Usuario'}
-              </span>
-            </div>
-          </div>
-        </div>
-      </div> */}
-
-      {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto p-4 space-y-1">
-        {(isAdmin || isSuperAdmin) ? (
-          <>
-            {/* Navegación Principal */}
-            <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-3 mb-2">
-              Principal
-            </div>
-            {menuItems.filter((item) => item.section === 'main').map((item) => {
-              const isActive = pathname === item.href;
-              const Icon = item.icon;
-              const isAlertsPage = item.href === '/dashboard/alerts';
-              
-              return (
-                <Link
-                  key={item.name}
-                  href={item.href}
-                  className={`group flex items-center space-x-3 px-3 py-2.5 rounded-lg transition-colors ${
-                    isActive
-                      ? 'bg-blue-600 text-white shadow-md'
-                      : 'text-gray-300 hover:bg-gray-800 hover:text-white'
-                  }`}
-                >
-                  <div className="relative">
-                    <Icon className={`w-5 h-5`} />
-                    {isAlertsPage && (
-                      <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
-                    )}
-                  </div>
-                  <span className="font-medium text-sm">{item.name}</span>
-                  {isActive && (
-                    <div className="ml-auto w-1.5 h-1.5 rounded-full bg-white"></div>
-                  )}
-                </Link>
-              );
-            })}
-
-            {/* Gestión */}
-            <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-3 mt-6 mb-2">
-              Gestión
-            </div>
-            {menuItems.filter((item) => item.section === 'gestion').map((item) => {
-              const isActive = pathname === item.href;
-              const Icon = item.icon;
-              
-              return (
-                <Link
-                  key={item.name}
-                  href={item.href}
-                  className={`group flex items-center space-x-3 px-3 py-2.5 rounded-lg transition-colors ${
-                    isActive
-                      ? 'bg-blue-600 text-white shadow-md'
-                      : 'text-gray-300 hover:bg-gray-800 hover:text-white'
-                  }`}
-                >
-                  <Icon className={`w-5 h-5`} />
-                  <span className="font-medium text-sm">{item.name}</span>
-                  {isActive && (
-                    <div className="ml-auto w-1.5 h-1.5 rounded-full bg-white"></div>
-                  )}
-                </Link>
-              );
-            })}
-
-            {/* Certificados */}
-            <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-3 mt-6 mb-2">
-              Certificados
-            </div>
-            {menuItems.filter((item) => item.section === 'certificados').map((item) => {
-              const isActive = pathname === item.href;
-              const Icon = item.icon;
-              
-              return (
-                <Link
-                  key={item.name}
-                  href={item.href}
-                  className={`group flex items-center space-x-3 px-3 py-2.5 rounded-lg transition-colors ${
-                    isActive
-                      ? 'bg-blue-600 text-white shadow-md'
-                      : 'text-gray-300 hover:bg-gray-800 hover:text-white'
-                  }`}
-                >
-                  <Icon className={`w-5 h-5`} />
-                  <span className="font-medium text-sm">{item.name}</span>
-                  {isActive && (
-                    <div className="ml-auto w-1.5 h-1.5 rounded-full bg-white"></div>
-                  )}
-                </Link>
-              );
-            })}
-
-            {/* Catálogos */}
-            <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-3 mt-6 mb-2">
-              Catálogos
-            </div>
-            {menuItems.filter((item) => item.section === 'catalogos').map((item) => {
-              const isActive = pathname === item.href;
-              const Icon = item.icon;
-              
-              return (
-                <Link
-                  key={item.name}
-                  href={item.href}
-                  className={`group flex items-center space-x-3 px-3 py-2.5 rounded-lg transition-colors ${
-                    isActive
-                      ? 'bg-blue-600 text-white shadow-md'
-                      : 'text-gray-300 hover:bg-gray-800 hover:text-white'
-                  }`}
-                >
-                  <Icon className={`w-5 h-5`} />
-                  <span className="font-medium text-sm">{item.name}</span>
-                  {isActive && (
-                    <div className="ml-auto w-1.5 h-1.5 rounded-full bg-white"></div>
-                  )}
-                </Link>
-              );
-            })}
-
-            {/* Configuración */}
-            {menuItems.filter((item) => item.section === 'config').map((item) => {
-              const isActive = pathname === item.href;
-              const Icon = item.icon;
-              
-              return (
-                <Link
-                  key={item.name}
-                  href={item.href}
-                  className={`group flex items-center space-x-3 px-3 py-2.5 rounded-lg transition-colors mt-6 ${
-                    isActive
-                      ? 'bg-blue-600 text-white shadow-md'
-                      : 'text-gray-300 hover:bg-gray-800 hover:text-white'
-                  }`}
-                >
-                  <Icon className={`w-5 h-5`} />
-                  <span className="font-medium text-sm">{item.name}</span>
-                  {isActive && (
-                    <div className="ml-auto w-1.5 h-1.5 rounded-full bg-white"></div>
-                  )}
-                </Link>
-              );
-            })}
-          </>
-        ) : (
-          <>
-            <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-3 mb-2">
-              Navegación
-            </div>
-            {menuItems.map((item) => {
-              const isActive = pathname === item.href;
-              const Icon = item.icon;
-              const isAlertsPage = item.href === '/dashboard/alerts';
-              
-              return (
-                <Link
-                  key={item.name}
-                  href={item.href}
-                  className={`group flex items-center space-x-3 px-3 py-2.5 rounded-lg transition-colors ${
-                    isActive
-                      ? 'bg-blue-600 text-white shadow-md'
-                      : 'text-gray-300 hover:bg-gray-800 hover:text-white'
-                  }`}
-                >
-                  <div className="relative">
-                    <Icon className={`w-5 h-5`} />
-                    {isAlertsPage && (
-                      <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
-                    )}
-                  </div>
-                  <span className="font-medium text-sm">{item.name}</span>
-                  {isActive && (
-                    <div className="ml-auto w-1.5 h-1.5 rounded-full bg-white"></div>
-                  )}
-                </Link>
-              );
-            })}
-          </>
-        )}
+          );
+        })}
       </nav>
 
-      {/* Logout Section */}
-      <div className="p-4 border-t border-gray-800">
+      {/* Cerrar sesión */}
+      <div className="shrink-0 border-t border-[var(--neutral-800)] p-2.5">
         <button
           onClick={handleLogout}
-          className="group flex items-center space-x-3 px-3 py-2.5 rounded-lg text-gray-300 hover:bg-red-600/10 hover:text-red-400 transition-colors w-full border border-transparent hover:border-red-600/30"
+          title={collapsed ? "Cerrar sesión" : undefined}
+          className={cn(
+            "group flex w-full items-center rounded-md text-sm text-[var(--sidebar-fg)] transition-colors duration-150",
+            "hover:bg-[color-mix(in_srgb,var(--sev-critica)_16%,transparent)] hover:text-[#fca5a5]",
+            "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)]",
+            collapsed ? "justify-center px-0 py-2.5" : "gap-3 px-3 py-2"
+          )}
         >
-          <ArrowLeftOnRectangleIcon className="w-5 h-5" />
-          <span className="font-medium text-sm">Cerrar Sesión</span>
+          <LogOut className="size-[18px] shrink-0" />
+          {!collapsed && <span>Cerrar sesión</span>}
         </button>
       </div>
-    </div>
+    </aside>
   );
 }
