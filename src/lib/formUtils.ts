@@ -93,3 +93,54 @@ export function parseDateInput(rawValue: string): string {
 
   return `${yyyy}-${mm}-${dd}`;
 }
+
+// ============================================
+// UX-3.4 — Validación en vivo (onBlur por campo)
+// ============================================
+// Marca de error inmediata + mensaje corto; el submit repite todo (defensa
+// doble, RN-16). Ninguna de estas funciones bloquea el tipeo: se llaman en
+// onBlur, nunca en onChange.
+
+/** DNI: 7 u 8 dígitos numéricos. */
+export function isValidDni(value: string): boolean {
+  return /^\d{7,8}$/.test(value.trim());
+}
+
+/**
+ * CUIL: 11 dígitos numéricos + dígito verificador válido (algoritmo estándar
+ * módulo 11 usado por ARCA/AFIP: dígitos 1-10 ponderados por 5,4,3,2,7,6,5,4,3,2).
+ */
+export function isValidCuil(value: string): boolean {
+  const digits = value.trim().replace(/[-\s]/g, '');
+  if (!/^\d{11}$/.test(digits)) return false;
+
+  const weights = [5, 4, 3, 2, 7, 6, 5, 4, 3, 2];
+  const sum = weights.reduce((acc, w, i) => acc + w * Number(digits[i]), 0);
+  const mod = sum % 11;
+  const expectedCheckDigit = mod === 0 ? 0 : mod === 1 ? 9 : 11 - mod;
+
+  return expectedCheckDigit === Number(digits[10]);
+}
+
+/** Email: formato básico (el backend valida con @IsEmail; esto es solo el feedback en vivo). */
+export function isValidEmailFormat(value: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+}
+
+/**
+ * Fecha de nacimiento: no futura y no mayor a 120 años. `value` en formato
+ * `yyyy-mm-dd` (el value nativo de `<input type="date">`).
+ */
+export function isValidFechaNacimiento(value: string): boolean {
+  if (!value) return false;
+  const fecha = new Date(value);
+  if (Number.isNaN(fecha.getTime())) return false;
+
+  const hoy = new Date();
+  if (fecha > hoy) return false;
+
+  const hace120Anos = new Date(hoy.getFullYear() - 120, hoy.getMonth(), hoy.getDate());
+  if (fecha < hace120Anos) return false;
+
+  return true;
+}

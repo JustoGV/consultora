@@ -36,11 +36,12 @@ export type EstadoAlerta = 'PENDIENTE' | 'VISTA' | 'RESUELTA' | 'DESCARTADA';
 export type EntidadOrigenAlerta =
   | 'certificados_discapacidad'
   | 'orientaciones_prestacionales'
-  | 'afiliados';
+  | 'afiliados'
+  | 'afiliacion_vinculos';
 
 export interface PosibleSolucion {
   texto: string;
-  accion: 'ver_certificado' | 'ver_orientacion' | 'listar_orientaciones' | 'renovar_certificado' | 'cargar_certificado' | null;
+  accion: 'ver_certificado' | 'ver_orientacion' | 'listar_orientaciones' | 'renovar_certificado' | 'cargar_certificado' | 'ver_persona' | null;
 }
 
 export interface CodigoAlerta {

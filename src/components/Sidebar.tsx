@@ -23,6 +23,7 @@ import {
   SlidersHorizontal,
   Building2,
   Landmark,
+  UserRound,
 } from "lucide-react";
 
 import { useAuth } from "@/contexts/AuthContext";
@@ -80,6 +81,7 @@ export default function Sidebar({
     { name: "Alertas", href: "/dashboard/alerts", icon: Bell, section: "main" },
     { name: "Métricas", href: "/dashboard/metrics", icon: PieChart, section: "main" },
 
+    { name: "Pacientes", href: "/dashboard/pacientes", icon: UserRound, section: "gestion" },
     { name: "Afiliados", href: "/dashboard/afiliados", icon: IdCard, section: "gestion" },
     { name: "Adherentes", href: "/dashboard/aderentes", icon: UsersRound, section: "gestion" },
     { name: "Terceros Vinculados", href: "/dashboard/terceros-vinculados", icon: UsersRound, section: "gestion" },
@@ -107,6 +109,7 @@ export default function Sidebar({
     { name: "Inicio", href: "/dashboard", icon: Home, section: "main" },
     { name: "Alertas", href: "/dashboard/alerts", icon: Bell, section: "main" },
 
+    { name: "Pacientes", href: "/dashboard/pacientes", icon: UserRound, section: "gestion" },
     { name: "Afiliados", href: "/dashboard/afiliados", icon: IdCard, section: "gestion" },
     { name: "Adherentes", href: "/dashboard/aderentes", icon: UsersRound, section: "gestion" },
     { name: "Terceros Vinculados", href: "/dashboard/terceros-vinculados", icon: UsersRound, section: "gestion" },
