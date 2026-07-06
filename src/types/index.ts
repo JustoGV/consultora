@@ -222,6 +222,7 @@ export interface Administradora {
   codigo?: string;
   descripcion?: string;
   activo: boolean;
+  obraSocialPredeterminadaId?: string | null;
   createdAt: string;
   updatedAt: string;
   deletedAt?: string | null;
@@ -524,6 +525,37 @@ export interface UpdateEstadoCivilDto {
   activo?: boolean;
 }
 
+// Obras Sociales
+export interface ObraSocial {
+  id: string;
+  nombre: string;
+  sigla?: string;
+  codigo?: string;
+  descripcion?: string;
+  activo: boolean;
+  administradoraId: string;
+  administradora?: Administradora;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateObraSocialDto {
+  nombre: string;
+  sigla?: string;
+  codigo?: string;
+  descripcion?: string;
+  administradoraId: string;
+  activo?: boolean;
+}
+
+export interface UpdateObraSocialDto {
+  nombre?: string;
+  sigla?: string;
+  codigo?: string;
+  descripcion?: string;
+  activo?: boolean;
+}
+
 // Tipo de Discapacidad
 export interface TipoDiscapacidad {
   id: string;
@@ -614,6 +646,8 @@ export interface Afiliado {
   plan: string;
   estadoCivilId?: string;
   estadoCivil?: EstadoCivil;
+  obraSocialId?: string;
+  obraSocial?: ObraSocial;
   administradoraId: string;
   administradora?: Administradora;
   activo: boolean;
@@ -640,6 +674,7 @@ export interface CreateAfiliadoDto {
   numeroAfiliado: string;
   plan: string;
   estadoCivilId?: string;
+  obraSocialId?: string;
   administradoraId: string;
   activo?: boolean;
 }

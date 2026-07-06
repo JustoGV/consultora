@@ -2,10 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { CreateAfiliadoDto, CreateCertificadoDiscapacidadDto, EstadoCivil, TipoDiscapacidad } from '@/types';
+import { CreateAfiliadoDto, CreateCertificadoDiscapacidadDto, EstadoCivil, ObraSocial, TipoDiscapacidad } from '@/types';
 import { afiliadosService } from '@/services/afiliadosService';
 import { certificadosDiscapacidadService } from '@/services/certificadosDiscapacidadService';
 import { estadoCivilService } from '@/services/estadoCivilService';
+import { obrasSocialesService } from '@/services/obrasSocialesService';
+import { administradoraService } from '@/services/administradoraService';
 import { tipoDiscapacidadService } from '@/services/tipoDiscapacidadService';
 import { CheckCircleIcon, DocumentPlusIcon } from '@heroicons/react/24/outline';
 import { useRouter } from 'next/navigation';
@@ -21,6 +23,7 @@ export default function UploadPage() {
   const [formError, setFormError] = useState('');
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [estadosCiviles, setEstadosCiviles] = useState<EstadoCivil[]>([]);
+  const [obrasSociales, setObrasSociales] = useState<ObraSocial[]>([]);
   const [tiposDiscapacidad, setTiposDiscapacidad] = useState<TipoDiscapacidad[]>([]);
 
   // Formulario del Afiliado
@@ -41,6 +44,7 @@ export default function UploadPage() {
     numeroAfiliado: '',
     plan: '',
     estadoCivilId: '',
+    obraSocialId: '',
     administradoraId: user?.administradoraId || '',
     activo: true,
   });
@@ -61,13 +65,28 @@ export default function UploadPage() {
     loadCatalogos();
   }, []);
 
+  useEffect(() => {
+    if (user?.administradoraId) {
+      administradoraService.getById(user.administradoraId)
+        .then((administradora) => {
+          if (administradora.obraSocialPredeterminadaId) {
+            // RN-14: preset editable de la OS predeterminada de la administradora
+            setAfiliadoData(prev => ({ ...prev, obraSocialId: administradora.obraSocialPredeterminadaId || '' }));
+          }
+        })
+        .catch(() => { /* superadmin sin administradora u otro error: sin preset, silencioso */ });
+    }
+  }, [user?.administradoraId]);
+
   const loadCatalogos = async () => {
     try {
-      const [estadosData, tiposData] = await Promise.all([
+      const [estadosData, obrasSocialesData, tiposData] = await Promise.all([
         estadoCivilService.getAll(),
+        obrasSocialesService.getAll(),
         tipoDiscapacidadService.getAll(),
       ]);
       setEstadosCiviles(estadosData);
+      setObrasSociales(obrasSocialesData);
       setTiposDiscapacidad(tiposData);
     } catch (error) {
       console.error('Error al cargar catálogos:', error);
@@ -95,6 +114,11 @@ export default function UploadPage() {
   const estadoCivilOptions = estadosCiviles.map((estado) => ({
     value: estado.id,
     label: estado.nombre
+  }));
+
+  const obraSocialOptions = obrasSociales.map((os) => ({
+    value: os.id,
+    label: os.sigla ? `${os.nombre} (${os.sigla})` : os.nombre
   }));
 
   const tipoDiscapacidadOptions = tiposDiscapacidad.map((tipo) => ({
@@ -140,6 +164,7 @@ export default function UploadPage() {
         telefono: afiliadoData.telefono || undefined,
         celular: afiliadoData.celular || undefined,
         estadoCivilId: afiliadoData.estadoCivilId || undefined,
+        obraSocialId: afiliadoData.obraSocialId || undefined,
       };
 
       const nuevoAfiliado = await afiliadosService.create(afiliadoToCreate);
@@ -406,6 +431,16 @@ export default function UploadPage() {
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                   required
                   maxLength={100}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Obra Social</label>
+                <SearchableSelect
+                  options={[{ value: '', label: 'Seleccionar...' }, ...obraSocialOptions]}
+                  value={afiliadoData.obraSocialId || ''}
+                  onChange={(value) => setAfiliadoData({ ...afiliadoData, obraSocialId: value })}
+                  placeholder="Seleccionar obra social..."
                 />
               </div>
             </div>

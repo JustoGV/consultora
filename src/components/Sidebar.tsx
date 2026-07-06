@@ -22,6 +22,7 @@ import {
   IdentificationIcon,
   AdjustmentsHorizontalIcon,
   BuildingOffice2Icon,
+  BuildingLibraryIcon,
 } from '@heroicons/react/24/outline';
 
 export default function Sidebar() {
@@ -64,6 +65,7 @@ export default function Sidebar() {
     { name: 'Efectores', href: '/dashboard/efectores', icon: BuildingOffice2Icon, section: 'catalogos' },
     { name: 'Prestadores', href: '/dashboard/prestadores', icon: UsersIcon, section: 'catalogos' },
     { name: 'Orientación Prestacional', href: '/dashboard/orientacion-prestacional', icon: LinkIcon, section: 'catalogos' },
+    { name: 'Obras Sociales', href: '/dashboard/obras-sociales', icon: BuildingLibraryIcon, section: 'catalogos' },
 
     { name: 'Configuración', href: '/dashboard/settings', icon: CogIcon, section: 'config' },
   ];
@@ -90,7 +92,8 @@ export default function Sidebar() {
     { name: 'Efectores', href: '/dashboard/efectores', icon: BuildingOffice2Icon, section: 'catalogos' },
     { name: 'Prestadores', href: '/dashboard/prestadores', icon: UsersIcon, section: 'catalogos' },
     { name: 'Orientación Prestacional', href: '/dashboard/orientacion-prestacional', icon: LinkIcon, section: 'catalogos' },
-    
+    { name: 'Obras Sociales', href: '/dashboard/obras-sociales', icon: BuildingLibraryIcon, section: 'catalogos' },
+
     { name: 'Configuración', href: '/dashboard/settings', icon: CogIcon, section: 'config' },
   ];
 

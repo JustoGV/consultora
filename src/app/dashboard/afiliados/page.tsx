@@ -3,9 +3,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
-import { Afiliado, CreateAfiliadoDto, CreateAderenteDto, Aderente, EstadoCivil, TercerosVinculado, PersonaTercerosVinculado, CreateTercerosVinculadoDto, CreatePersonaTercerosVinculadoDto } from '@/types';
+import { Afiliado, CreateAfiliadoDto, CreateAderenteDto, Aderente, EstadoCivil, ObraSocial, TercerosVinculado, PersonaTercerosVinculado, CreateTercerosVinculadoDto, CreatePersonaTercerosVinculadoDto } from '@/types';
 import { afiliadosService } from '@/services/afiliadosService';
 import { estadoCivilService } from '@/services/estadoCivilService';
+import { obrasSocialesService } from '@/services/obrasSocialesService';
+import { administradoraService } from '@/services/administradoraService';
 import { tercerosVinculadoService } from '@/services/tercerosVinculadoService';
 import { personaTercerosService } from '@/services/personaTercerosService';
 import { aderentesService } from '@/services/aderentesService';
@@ -31,6 +33,8 @@ export default function AfiliadosPage() {
   const router = useRouter();
   const [afiliados, setAfiliados] = useState<Afiliado[]>([]);
   const [estadosCiviles, setEstadosCiviles] = useState<EstadoCivil[]>([]);
+  const [obrasSociales, setObrasSociales] = useState<ObraSocial[]>([]);
+  const [obraSocialPredeterminadaId, setObraSocialPredeterminadaId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingAfiliado, setEditingAfiliado] = useState<Afiliado | null>(null);
@@ -94,6 +98,7 @@ export default function AfiliadosPage() {
     numeroAfiliado: '',
     plan: '',
     estadoCivilId: '',
+    obraSocialId: '',
     administradoraId: user?.administradoraId || '',
     activo: true,
   });
@@ -105,20 +110,25 @@ export default function AfiliadosPage() {
   useEffect(() => {
     if (user?.administradoraId) {
       setFormData(prev => ({ ...prev, administradoraId: user.administradoraId || '' }));
+      administradoraService.getById(user.administradoraId)
+        .then((administradora) => setObraSocialPredeterminadaId(administradora.obraSocialPredeterminadaId || null))
+        .catch(() => { /* superadmin sin administradora u otro error: sin preset, silencioso */ });
     }
   }, [user?.administradoraId]);
 
   const loadData = async () => {
     try {
       setLoading(true);
-      const [afiliadosData, estadosCivilesData, tercerosData, aderentesData] = await Promise.all([
+      const [afiliadosData, estadosCivilesData, obrasSocialesData, tercerosData, aderentesData] = await Promise.all([
         afiliadosService.getAll(),
         estadoCivilService.getAll(),
+        obrasSocialesService.getAll(),
         tercerosVinculadoService.getAll(),
         aderentesService.getAll(),
       ]);
       setAfiliados(afiliadosData);
       setEstadosCiviles(estadosCivilesData);
+      setObrasSociales(obrasSocialesData);
       setTerceros(tercerosData);
       setAderentes(aderentesData);
     } catch (error) {
@@ -181,6 +191,7 @@ export default function AfiliadosPage() {
         numeroAfiliado: afiliado.numeroAfiliado,
         plan: afiliado.plan,
         estadoCivilId: afiliado.estadoCivilId || '',
+        obraSocialId: afiliado.obraSocialId || '',
         administradoraId: afiliado.administradoraId,
         activo: afiliado.activo,
       });
@@ -214,6 +225,8 @@ export default function AfiliadosPage() {
         numeroAfiliado: '',
         plan: '',
         estadoCivilId: '',
+        // RN-14: preset editable de la OS predeterminada de la administradora (solo al crear)
+        obraSocialId: obraSocialPredeterminadaId || '',
         administradoraId: user?.administradoraId || '',
         activo: true,
       });
@@ -311,6 +324,7 @@ export default function AfiliadosPage() {
         telefono: formData.telefono || undefined,
         celular: formData.celular || undefined,
         estadoCivilId: formData.estadoCivilId || undefined,
+        obraSocialId: formData.obraSocialId || undefined,
       };
       if (editingAfiliado) {
         await afiliadosService.update(editingAfiliado.id, dataToSend);
@@ -448,6 +462,7 @@ export default function AfiliadosPage() {
   } = usePagination({ items: filteredAfiliados, itemsPerPage: 12 });
 
   const estadoCivilOptions = estadosCiviles.map(ec => ({ value: ec.id, label: ec.nombre }));
+  const obraSocialOptions = obrasSociales.map(os => ({ value: os.id, label: os.sigla ? `${os.nombre} (${os.sigla})` : os.nombre }));
   const sexoOptions = [
     { value: 'M', label: 'Masculino' },
     { value: 'F', label: 'Femenino' },
@@ -752,6 +767,12 @@ export default function AfiliadosPage() {
                         onChange={(e) => setFormData({ ...formData, plan: e.target.value })}
                         className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500"
                         maxLength={100} />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-neutral-700 mb-1">Obra Social</label>
+                      <SearchableSelect options={obraSocialOptions} value={formData.obraSocialId || ''}
+                        onChange={(v) => setFormData({ ...formData, obraSocialId: v })}
+                        placeholder="Seleccionar..." />
                     </div>
                     <div className="flex items-center gap-2">
                       <input type="checkbox" id="activo" checked={formData.activo}
