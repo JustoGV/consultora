@@ -117,11 +117,11 @@ export function useFormKeyboard({
    * Busca en el form un input cuyo atributo `name` coincida con la PRIMERA key
    * de `fieldErrors` y le hace focus.
    *
-   * Requiere que el consumidor ponga `name={campo}` en cada input — varios
-   * forms del repo (ej. `AderenteEditModal.tsx`) controlan todo por state de
-   * React SIN atributo `name`; en esos casos esta función no encuentra nada y
-   * no hace foco (no lanza error, es un no-op silencioso). Es responsabilidad
-   * del componente consumidor agregar `name` si quiere esta feature.
+   * Requiere que el consumidor ponga `name={campo}` en cada input — algunos
+   * forms del repo controlan todo por state de React SIN atributo `name`; en
+   * esos casos esta función no encuentra nada y no hace foco (no lanza error,
+   * es un no-op silencioso). Es responsabilidad del componente consumidor
+   * agregar `name` si quiere esta feature.
    */
   const focusFirstError = useCallback(
     (fieldErrors: Record<string, string>) => {

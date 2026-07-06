@@ -1,20 +1,22 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   CertificadoDiscapacidad,
   CreateCertificadoDiscapacidadDto,
-  Afiliado,
+  Persona,
   TipoDiscapacidad,
   OrientacionPrestacional
 } from '@/types';
 import { certificadosDiscapacidadService } from '@/services/certificadosDiscapacidadService';
-import { afiliadosService } from '@/services/afiliadosService';
+import { personasService } from '@/services/personasService';
 import { tipoDiscapacidadService } from '@/services/tipoDiscapacidadService';
 import { orientacionPrestacionalService } from '@/services/orientacionPrestacionalService';
 import { PencilIcon, TrashIcon, PlusIcon, XMarkIcon, DocumentTextIcon } from '@heroicons/react/24/outline';
 import SearchableSelect from '@/components/SearchableSelect';
+import SearchableSelectRemote from '@/components/SearchableSelectRemote';
 import Pagination from '@/components/Pagination';
 import { usePagination } from '@/hooks/usePagination';
 import { extractErrorMessage, mapServerErrors } from '@/lib/errorUtils';
@@ -22,8 +24,9 @@ import { handleEnterAsTab } from '@/lib/formUtils';
 
 export default function CertificadosDiscapacidadPage() {
   const { user } = useAuth();
+  const searchParams = useSearchParams();
   const [certificados, setCertificados] = useState<CertificadoDiscapacidad[]>([]);
-  const [afiliados, setAfiliados] = useState<Afiliado[]>([]);
+  const [personasCache, setPersonasCache] = useState<Record<string, Persona>>({});
   const [tiposDiscapacidad, setTiposDiscapacidad] = useState<TipoDiscapacidad[]>([]);
   const [orientaciones, setOrientaciones] = useState<OrientacionPrestacional[]>([]);
   const [loading, setLoading] = useState(true);
@@ -60,19 +63,55 @@ export default function CertificadosDiscapacidadPage() {
     }
   }, [user?.administradoraId]);
 
+  // Deep-link desde la ficha del paciente (F-6): ?personaId=... abre el modal
+  // de carga con el paciente ya preseleccionado.
+  useEffect(() => {
+    const presetPersonaId = searchParams.get('personaId');
+    if (presetPersonaId) {
+      handleOpenModal(undefined, presetPersonaId);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
+
   const loadData = async () => {
     try {
       setLoading(true);
-      const [certificadosData, afiliadosData, tiposData, orientacionesData] = await Promise.all([
+      const [certificadosData, tiposData, orientacionesData] = await Promise.all([
         certificadosDiscapacidadService.getAll(),
-        afiliadosService.getAll(),
         tipoDiscapacidadService.getAll(),
         orientacionPrestacionalService.getAll(),
       ]);
       setCertificados(certificadosData);
-      setAfiliados(afiliadosData);
       setTiposDiscapacidad(tiposData);
       setOrientaciones(orientacionesData);
+
+      // Resuelve el nombre de cada paciente referenciado (SearchableSelectRemote
+      // reemplazó el afiliadoOptions traído completo — ver F-6). Si el
+      // certificado ya trae `persona` embebida se usa directo; si no, se pide
+      // puntual por id (dedupe por Set) sin bloquear el resto de la carga.
+      const idsAResolver = new Set(
+        certificadosData
+          .filter((c) => !c.persona)
+          .map((c) => c.personaId)
+      );
+      const embebidas = certificadosData
+        .filter((c) => c.persona)
+        .reduce<Record<string, Persona>>((acc, c) => {
+          acc[c.personaId] = c.persona as Persona;
+          return acc;
+        }, {});
+
+      if (idsAResolver.size > 0) {
+        const resueltas = await Promise.all(
+          Array.from(idsAResolver).map((id) =>
+            personasService.getById(id).catch(() => null)
+          )
+        );
+        resueltas.forEach((p) => {
+          if (p) embebidas[p.id] = p;
+        });
+      }
+      setPersonasCache(embebidas);
     } catch (error) {
       console.error('Error al cargar datos:', error);
       alert('Error al cargar datos');
@@ -81,7 +120,7 @@ export default function CertificadosDiscapacidadPage() {
     }
   };
 
-  const handleOpenModal = (certificado?: CertificadoDiscapacidad) => {
+  const handleOpenModal = (certificado?: CertificadoDiscapacidad, presetPersonaId?: string) => {
     setFormError('');
     setFieldErrors({});
     if (certificado) {
@@ -115,7 +154,7 @@ export default function CertificadosDiscapacidadPage() {
         grado: '',
         observaciones: '',
         antecedentes: '',
-        personaId: '',
+        personaId: presetPersonaId || '',
         tipoDiscapacidadId: '',
         administradoraId: user?.administradoraId || '',
         activo: true,
@@ -200,9 +239,9 @@ export default function CertificadosDiscapacidadPage() {
     }
   };
 
-  const getAfiliadoNombre = (personaId: string) => {
-    const afiliado = afiliados.find((a) => a.id === personaId);
-    return afiliado ? `${afiliado.apellido}, ${afiliado.nombre}` : '-';
+  const getPacienteNombre = (personaId: string) => {
+    const persona = personasCache[personaId];
+    return persona ? `${persona.apellido}, ${persona.nombre}` : '-';
   };
 
   const getTipoDiscapacidadNombre = (tipoId: string, tipoIds?: string[]) => {
@@ -218,12 +257,12 @@ export default function CertificadosDiscapacidadPage() {
   };
 
   const filteredCertificados = certificados.filter((cert) => {
-    const afiliadoNombre = getAfiliadoNombre(cert.personaId).toLowerCase();
+    const pacienteNombre = getPacienteNombre(cert.personaId).toLowerCase();
     const tipoNombre = getTipoDiscapacidadNombre(cert.tipoDiscapacidadId || '', cert.tipoDiscapacidadIds).toLowerCase();
     const search = searchTerm.toLowerCase();
     return (
       cert.numeroCertificado.toLowerCase().includes(search) ||
-      afiliadoNombre.includes(search) ||
+      pacienteNombre.includes(search) ||
       tipoNombre.includes(search) ||
       cert.grado.toLowerCase().includes(search)
     );
@@ -240,11 +279,13 @@ export default function CertificadosDiscapacidadPage() {
     handleItemsPerPageChange
   } = usePagination({ items: filteredCertificados, itemsPerPage: 10 });
 
-  // Opciones para selects
-  const afiliadoOptions = afiliados.map(af => ({
-    value: af.id,
-    label: `${af.apellido}, ${af.nombre} (DNI: ${af.dni})`
-  }));
+  const fetchPersonaOptions = async (search: string) => {
+    const result = await personasService.getPaginated({ search, page: 1, limit: 20 });
+    return result.data.map((p) => ({
+      value: p.id,
+      label: `${p.apellido}, ${p.nombre} — ${p.tipoDocumento} ${p.numeroDocumento}`,
+    }));
+  };
 
   const orientacionOptions = orientaciones.map((orientacion) => ({
     value: orientacion.id,
@@ -271,7 +312,7 @@ export default function CertificadosDiscapacidadPage() {
         <div className="relative">
           <input
             type="text"
-            placeholder="Buscar por número, afiliado, tipo o grado..."
+            placeholder="Buscar por número, paciente, tipo o grado..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full px-4 py-2 pl-10 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500"
@@ -292,7 +333,7 @@ export default function CertificadosDiscapacidadPage() {
               <thead className="bg-neutral-50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase">N° Certificado</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase">Afiliado</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase">Paciente</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase">Tipo Discapacidad</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase">Grado</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase">Fecha Emisión</th>
@@ -308,7 +349,7 @@ export default function CertificadosDiscapacidadPage() {
                       {certificado.numeroCertificado}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-neutral-600">
-                      {getAfiliadoNombre(certificado.personaId)}
+                      {getPacienteNombre(certificado.personaId)}
                     </td>
                     <td className="px-6 py-4 text-sm text-neutral-600">
                       {getTipoDiscapacidadNombre(certificado.tipoDiscapacidadId, certificado.tipoDiscapacidadIds)}
@@ -396,12 +437,12 @@ export default function CertificadosDiscapacidadPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-neutral-700 mb-1">Afiliado *</label>
-                  <SearchableSelect
-                    options={afiliadoOptions}
+                  <label className="block text-sm font-medium text-neutral-700 mb-1">Paciente *</label>
+                  <SearchableSelectRemote
                     value={formData.personaId}
                     onChange={(value) => setFormData({ ...formData, personaId: value })}
-                    placeholder="Seleccionar afiliado..."
+                    fetcher={fetchPersonaOptions}
+                    placeholder="Buscar paciente..."
                     required
                   />
                 </div>

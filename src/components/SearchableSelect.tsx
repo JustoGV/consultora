@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useId } from 'react';
 import { MagnifyingGlassIcon, ChevronUpDownIcon, XMarkIcon } from '@heroicons/react/24/outline';
 
 interface Option {
@@ -34,6 +34,7 @@ export default function SearchableSelect({
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const listboxId = useId();
 
   // Filtrar opciones según el término de búsqueda
   const filteredOptions = options.filter(option =>
@@ -79,7 +80,7 @@ export default function SearchableSelect({
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'ArrowDown') {
       e.preventDefault();
-      setHighlightedIndex(prev => 
+      setHighlightedIndex(prev =>
         prev < filteredOptions.length - 1 ? prev + 1 : prev
       );
     } else if (e.key === 'ArrowUp') {
@@ -94,13 +95,36 @@ export default function SearchableSelect({
     }
   };
 
+  /**
+   * Teclado en el TRIGGER (cerrado, con foco): Enter/Espacio/ArrowDown abren el
+   * dropdown. `preventDefault` en todos los casos manejados evita que Enter
+   * dispare un submit del form o que `handleEnterAsTab` (src/lib/formUtils.ts)
+   * le robe el foco — ese helper respeta `e.defaultPrevented` (fix a11y F-6,
+   * hallazgo de F-5: el trigger era un div sin foco).
+   */
+  const handleTriggerKeyDown = (e: React.KeyboardEvent) => {
+    if (disabled) return;
+    if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowDown') {
+      e.preventDefault();
+      setIsOpen(true);
+    }
+  };
+
   return (
     <div ref={containerRef} className={`relative ${className}`}>
       {/* Trigger */}
       <div
         onClick={() => !disabled && setIsOpen(!isOpen)}
+        onKeyDown={handleTriggerKeyDown}
+        tabIndex={disabled ? -1 : 0}
+        role="combobox"
+        aria-expanded={isOpen}
+        aria-haspopup="listbox"
+        aria-controls={listboxId}
+        aria-disabled={disabled}
         className={`
           w-full px-3 py-2 border rounded-lg flex items-center justify-between cursor-pointer
+          focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500
           ${disabled ? 'bg-gray-100 cursor-not-allowed' : 'bg-white hover:border-blue-400'}
           ${isOpen ? 'border-blue-500 ring-2 ring-blue-200' : 'border-neutral-300'}
         `}
@@ -145,11 +169,13 @@ export default function SearchableSelect({
           </div>
 
           {/* Options List */}
-          <div className="overflow-y-auto">
+          <div id={listboxId} role="listbox" className="overflow-y-auto">
             {filteredOptions.length > 0 ? (
               filteredOptions.map((option, index) => (
                 <div
                   key={option.value}
+                  role="option"
+                  aria-selected={option.value === value}
                   onClick={() => handleSelect(option.value)}
                   className={`
                     px-3 py-2 cursor-pointer transition-colors

@@ -230,14 +230,12 @@ function AlertRow({
     </div>
   );
 
-  // Link a la ficha de la persona si tenemos el id.
-  // OJO: la ruta de destino sigue siendo /dashboard/afiliados/:id (la página de
-  // detalle de personas todavía no existe, es F-5) — solo cambia la fuente del id.
+  // Link a la ficha del paciente.
   if (alerta.personaId) {
     return (
       <li>
         <Link
-          href={`/dashboard/afiliados/${alerta.personaId}`}
+          href={`/dashboard/pacientes/${alerta.personaId}`}
           onClick={onNavigate}
           className="block px-5 py-3.5 transition-colors hover:bg-[var(--surface-sunken)]"
         >

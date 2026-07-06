@@ -16,14 +16,13 @@ import {
   Activity,
   Bell,
   Heart,
-  UsersRound,
   Link2,
   FileText,
-  IdCard,
   SlidersHorizontal,
   Building2,
   Landmark,
   UserRound,
+  Stethoscope,
 } from "lucide-react";
 
 import { useAuth } from "@/contexts/AuthContext";
@@ -71,7 +70,7 @@ export default function Sidebar({
   const userMenuItems: MenuItem[] = [
     { name: "Inicio", href: "/dashboard", icon: Home, section: "main" },
     { name: "Alertas", href: "/dashboard/alerts", icon: Bell, section: "main" },
-    { name: "Nuevo Afiliado/Certificado", href: "/dashboard/upload", icon: FilePlus2, section: "main" },
+    { name: "Nuevo Paciente/Certificado", href: "/dashboard/upload", icon: FilePlus2, section: "main" },
     { name: "Mis Certificados", href: "/dashboard/certificates", icon: FolderOpen, section: "main" },
   ];
 
@@ -82,10 +81,7 @@ export default function Sidebar({
     { name: "Métricas", href: "/dashboard/metrics", icon: PieChart, section: "main" },
 
     { name: "Pacientes", href: "/dashboard/pacientes", icon: UserRound, section: "gestion" },
-    { name: "Afiliados", href: "/dashboard/afiliados", icon: IdCard, section: "gestion" },
-    { name: "Adherentes", href: "/dashboard/aderentes", icon: UsersRound, section: "gestion" },
-    { name: "Terceros Vinculados", href: "/dashboard/terceros-vinculados", icon: UsersRound, section: "gestion" },
-    { name: "Relaciones Afiliado-Tercero", href: "/dashboard/persona-terceros", icon: Link2, section: "gestion" },
+    { name: "Profesionales", href: "/dashboard/profesionales", icon: Stethoscope, section: "gestion" },
 
     { name: "Certificados Discapacidad", href: "/dashboard/certificados-discapacidad", icon: FileText, section: "certificados" },
     { name: "Certificados", href: "/dashboard/certificates", icon: FolderOpen, section: "certificados" },
@@ -110,10 +106,7 @@ export default function Sidebar({
     { name: "Alertas", href: "/dashboard/alerts", icon: Bell, section: "main" },
 
     { name: "Pacientes", href: "/dashboard/pacientes", icon: UserRound, section: "gestion" },
-    { name: "Afiliados", href: "/dashboard/afiliados", icon: IdCard, section: "gestion" },
-    { name: "Adherentes", href: "/dashboard/aderentes", icon: UsersRound, section: "gestion" },
-    { name: "Terceros Vinculados", href: "/dashboard/terceros-vinculados", icon: UsersRound, section: "gestion" },
-    { name: "Relaciones Afiliado-Tercero", href: "/dashboard/persona-terceros", icon: Link2, section: "gestion" },
+    { name: "Profesionales", href: "/dashboard/profesionales", icon: Stethoscope, section: "gestion" },
 
     { name: "Certificados Discapacidad", href: "/dashboard/certificados-discapacidad", icon: FileText, section: "certificados" },
     { name: "Certificados", href: "/dashboard/certificates", icon: FolderOpen, section: "certificados" },

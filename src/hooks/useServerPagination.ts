@@ -11,7 +11,7 @@ import { PaginatedResponse } from '@/types';
  *
  * Uso previsto:
  *   const { data, page, totalPages, isLoading, error, setPage, refetch } =
- *     useServerPagination((params) => afiliadosService.getPaginated(params), { limit: 20 });
+ *     useServerPagination((params) => personasService.getPaginated(params), { limit: 20 });
  */
 
 interface UseServerPaginationOptions {

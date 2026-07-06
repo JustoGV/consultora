@@ -82,11 +82,9 @@ export default function PacienteDetallePage() {
   }, [personaId]);
 
   const loadCertificados = useCallback(async () => {
-    // certificados-discapacidad no filtra por personaId server-side todavía
-    // (el controller solo acepta paginación, sin query params de filtro) —
-    // se trae todo y se filtra client-side. Ver desvío documentado en el reporte final.
-    const all = await certificadosDiscapacidadService.getAll();
-    setCertificados(all.filter((c) => c.personaId === personaId));
+    // B-5.1: filtro server-side por personaId (ver certificadosDiscapacidadService.ts).
+    const filtrados = await certificadosDiscapacidadService.getAll({ personaId });
+    setCertificados(filtrados);
   }, [personaId]);
 
   const loadAlertas = useCallback(async () => {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, useId } from 'react';
 import { Search, ChevronsUpDown, X, Loader2 } from 'lucide-react';
 
 interface Option {
@@ -61,6 +61,7 @@ export default function SearchableSelectRemote({
   const inputRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const requestIdRef = useRef(0);
+  const listboxId = useId();
 
   // Si el value externo cambia y no coincide con la opción que tenemos guardada
   // (ej. el form se resetea a ''), soltamos el label guardado.
@@ -174,13 +175,36 @@ export default function SearchableSelectRemote({
   const displayLabel = selectedOption?.value === value ? selectedOption.label : value || null;
   const showBelowMinChars = searchTerm.length > 0 && searchTerm.length < minChars;
 
+  /**
+   * Teclado en el TRIGGER (cerrado, con foco): Enter/Espacio/ArrowDown abren el
+   * dropdown. `preventDefault` en todos los casos manejados evita que Enter
+   * dispare un submit del form o que `handleEnterAsTab` (src/lib/formUtils.ts)
+   * le robe el foco — ese helper respeta `e.defaultPrevented` (fix a11y F-6,
+   * hallazgo de F-5: el trigger era un div sin foco).
+   */
+  const handleTriggerKeyDown = (e: React.KeyboardEvent) => {
+    if (disabled) return;
+    if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowDown') {
+      e.preventDefault();
+      setIsOpen(true);
+    }
+  };
+
   return (
     <div ref={containerRef} className={`relative ${className}`}>
       {/* Trigger */}
       <div
         onClick={() => !disabled && setIsOpen(!isOpen)}
+        onKeyDown={handleTriggerKeyDown}
+        tabIndex={disabled ? -1 : 0}
+        role="combobox"
+        aria-expanded={isOpen}
+        aria-haspopup="listbox"
+        aria-controls={listboxId}
+        aria-disabled={disabled}
         className={`
           w-full px-3 py-2 border rounded-lg flex items-center justify-between cursor-pointer
+          focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500
           ${disabled ? 'bg-gray-100 cursor-not-allowed' : 'bg-white hover:border-blue-400'}
           ${isOpen ? 'border-blue-500 ring-2 ring-blue-200' : 'border-neutral-300'}
         `}
@@ -225,7 +249,7 @@ export default function SearchableSelectRemote({
           </div>
 
           {/* Options List */}
-          <div className="overflow-y-auto">
+          <div id={listboxId} role="listbox" className="overflow-y-auto">
             {loading ? (
               <div className="flex items-center justify-center gap-2 px-3 py-8 text-sm text-gray-500">
                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -239,6 +263,8 @@ export default function SearchableSelectRemote({
               options.map((option, index) => (
                 <div
                   key={option.value}
+                  role="option"
+                  aria-selected={option.value === value}
                   onClick={() => handleSelect(option)}
                   className={`
                     px-3 py-2 cursor-pointer transition-colors

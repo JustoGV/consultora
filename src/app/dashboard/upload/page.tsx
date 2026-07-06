@@ -1,39 +1,67 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
-import { CreateAfiliadoDto, CreateCertificadoDiscapacidadDto, EstadoCivil, ObraSocial, TipoDiscapacidad } from '@/types';
-import { afiliadosService } from '@/services/afiliadosService';
+import {
+  CreatePersonaDto,
+  CreateAfiliacionDto,
+  CreateCertificadoDiscapacidadDto,
+  EstadoCivil,
+  ObraSocial,
+  TipoDiscapacidad,
+  TipoDocumento,
+  RolAfiliacion,
+  Persona,
+} from '@/types';
+import { personasService } from '@/services/personasService';
+import { afiliacionesService } from '@/services/afiliacionesService';
 import { certificadosDiscapacidadService } from '@/services/certificadosDiscapacidadService';
 import { estadoCivilService } from '@/services/estadoCivilService';
 import { obrasSocialesService } from '@/services/obrasSocialesService';
 import { administradoraService } from '@/services/administradoraService';
 import { tipoDiscapacidadService } from '@/services/tipoDiscapacidadService';
 import { CheckCircleIcon, DocumentPlusIcon } from '@heroicons/react/24/outline';
-import { useRouter } from 'next/navigation';
 import SearchableSelect from '@/components/SearchableSelect';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { mapServerErrors } from '@/lib/errorUtils';
-import { handleEnterAsTab } from '@/lib/formUtils';
+import { useFormKeyboard } from '@/hooks/useFormKeyboard';
 
-export default function UploadPage() {
-  const { user } = useAuth();
-  const router = useRouter();
-  const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
-  const [formError, setFormError] = useState('');
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-  const [estadosCiviles, setEstadosCiviles] = useState<EstadoCivil[]>([]);
-  const [obrasSociales, setObrasSociales] = useState<ObraSocial[]>([]);
-  const [tiposDiscapacidad, setTiposDiscapacidad] = useState<TipoDiscapacidad[]>([]);
+const TIPOS_DOCUMENTO: { value: TipoDocumento; label: string }[] = [
+  { value: 'DNI', label: 'DNI' },
+  { value: 'CUIL', label: 'CUIL' },
+  { value: 'PASAPORTE', label: 'Pasaporte' },
+  { value: 'OTRO', label: 'Otro' },
+];
 
-  // Formulario del Afiliado
-  const [afiliadoData, setAfiliadoData] = useState<CreateAfiliadoDto>({
+const SEXO_OPTIONS = [
+  { value: 'M', label: 'M — Masculino' },
+  { value: 'F', label: 'F — Femenino' },
+  { value: 'X', label: 'X — Tercer género' },
+];
+
+const ROL_OPTIONS: { value: RolAfiliacion; label: string }[] = [
+  { value: 'TITULAR', label: 'Titular' },
+  { value: 'ADHERENTE', label: 'Adherente' },
+];
+
+const GRADO_OPTIONS = [
+  { value: 'Leve', label: 'Leve' },
+  { value: 'Moderado', label: 'Moderado' },
+  { value: 'Severo', label: 'Severo' },
+  { value: 'Muy Severo', label: 'Muy Severo' },
+];
+
+function emptyPersonaForm(administradoraId: string): CreatePersonaDto {
+  return {
     nombre: '',
     apellido: '',
-    dni: '',
+    tipoDocumento: 'DNI',
+    numeroDocumento: '',
+    cuil: '',
     fechaNacimiento: '',
-    edad: 0,
-    sexo: 'M',
+    sexo: '',
     email: '',
     telefono: '',
     celular: '',
@@ -41,25 +69,83 @@ export default function UploadPage() {
     localidad: '',
     provincia: '',
     codigoPostal: '',
+    estadoCivilId: '',
+    administradoraId,
+    activo: true,
+  };
+}
+
+function emptyAfiliacionForm(personaId: string, administradoraId: string): CreateAfiliacionDto {
+  return {
+    personaId,
+    obraSocialId: '',
+    rol: 'TITULAR',
     numeroAfiliado: '',
     plan: '',
-    estadoCivilId: '',
-    obraSocialId: '',
-    administradoraId: user?.administradoraId || '',
+    fechaAlta: '',
+    observaciones: '',
+    administradoraId,
     activo: true,
-  });
+  };
+}
 
-  // Formulario del Certificado
-  const [certificadoData, setCertificadoData] = useState<Omit<CreateCertificadoDiscapacidadDto, 'personaId' | 'tipoDiscapacidadIds'> & { tipoDiscapacidadId: string }>({
+function emptyCertificadoForm(
+  administradoraId: string
+): Omit<CreateCertificadoDiscapacidadDto, 'personaId' | 'tipoDiscapacidadIds'> & { tipoDiscapacidadId: string } {
+  return {
     numeroCertificado: '',
     fechaEmision: '',
     fechaVencimiento: '',
     grado: '',
     observaciones: '',
     tipoDiscapacidadId: '',
-    administradoraId: user?.administradoraId || '',
+    administradoraId,
     activo: true,
+  };
+}
+
+/** Omite claves vacías del payload: `""` nunca viaja en opcionales (RN-17/F1.4). */
+function stripEmpty<T extends object>(data: T): T {
+  const payload = { ...data };
+  (Object.keys(payload) as (keyof T)[]).forEach((key) => {
+    if (payload[key] === '') {
+      (payload as Record<string, unknown>)[key as string] = undefined;
+    }
   });
+  return payload;
+}
+
+type Step = 1 | 2 | 3;
+
+/**
+ * Alta rápida rol USER (F-6): una sola pantalla en tres pasos —
+ * (1) datos del paciente, (2) afiliación (opcional/salteable), (3) certificado
+ * CUD. Reemplaza el viejo formulario monolítico de Afiliado+Certificado.
+ */
+export default function UploadPage() {
+  const { user } = useAuth();
+  const router = useRouter();
+
+  const [step, setStep] = useState<Step>(1);
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [formError, setFormError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+
+  const [estadosCiviles, setEstadosCiviles] = useState<EstadoCivil[]>([]);
+  const [obrasSociales, setObrasSociales] = useState<ObraSocial[]>([]);
+  const [tiposDiscapacidad, setTiposDiscapacidad] = useState<TipoDiscapacidad[]>([]);
+
+  const [personaCreada, setPersonaCreada] = useState<Persona | null>(null);
+  const [afiliacionOmitida, setAfiliacionOmitida] = useState(false);
+
+  const administradoraId = user?.administradoraId || '';
+
+  const [personaData, setPersonaData] = useState<CreatePersonaDto>(() => emptyPersonaForm(administradoraId));
+  const [afiliacionData, setAfiliacionData] = useState<CreateAfiliacionDto>(() => emptyAfiliacionForm('', administradoraId));
+  const [certificadoData, setCertificadoData] = useState(() => emptyCertificadoForm(administradoraId));
+
+  const formRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     loadCatalogos();
@@ -67,11 +153,20 @@ export default function UploadPage() {
 
   useEffect(() => {
     if (user?.administradoraId) {
-      administradoraService.getById(user.administradoraId)
+      setPersonaData((prev) => ({ ...prev, administradoraId: user.administradoraId || '' }));
+      setAfiliacionData((prev) => ({ ...prev, administradoraId: user.administradoraId || '' }));
+      setCertificadoData((prev) => ({ ...prev, administradoraId: user.administradoraId || '' }));
+    }
+  }, [user?.administradoraId]);
+
+  useEffect(() => {
+    if (user?.administradoraId) {
+      administradoraService
+        .getById(user.administradoraId)
         .then((administradora) => {
           if (administradora.obraSocialPredeterminadaId) {
             // RN-14: preset editable de la OS predeterminada de la administradora
-            setAfiliadoData(prev => ({ ...prev, obraSocialId: administradora.obraSocialPredeterminadaId || '' }));
+            setAfiliacionData((prev) => ({ ...prev, obraSocialId: administradora.obraSocialPredeterminadaId || '' }));
           }
         })
         .catch(() => { /* superadmin sin administradora u otro error: sin preset, silencioso */ });
@@ -93,59 +188,77 @@ export default function UploadPage() {
     }
   };
 
-  const calculateAge = (birthDate: string): number => {
-    if (!birthDate) return 0;
-    const today = new Date();
-    const birth = new Date(birthDate);
-    let age = today.getFullYear() - birth.getFullYear();
-    const monthDiff = today.getMonth() - birth.getMonth();
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
-      age--;
-    }
-    return age;
-  };
-
-  const sexoOptions = [
-    { value: 'M', label: 'Masculino' },
-    { value: 'F', label: 'Femenino' },
-    { value: 'X', label: 'Tercer género' }
-  ];
-
-  const estadoCivilOptions = estadosCiviles.map((estado) => ({
-    value: estado.id,
-    label: estado.nombre
-  }));
-
+  const estadoCivilOptions = estadosCiviles.map((estado) => ({ value: estado.id, label: estado.nombre }));
   const obraSocialOptions = obrasSociales.map((os) => ({
     value: os.id,
-    label: os.sigla ? `${os.nombre} (${os.sigla})` : os.nombre
+    label: os.sigla ? `${os.nombre} (${os.sigla})` : os.nombre,
   }));
+  const tipoDiscapacidadOptions = tiposDiscapacidad.map((tipo) => ({ value: tipo.id, label: tipo.nombre }));
 
-  const tipoDiscapacidadOptions = tiposDiscapacidad.map((tipo) => ({
-    value: tipo.id,
-    label: tipo.nombre
-  }));
+  const isDirtyPaso1 = useMemo(
+    () => JSON.stringify(personaData) !== JSON.stringify(emptyPersonaForm(administradoraId)),
+    [personaData, administradoraId]
+  );
 
-  const gradoOptions = [
-    { value: 'Leve', label: 'Leve' },
-    { value: 'Moderado', label: 'Moderado' },
-    { value: 'Severo', label: 'Severo' },
-    { value: 'Muy Severo', label: 'Muy Severo' }
-  ];
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    // Validaciones
+  // ---------- Paso 1: datos del paciente ----------
+  const validatePersona = (): Record<string, string> => {
     const errors: Record<string, string> = {};
-    if (!afiliadoData.nombre) errors.nombre = 'Requerido';
-    if (!afiliadoData.apellido) errors.apellido = 'Requerido';
-    if (!afiliadoData.dni) errors.dni = 'Requerido';
-    if (!afiliadoData.fechaNacimiento) errors.fechaNacimiento = 'Requerido';
-    if (!certificadoData.numeroCertificado) errors.numeroCertificado = 'Requerido';
-    if (!certificadoData.fechaEmision) errors.fechaEmision = 'Requerido';
-    if (!certificadoData.tipoDiscapacidadId) errors.tipoDiscapacidadId = 'Requerido';
-    if (!certificadoData.grado) errors.grado = 'Requerido';
+    if (!personaData.nombre.trim()) errors.nombre = 'Requerido';
+    if (!personaData.apellido.trim()) errors.apellido = 'Requerido';
+    if (!personaData.numeroDocumento.trim()) errors.numeroDocumento = 'Requerido';
+    if (!personaData.fechaNacimiento) errors.fechaNacimiento = 'Requerido';
+    return errors;
+  };
+
+  const handleSubmitPaso1 = async () => {
+    const errors = validatePersona();
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
+      focusFirstError(errors);
+      return;
+    }
+    setFieldErrors({});
+    setFormError('');
+
+    try {
+      setLoading(true);
+      const payload = stripEmpty(personaData);
+      const creada = await personasService.create(payload);
+      setPersonaCreada(creada);
+      setAfiliacionData(emptyAfiliacionForm(creada.id, administradoraId));
+      setStep(2);
+    } catch (error) {
+      const { fieldErrors: fe, formError: gf } = mapServerErrors(error, Object.keys(personaData));
+      const conflict =
+        error && typeof error === 'object' && 'response' in error
+          ? (error as { response?: { status?: number } }).response?.status === 409
+          : false;
+      if (conflict && !fe.numeroDocumento) {
+        fe.numeroDocumento = 'Ya existe una persona con ese documento';
+      }
+      setFieldErrors((prev) => ({ ...prev, ...fe }));
+      if (gf && !conflict) setFormError(gf);
+      focusFirstError(fe);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ---------- Paso 2: afiliación (opcional) ----------
+  const handleSubmitPaso2 = async () => {
+    if (!personaCreada) return;
+
+    // Afiliación es opcional/salteable: si no cargaron obra social, se saltea sin crear nada.
+    if (!afiliacionData.obraSocialId) {
+      setAfiliacionOmitida(true);
+      setFieldErrors({});
+      setFormError('');
+      setStep(3);
+      return;
+    }
+
+    const errors: Record<string, string> = {};
+    if (!afiliacionData.rol) errors.rol = 'Requerido';
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors);
       return;
@@ -155,48 +268,96 @@ export default function UploadPage() {
 
     try {
       setLoading(true);
+      const payload = stripEmpty(afiliacionData);
+      await afiliacionesService.create(payload);
+      setAfiliacionOmitida(false);
+      setStep(3);
+    } catch (error) {
+      const { fieldErrors: fe, formError: gf } = mapServerErrors(error, Object.keys(afiliacionData));
+      const conflict =
+        error && typeof error === 'object' && 'response' in error
+          ? (error as { response?: { status?: number } }).response?.status === 409
+          : false;
+      if (conflict) {
+        setFormError(gf || 'El paciente ya tiene una afiliación activa en esa obra social.');
+      } else {
+        setFieldErrors((prev) => ({ ...prev, ...fe }));
+        if (gf) setFormError(gf);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
 
-      // 1. Crear el afiliado
-      const afiliadoToCreate = {
-        ...afiliadoData,
-        edad: calculateAge(afiliadoData.fechaNacimiento),
-        email: afiliadoData.email || undefined,
-        telefono: afiliadoData.telefono || undefined,
-        celular: afiliadoData.celular || undefined,
-        estadoCivilId: afiliadoData.estadoCivilId || undefined,
-        obraSocialId: afiliadoData.obraSocialId || undefined,
-      };
+  const handleSaltearPaso2 = () => {
+    setAfiliacionOmitida(true);
+    setFieldErrors({});
+    setFormError('');
+    setStep(3);
+  };
 
-      const nuevoAfiliado = await afiliadosService.create(afiliadoToCreate);
+  // ---------- Paso 3: certificado CUD ----------
+  const handleSubmitPaso3 = async () => {
+    if (!personaCreada) return;
 
-      // 2. Crear el certificado asociado al afiliado
+    const errors: Record<string, string> = {};
+    if (!certificadoData.numeroCertificado) errors.numeroCertificado = 'Requerido';
+    if (!certificadoData.fechaEmision) errors.fechaEmision = 'Requerido';
+    if (!certificadoData.tipoDiscapacidadId) errors.tipoDiscapacidadId = 'Requerido';
+    if (!certificadoData.grado) errors.grado = 'Requerido';
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
+      focusFirstError(errors);
+      return;
+    }
+    setFieldErrors({});
+    setFormError('');
+
+    try {
+      setLoading(true);
       const { tipoDiscapacidadId, ...certRest } = certificadoData;
-      const certificadoToCreate: CreateCertificadoDiscapacidadDto = {
+      const payload: CreateCertificadoDiscapacidadDto = {
         ...certRest,
-        personaId: nuevoAfiliado.id,
+        personaId: personaCreada.id,
         tipoDiscapacidadIds: [tipoDiscapacidadId],
         fechaVencimiento: certificadoData.fechaVencimiento || undefined,
         observaciones: certificadoData.observaciones || undefined,
       };
 
-      await certificadosDiscapacidadService.create(certificadoToCreate);
+      await certificadosDiscapacidadService.create(payload);
 
       setSuccess(true);
-
-      // Redirigir después de 2 segundos
       setTimeout(() => {
-        router.push('/dashboard/afiliados');
+        router.push('/dashboard/pacientes');
       }, 2000);
     } catch (error) {
-      console.error('Error al crear afiliado y certificado:', error);
-      const knownFields = [...Object.keys(afiliadoData), ...Object.keys(certificadoData)];
-      const { fieldErrors: fe, formError: gf } = mapServerErrors(error, knownFields);
+      const { fieldErrors: fe, formError: gf } = mapServerErrors(error, Object.keys(certificadoData));
       setFieldErrors((prev) => ({ ...prev, ...fe }));
       if (gf) setFormError(gf);
+      focusFirstError(fe);
     } finally {
       setLoading(false);
     }
   };
+
+  const handleSubmitStep = () => {
+    if (step === 1) return handleSubmitPaso1();
+    if (step === 2) return handleSubmitPaso2();
+    return handleSubmitPaso3();
+  };
+
+  const handleVolver = () => {
+    if (step === 3) setStep(2);
+    else if (step === 2) setStep(1);
+    else router.back();
+  };
+
+  const { onKeyDown, focusFirstError } = useFormKeyboard({
+    formRef,
+    onSubmit: handleSubmitStep,
+    onClose: () => router.back(),
+    isDirty: isDirtyPaso1,
+  });
 
   if (success) {
     return (
@@ -205,364 +366,367 @@ export default function UploadPage() {
           <CheckCircleIcon className="w-20 h-20 text-green-600 mx-auto mb-4" />
           <h2 className="text-2xl font-bold text-gray-900 mb-2">¡Registro Exitoso!</h2>
           <p className="text-gray-600 mb-4">
-            El afiliado y su certificado de discapacidad han sido creados correctamente.
+            El paciente y su certificado de discapacidad han sido creados correctamente.
           </p>
-          <p className="text-sm text-gray-500">Redirigiendo a la lista de afiliados...</p>
+          <p className="text-sm text-gray-500">Redirigiendo a la lista de pacientes...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-6xl mx-auto">
-      <div className="mb-8">
+    <div className="max-w-4xl mx-auto space-y-6">
+      <div>
         <h1 className="text-3xl font-bold bg-gradient-to-r from-primary-600 to-primary-800 bg-clip-text text-transparent flex items-center gap-3">
           <DocumentPlusIcon className="w-8 h-8 text-primary-600" />
-          Nuevo Afiliado con Certificado
+          Nuevo Paciente con Certificado
         </h1>
-        <p className="text-gray-600 mt-2">
-          Complete los datos del afiliado y su certificado de discapacidad
-        </p>
+        <p className="text-gray-600 mt-2">Completá los datos en tres pasos: paciente, afiliación y certificado.</p>
       </div>
 
-      <form onSubmit={handleSubmit} onKeyDown={handleEnterAsTab} autoComplete="off" className="space-y-6">
-        {/* Sección: Datos del Afiliado */}
-        <div className="bg-white rounded-xl shadow-md p-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-6 pb-3 border-b flex items-center gap-2">
-            <span className="w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-bold text-sm">
-              1
-            </span>
-            Datos del Afiliado
-          </h2>
+      {/* Indicador de pasos */}
+      <div className="flex items-center gap-3">
+        <StepBadge n={1} active={step === 1} done={step > 1} label="Paciente" />
+        <StepDivider />
+        <StepBadge n={2} active={step === 2} done={step > 2} label="Afiliación" />
+        <StepDivider />
+        <StepBadge n={3} active={step === 3} done={false} label="Certificado" />
+      </div>
 
-          {/* Datos Personales */}
-          <div className="mb-6">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Datos Personales</h3>
+      <div
+        ref={formRef}
+        onKeyDown={onKeyDown}
+        className="bg-white rounded-xl shadow-md p-6 space-y-4"
+      >
+        {step === 1 && (
+          <>
+            <h2 className="text-lg font-semibold text-gray-900 border-b pb-3">Datos del paciente</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Nombre *</label>
-                <input
-                  type="text"
-                  value={afiliadoData.nombre}
-                  onChange={(e) => setAfiliadoData({ ...afiliadoData, nombre: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  required
-                  maxLength={100}
+              <Field label="Nombre" required error={fieldErrors.nombre}>
+                <Input
+                  name="nombre"
+                  value={personaData.nombre}
+                  onChange={(e) => setPersonaData({ ...personaData, nombre: e.target.value })}
+                  autoComplete="off"
+                  aria-invalid={!!fieldErrors.nombre}
                 />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Apellido *</label>
-                <input
-                  type="text"
-                  value={afiliadoData.apellido}
-                  onChange={(e) => setAfiliadoData({ ...afiliadoData, apellido: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  required
-                  maxLength={100}
+              </Field>
+              <Field label="Apellido" required error={fieldErrors.apellido}>
+                <Input
+                  name="apellido"
+                  value={personaData.apellido}
+                  onChange={(e) => setPersonaData({ ...personaData, apellido: e.target.value })}
+                  autoComplete="off"
+                  aria-invalid={!!fieldErrors.apellido}
                 />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">DNI *</label>
-                <input
-                  type="text"
-                  value={afiliadoData.dni}
-                  onChange={(e) => setAfiliadoData({ ...afiliadoData, dni: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  required
-                  maxLength={20}
+              </Field>
+              <Field label="Tipo de documento" required>
+                <SearchableSelect
+                  options={TIPOS_DOCUMENTO}
+                  value={personaData.tipoDocumento || 'DNI'}
+                  onChange={(v) => setPersonaData({ ...personaData, tipoDocumento: v as TipoDocumento })}
                 />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Fecha de Nacimiento *</label>
-                <input
+              </Field>
+              <Field label="Número de documento" required error={fieldErrors.numeroDocumento}>
+                <Input
+                  name="numeroDocumento"
+                  value={personaData.numeroDocumento}
+                  onChange={(e) => setPersonaData({ ...personaData, numeroDocumento: e.target.value })}
+                  className="tabular-nums"
+                  autoComplete="off"
+                  aria-invalid={!!fieldErrors.numeroDocumento}
+                />
+              </Field>
+              <Field label="CUIL">
+                <Input
+                  name="cuil"
+                  value={personaData.cuil}
+                  onChange={(e) => setPersonaData({ ...personaData, cuil: e.target.value })}
+                  className="tabular-nums"
+                  autoComplete="off"
+                />
+              </Field>
+              <Field label="Fecha de nacimiento" required error={fieldErrors.fechaNacimiento}>
+                <Input
                   type="date"
-                  value={afiliadoData.fechaNacimiento}
-                  onChange={(e) => setAfiliadoData({ ...afiliadoData, fechaNacimiento: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  required
+                  name="fechaNacimiento"
+                  value={personaData.fechaNacimiento}
+                  onChange={(e) => setPersonaData({ ...personaData, fechaNacimiento: e.target.value })}
+                  className="tabular-nums"
+                  aria-invalid={!!fieldErrors.fechaNacimiento}
                 />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Sexo *</label>
+              </Field>
+              <Field label="Sexo">
                 <SearchableSelect
-                  options={sexoOptions}
-                  value={afiliadoData.sexo}
-                  onChange={(value) => setAfiliadoData({ ...afiliadoData, sexo: value })}
-                  placeholder="Seleccionar sexo..."
-                  required
+                  options={SEXO_OPTIONS}
+                  value={personaData.sexo || ''}
+                  onChange={(v) => setPersonaData({ ...personaData, sexo: v })}
+                  emptyMessage="Sin opciones"
                 />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Estado Civil</label>
+              </Field>
+              <Field label="Estado civil">
                 <SearchableSelect
-                  options={[{ value: '', label: 'Seleccionar...' }, ...estadoCivilOptions]}
-                  value={afiliadoData.estadoCivilId || ''}
-                  onChange={(value) => setAfiliadoData({ ...afiliadoData, estadoCivilId: value })}
-                  placeholder="Seleccionar estado civil..."
+                  options={estadoCivilOptions}
+                  value={personaData.estadoCivilId || ''}
+                  onChange={(v) => setPersonaData({ ...personaData, estadoCivilId: v })}
+                  emptyMessage="Sin estados civiles cargados"
                 />
-              </div>
-            </div>
-          </div>
-
-          {/* Contacto */}
-          <div className="mb-6">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Contacto</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                <input
+              </Field>
+              <Field label="Email">
+                <Input
                   type="email"
-                  value={afiliadoData.email}
-                  onChange={(e) => setAfiliadoData({ ...afiliadoData, email: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  maxLength={100}
+                  name="email"
+                  value={personaData.email}
+                  onChange={(e) => setPersonaData({ ...personaData, email: e.target.value })}
+                  autoComplete="off"
                 />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Teléfono</label>
-                <input
-                  type="tel"
-                  value={afiliadoData.telefono}
-                  onChange={(e) => setAfiliadoData({ ...afiliadoData, telefono: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  maxLength={50}
+              </Field>
+              <Field label="Teléfono">
+                <Input
+                  name="telefono"
+                  value={personaData.telefono}
+                  onChange={(e) => setPersonaData({ ...personaData, telefono: e.target.value })}
+                  className="tabular-nums"
+                  autoComplete="off"
                 />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Celular</label>
-                <input
-                  type="tel"
-                  value={afiliadoData.celular}
-                  onChange={(e) => setAfiliadoData({ ...afiliadoData, celular: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  maxLength={50}
+              </Field>
+              <Field label="Celular">
+                <Input
+                  name="celular"
+                  value={personaData.celular}
+                  onChange={(e) => setPersonaData({ ...personaData, celular: e.target.value })}
+                  className="tabular-nums"
+                  autoComplete="off"
                 />
-              </div>
+              </Field>
+              <Field label="Dirección">
+                <Input
+                  name="direccion-sistema"
+                  value={personaData.direccion}
+                  onChange={(e) => setPersonaData({ ...personaData, direccion: e.target.value })}
+                  autoComplete="off"
+                />
+              </Field>
+              <Field label="Localidad">
+                <Input
+                  name="localidad-sistema"
+                  value={personaData.localidad}
+                  onChange={(e) => setPersonaData({ ...personaData, localidad: e.target.value })}
+                  autoComplete="off"
+                />
+              </Field>
+              <Field label="Provincia">
+                <Input
+                  name="provincia-sistema"
+                  value={personaData.provincia}
+                  onChange={(e) => setPersonaData({ ...personaData, provincia: e.target.value })}
+                  autoComplete="off"
+                />
+              </Field>
+              <Field label="Código postal">
+                <Input
+                  name="codigoPostal-sistema"
+                  value={personaData.codigoPostal}
+                  onChange={(e) => setPersonaData({ ...personaData, codigoPostal: e.target.value })}
+                  className="tabular-nums"
+                  autoComplete="off"
+                />
+              </Field>
             </div>
-          </div>
+          </>
+        )}
 
-          {/* Domicilio */}
-          <div className="mb-6">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Domicilio</h3>
+        {step === 2 && personaCreada && (
+          <>
+            <h2 className="text-lg font-semibold text-gray-900 border-b pb-3">
+              Afiliación de {personaCreada.apellido}, {personaCreada.nombre}{' '}
+              <span className="text-sm font-normal text-gray-500">(opcional)</span>
+            </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Dirección *</label>
-                <input
-                  type="text"
-                  value={afiliadoData.direccion}
-                  onChange={(e) => setAfiliadoData({ ...afiliadoData, direccion: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  required
-                  maxLength={255}
-                  autoComplete="off"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Localidad *</label>
-                <input
-                  type="text"
-                  value={afiliadoData.localidad}
-                  onChange={(e) => setAfiliadoData({ ...afiliadoData, localidad: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  required
-                  maxLength={100}
-                  autoComplete="off"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Provincia *</label>
-                <input
-                  type="text"
-                  value={afiliadoData.provincia}
-                  onChange={(e) => setAfiliadoData({ ...afiliadoData, provincia: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  required
-                  maxLength={100}
-                  autoComplete="off"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Código Postal *</label>
-                <input
-                  type="text"
-                  value={afiliadoData.codigoPostal}
-                  onChange={(e) => setAfiliadoData({ ...afiliadoData, codigoPostal: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  required
-                  maxLength={20}
-                  autoComplete="off"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Datos de Afiliación */}
-          <div>
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Datos de Afiliación</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Número de Afiliado *</label>
-                <input
-                  type="text"
-                  value={afiliadoData.numeroAfiliado}
-                  onChange={(e) => setAfiliadoData({ ...afiliadoData, numeroAfiliado: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  required
-                  maxLength={50}
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Plan *</label>
-                <input
-                  type="text"
-                  value={afiliadoData.plan}
-                  onChange={(e) => setAfiliadoData({ ...afiliadoData, plan: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  required
-                  maxLength={100}
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Obra Social</label>
+              <Field label="Obra Social" error={fieldErrors.obraSocialId}>
                 <SearchableSelect
-                  options={[{ value: '', label: 'Seleccionar...' }, ...obraSocialOptions]}
-                  value={afiliadoData.obraSocialId || ''}
-                  onChange={(value) => setAfiliadoData({ ...afiliadoData, obraSocialId: value })}
+                  options={[{ value: '', label: 'Sin obra social (particular)' }, ...obraSocialOptions]}
+                  value={afiliacionData.obraSocialId}
+                  onChange={(v) => setAfiliacionData({ ...afiliacionData, obraSocialId: v })}
                   placeholder="Seleccionar obra social..."
                 />
+              </Field>
+              <Field label="Rol" required error={fieldErrors.rol}>
+                <SearchableSelect
+                  options={ROL_OPTIONS}
+                  value={afiliacionData.rol}
+                  onChange={(v) => setAfiliacionData({ ...afiliacionData, rol: v as RolAfiliacion })}
+                />
+              </Field>
+              <Field label="N° de afiliado">
+                <Input
+                  name="numeroAfiliado"
+                  value={afiliacionData.numeroAfiliado}
+                  onChange={(e) => setAfiliacionData({ ...afiliacionData, numeroAfiliado: e.target.value })}
+                  className="tabular-nums"
+                  autoComplete="off"
+                  placeholder="Texto libre"
+                />
+              </Field>
+              <Field label="Plan">
+                <Input
+                  name="plan"
+                  value={afiliacionData.plan}
+                  onChange={(e) => setAfiliacionData({ ...afiliacionData, plan: e.target.value })}
+                  autoComplete="off"
+                />
+              </Field>
+              <Field label="Fecha de alta">
+                <Input
+                  type="date"
+                  name="fechaAlta"
+                  value={afiliacionData.fechaAlta}
+                  onChange={(e) => setAfiliacionData({ ...afiliacionData, fechaAlta: e.target.value })}
+                  className="tabular-nums"
+                />
+              </Field>
+            </div>
+          </>
+        )}
+
+        {step === 3 && personaCreada && (
+          <>
+            <h2 className="text-lg font-semibold text-gray-900 border-b pb-3">
+              Certificado CUD de {personaCreada.apellido}, {personaCreada.nombre}
+              {afiliacionOmitida && (
+                <span className="ml-2 text-sm font-normal text-gray-500">(sin afiliación cargada)</span>
+              )}
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="md:col-span-2">
+                <Field label="Número de certificado" required error={fieldErrors.numeroCertificado}>
+                  <Input
+                    name="numeroCertificado"
+                    value={certificadoData.numeroCertificado}
+                    onChange={(e) =>
+                      setCertificadoData({ ...certificadoData, numeroCertificado: e.target.value.toUpperCase() })
+                    }
+                    autoComplete="off"
+                    aria-invalid={!!fieldErrors.numeroCertificado}
+                  />
+                </Field>
+              </div>
+              <Field label="Tipo de discapacidad" required error={fieldErrors.tipoDiscapacidadId}>
+                <SearchableSelect
+                  options={tipoDiscapacidadOptions}
+                  value={certificadoData.tipoDiscapacidadId}
+                  onChange={(v) => setCertificadoData({ ...certificadoData, tipoDiscapacidadId: v })}
+                  placeholder="Seleccionar tipo..."
+                />
+              </Field>
+              <Field label="Grado" required error={fieldErrors.grado}>
+                <SearchableSelect
+                  options={GRADO_OPTIONS}
+                  value={certificadoData.grado}
+                  onChange={(v) => setCertificadoData({ ...certificadoData, grado: v })}
+                  placeholder="Seleccionar grado..."
+                />
+              </Field>
+              <Field label="Fecha de emisión" required error={fieldErrors.fechaEmision}>
+                <Input
+                  type="date"
+                  name="fechaEmision"
+                  value={certificadoData.fechaEmision}
+                  onChange={(e) => setCertificadoData({ ...certificadoData, fechaEmision: e.target.value })}
+                  className="tabular-nums"
+                  aria-invalid={!!fieldErrors.fechaEmision}
+                />
+              </Field>
+              <Field label="Fecha de vencimiento">
+                <Input
+                  type="date"
+                  name="fechaVencimiento"
+                  value={certificadoData.fechaVencimiento}
+                  onChange={(e) => setCertificadoData({ ...certificadoData, fechaVencimiento: e.target.value })}
+                  className="tabular-nums"
+                />
+              </Field>
+              <div className="md:col-span-2">
+                <Field label="Observaciones">
+                  <textarea
+                    value={certificadoData.observaciones}
+                    onChange={(e) => setCertificadoData({ ...certificadoData, observaciones: e.target.value })}
+                    rows={3}
+                    className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                    maxLength={500}
+                    placeholder="Información adicional sobre el certificado..."
+                  />
+                </Field>
               </div>
             </div>
+          </>
+        )}
+
+        {formError && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">
+            <span className="font-medium">Error:</span> {formError}
           </div>
-        </div>
+        )}
 
-        {/* Sección: Datos del Certificado */}
-        <div className="bg-white rounded-xl shadow-md p-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-6 pb-3 border-b flex items-center gap-2">
-            <span className="w-8 h-8 bg-green-100 text-green-600 rounded-full flex items-center justify-center font-bold text-sm">
-              2
-            </span>
-            Certificado de Discapacidad
-          </h2>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Número de Certificado *</label>
-              <input
-                type="text"
-                value={certificadoData.numeroCertificado}
-                onChange={(e) => setCertificadoData({ ...certificadoData, numeroCertificado: e.target.value.toUpperCase() })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                required
-                maxLength={50}
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Tipo de Discapacidad *</label>
-              <SearchableSelect
-                options={[{ value: '', label: 'Seleccionar tipo...' }, ...tipoDiscapacidadOptions]}
-                value={certificadoData.tipoDiscapacidadId}
-                onChange={(value) => setCertificadoData({ ...certificadoData, tipoDiscapacidadId: value })}
-                placeholder="Seleccionar tipo..."
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Grado *</label>
-              <SearchableSelect
-                options={[{ value: '', label: 'Seleccionar grado...' }, ...gradoOptions]}
-                value={certificadoData.grado}
-                onChange={(value) => setCertificadoData({ ...certificadoData, grado: value })}
-                placeholder="Seleccionar grado..."
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Fecha de Emisión *</label>
-              <input
-                type="date"
-                value={certificadoData.fechaEmision}
-                onChange={(e) => setCertificadoData({ ...certificadoData, fechaEmision: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Fecha de Vencimiento</label>
-              <input
-                type="date"
-                value={certificadoData.fechaVencimiento}
-                onChange={(e) => setCertificadoData({ ...certificadoData, fechaVencimiento: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Observaciones</label>
-              <textarea
-                value={certificadoData.observaciones}
-                onChange={(e) => setCertificadoData({ ...certificadoData, observaciones: e.target.value })}
-                rows={3}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                maxLength={500}
-                placeholder="Información adicional sobre el certificado..."
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Botones de Acción */}
-        <div className="bg-white p-6 rounded-xl shadow-md border border-gray-200 mt-6">
-          {formError && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">
-              <span className="font-medium">Error:</span> {formError}
-            </div>
+        <div className="flex gap-3 justify-end border-t pt-4">
+          <Button type="button" variant="outline" onClick={handleVolver} disabled={loading}>
+            {step === 1 ? 'Cancelar' : 'Volver'}
+          </Button>
+          {step === 2 && (
+            <Button type="button" variant="ghost" onClick={handleSaltearPaso2} disabled={loading}>
+              Saltear afiliación
+            </Button>
           )}
-
-          <div className="flex gap-4 justify-end">
-            <button
-              type="button"
-              onClick={() => router.back()}
-              className="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium cursor-pointer"
-              disabled={loading}
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              className="px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 cursor-pointer"
-              disabled={loading}
-            >
-              {loading ? (
-                <>
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                  Guardando...
-                </>
-              ) : (
-                <>
-                  <DocumentPlusIcon className="w-5 h-5" />
-                  Crear Afiliado y Certificado
-                </>
-              )}
-            </button>
-          </div>
+          <Button type="button" onClick={handleSubmitStep} disabled={loading}>
+            {loading ? 'Guardando…' : step === 3 ? 'Crear certificado' : 'Continuar'}
+          </Button>
         </div>
-      </form>
+      </div>
+    </div>
+  );
+}
+
+function StepBadge({ n, active, done, label }: { n: number; active: boolean; done: boolean; label: string }) {
+  return (
+    <div className="flex items-center gap-2">
+      <span
+        className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${
+          done
+            ? 'bg-primary-600 text-white'
+            : active
+              ? 'bg-primary-100 text-primary-700 ring-2 ring-primary-600'
+              : 'bg-neutral-100 text-neutral-500'
+        }`}
+      >
+        {done ? '✓' : n}
+      </span>
+      <span className={`text-sm font-medium ${active ? 'text-neutral-900' : 'text-neutral-500'}`}>{label}</span>
+    </div>
+  );
+}
+
+function StepDivider() {
+  return <span className="h-px w-8 bg-neutral-300" aria-hidden />;
+}
+
+function Field({
+  label,
+  required,
+  error,
+  children,
+}: {
+  label: string;
+  required?: boolean;
+  error?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div>
+      <label className="block text-sm font-medium text-neutral-700 mb-1">
+        {label} {required && <span className="text-red-600">*</span>}
+      </label>
+      {children}
+      {error && <p className="text-xs text-red-600 mt-1">{error}</p>}
     </div>
   );
 }

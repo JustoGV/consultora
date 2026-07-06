@@ -28,9 +28,9 @@ interface FormModalProps {
  * integrado: Enter = siguiente campo, Ctrl+Enter = submit, Esc = cerrar (con
  * confirmación si `isDirty`), autofocus del primer campo.
  *
- * No reemplaza los modales legacy hechos a mano (overlay `<div>` propio, ver
- * `AderenteEditModal.tsx`) — es para consumo de F-5 en adelante, cuando las
- * pantallas nuevas migren a Radix Dialog.
+ * No reemplaza los modales legacy hechos a mano (overlay `<div>` propio) — es
+ * para consumo de F-5 en adelante, cuando las pantallas nuevas migren a Radix
+ * Dialog.
  *
  * El `<form>` interno lo provee el consumidor como `children` (este wrapper no
  * asume su estructura); pasale el mismo `formRef` que uses acá al elemento

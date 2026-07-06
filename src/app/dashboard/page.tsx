@@ -2,7 +2,7 @@
 
 import { useMemo, useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { afiliadosService } from '@/services/afiliadosService';
+import { personasService } from '@/services/personasService';
 import { certificadosDiscapacidadService } from '@/services/certificadosDiscapacidadService';
 import {
   UsersIcon,
@@ -12,12 +12,12 @@ import {
   ArrowTrendingUpIcon,
   CheckCircleIcon
 } from '@heroicons/react/24/outline';
-import { Afiliado, CertificadoDiscapacidad } from '@/types';
+import { Persona, CertificadoDiscapacidad } from '@/types';
 
 export default function DashboardPage() {
   const { user, isAdmin } = useAuth();
   const [loading, setLoading] = useState(true);
-  const [afiliados, setAfiliados] = useState<Afiliado[]>([]);
+  const [pacientes, setPacientes] = useState<Persona[]>([]);
   const [certificados, setCertificados] = useState<CertificadoDiscapacidad[]>([]);
 
   useEffect(() => {
@@ -27,11 +27,11 @@ export default function DashboardPage() {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [afiliadosData, certificadosData] = await Promise.all([
-        afiliadosService.getAll(),
+      const [pacientesData, certificadosData] = await Promise.all([
+        personasService.getAll(),
         certificadosDiscapacidadService.getAll(),
       ]);
-      setAfiliados(afiliadosData);
+      setPacientes(pacientesData);
       setCertificados(certificadosData);
     } catch (error) {
       console.error('Error al cargar datos del dashboard:', error);
@@ -45,12 +45,12 @@ export default function DashboardPage() {
     if (!user) return { patients: 0, certificates: 0, categories: 0, nomenclators: 0 };
 
     return {
-      patients: afiliados.length,
+      patients: pacientes.length,
       certificates: certificados.length,
       categories: 0, // TODO: Conectar con API de categorías
       nomenclators: 0, // TODO: Conectar con API de nomencladores
     };
-  }, [user, afiliados, certificados]);
+  }, [user, pacientes, certificados]);
 
   const stats = isAdmin ? [
     {

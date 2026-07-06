@@ -5,7 +5,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { DocumentTextIcon, BuildingOfficeIcon } from '@heroicons/react/24/outline';
 import CertificateSearch, { SearchFilters } from '@/components/CertificateSearch';
 import { certificadosDiscapacidadService } from '@/services/certificadosDiscapacidadService';
-import { afiliadosService } from '@/services/afiliadosService';
 import { tipoDiscapacidadService } from '@/services/tipoDiscapacidadService';
 import { CertificadoDiscapacidad } from '@/types';
 
@@ -37,15 +36,15 @@ export default function CertificatesPage() {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [certificadosData, afiliadosData, tiposData] = await Promise.all([
+      const [certificadosData, tiposData] = await Promise.all([
         certificadosDiscapacidadService.getAll(),
-        afiliadosService.getAll(),
         tipoDiscapacidadService.getAll(),
       ]);
 
-      // Combinar datos
+      // El certificado ya viene con `persona` embebida (leftJoinAndSelect en
+      // el backend) — no hace falta traer personas aparte.
       const certificadosConInfo = certificadosData.map(cert => {
-        const afiliado = afiliadosData.find(a => a.id === cert.personaId);
+        const persona = cert.persona;
         const ids = cert.tipoDiscapacidadIds && cert.tipoDiscapacidadIds.length > 0
           ? cert.tipoDiscapacidadIds
           : cert.tipoDiscapacidadId ? [cert.tipoDiscapacidadId] : [];
@@ -55,8 +54,8 @@ export default function CertificatesPage() {
           .join(', ') || 'N/A';
         return {
           ...cert,
-          afiliadoNombre: afiliado ? `${afiliado.apellido}, ${afiliado.nombre}` : 'N/A',
-          afiliadoDni: afiliado?.dni || 'N/A',
+          afiliadoNombre: persona ? `${persona.apellido}, ${persona.nombre}` : 'N/A',
+          afiliadoDni: persona ? `${persona.tipoDocumento} ${persona.numeroDocumento}` : 'N/A',
           tipoDiscapacidadNombre,
         };
       });
@@ -178,7 +177,7 @@ export default function CertificatesPage() {
                         </div>
                         
                         <div>
-                          <p className="text-xs text-gray-600">DNI Afiliado</p>
+                          <p className="text-xs text-gray-600">Documento del paciente</p>
                           <p className="font-medium text-gray-900">{certificate.afiliadoDni}</p>
                         </div>
                         
@@ -259,11 +258,11 @@ export default function CertificatesPage() {
             <div className="p-6 space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <p className="text-xs text-gray-600">Afiliado</p>
+                  <p className="text-xs text-gray-600">Paciente</p>
                   <p className="font-medium text-gray-900">{selectedCertificate.afiliadoNombre}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-600">DNI</p>
+                  <p className="text-xs text-gray-600">Documento</p>
                   <p className="font-medium text-gray-900">{selectedCertificate.afiliadoDni}</p>
                 </div>
                 <div>

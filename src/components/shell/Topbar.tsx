@@ -11,7 +11,9 @@ import AlertBell from "@/components/shell/AlertBell";
 /**
  * Topbar del shell (UX-1).
  * - Buscador global de pacientes con atajo "/" para enfocar. Por ahora, al
- *   submitear navega a /dashboard/afiliados (el buscador real llega en F-5).
+ *   submitear navega a /dashboard/pacientes (el buscador real que lea el
+ *   query param queda pendiente — la página de pacientes hoy busca con su
+ *   propio input server-side, no lee `?q=` de la URL todavía).
  * - Campana de alertas (AlertBell) con badge por severidad.
  * - Botón hamburguesa para colapsar la sidebar (controlado por el layout).
  */
@@ -45,11 +47,12 @@ export default function Topbar({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO(F-5): reemplazar por la búsqueda global real de personas
+    // TODO: reemplazar por la búsqueda global real de personas
     // (SearchableSelectRemote / página de resultados). Por ahora navega al
-    // listado de afiliados llevando el término como query param.
+    // listado de pacientes llevando el término como query param (la página
+    // todavía no lo lee de la URL — queda para una fase posterior).
     const q = query.trim();
-    router.push(q ? `/dashboard/afiliados?q=${encodeURIComponent(q)}` : "/dashboard/afiliados");
+    router.push(q ? `/dashboard/pacientes?q=${encodeURIComponent(q)}` : "/dashboard/pacientes");
   };
 
   const initials = user?.nombre
