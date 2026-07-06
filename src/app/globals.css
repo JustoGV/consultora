@@ -410,3 +410,71 @@ p {
     scroll-behavior: auto !important;
   }
 }
+
+/* ============================================================
+   IMPRESIÓN (UX-6) — vista A4 de /dashboard/reportes
+   ============================================================
+   Oculta shell (sidebar/topbar) y controles interactivos; deja solo el
+   contenido marcado `.print-area` con un encabezado propio (`.print-header`,
+   inyectado por la página) y tablas con bordes limpios en blanco y negro.
+   Cualquier elemento fuera de `.print-area` (o marcado `.no-print`) se oculta. */
+@media print {
+  @page {
+    size: A4;
+    margin: 14mm 12mm;
+  }
+
+  html, body {
+    background: #fff !important;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  body * {
+    visibility: hidden;
+  }
+
+  .print-area, .print-area * {
+    visibility: visible;
+  }
+
+  .print-area {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    background: #fff !important;
+    color: #000 !important;
+  }
+
+  .print-area .print-header {
+    display: block !important;
+  }
+
+  .print-area table {
+    border-collapse: collapse;
+    width: 100%;
+    page-break-inside: auto;
+  }
+
+  .print-area tr {
+    page-break-inside: avoid;
+  }
+
+  .print-area th,
+  .print-area td {
+    border: 1px solid #999 !important;
+    color: #000 !important;
+    background: #fff !important;
+    padding: 4px 6px;
+  }
+
+  .print-area .print-section {
+    page-break-inside: avoid;
+    margin-bottom: 10mm;
+  }
+}
+

@@ -12,7 +12,6 @@ import {
   BarChart3,
   ClipboardList,
   LogOut,
-  PieChart,
   Activity,
   Bell,
   Heart,
@@ -23,6 +22,7 @@ import {
   Landmark,
   UserRound,
   Stethoscope,
+  FileBarChart2,
 } from "lucide-react";
 
 import { useAuth } from "@/contexts/AuthContext";
@@ -78,7 +78,7 @@ export default function Sidebar({
   const superAdminMenuItems: MenuItem[] = [
     { name: "Inicio", href: "/dashboard", icon: Home, section: "main" },
     { name: "Alertas", href: "/dashboard/alerts", icon: Bell, section: "main" },
-    { name: "Métricas", href: "/dashboard/metrics", icon: PieChart, section: "main" },
+    { name: "Reportes", href: "/dashboard/reportes", icon: FileBarChart2, section: "main" },
 
     { name: "Pacientes", href: "/dashboard/pacientes", icon: UserRound, section: "gestion" },
     { name: "Profesionales", href: "/dashboard/profesionales", icon: Stethoscope, section: "gestion" },
@@ -100,10 +100,11 @@ export default function Sidebar({
     { name: "Configuración", href: "/dashboard/settings", icon: Settings, section: "config" },
   ];
 
-  // Menú Admin de Obra Social (sin métricas)
+  // Menú Admin de Obra Social (con Reportes; sin acceso a Configuración global)
   const adminObraSocialMenuItems: MenuItem[] = [
     { name: "Inicio", href: "/dashboard", icon: Home, section: "main" },
     { name: "Alertas", href: "/dashboard/alerts", icon: Bell, section: "main" },
+    { name: "Reportes", href: "/dashboard/reportes", icon: FileBarChart2, section: "main" },
 
     { name: "Pacientes", href: "/dashboard/pacientes", icon: UserRound, section: "gestion" },
     { name: "Profesionales", href: "/dashboard/profesionales", icon: Stethoscope, section: "gestion" },
