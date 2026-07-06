@@ -10,7 +10,8 @@ import { PlusIcon, PencilIcon, TrashIcon, XMarkIcon, MagnifyingGlassIcon } from 
 import SearchableSelect from '@/components/SearchableSelect';
 import Pagination from '@/components/Pagination';
 import { usePagination } from '@/hooks/usePagination';
-import { extractErrorMessage } from '@/lib/errorUtils';
+import { mapServerErrors } from '@/lib/errorUtils';
+import { handleEnterAsTab } from '@/lib/formUtils';
 
 export default function ServiciosPage() {
   const { isSuperAdmin, isAdmin } = useAuth();
@@ -109,7 +110,9 @@ export default function ServiciosPage() {
       handleCloseModal();
     } catch (error) {
       console.error('Error al guardar servicio:', error);
-      setFormError(extractErrorMessage(error));
+      const { fieldErrors: fe, formError: gf } = mapServerErrors(error, Object.keys(formData));
+      setFieldErrors((prev) => ({ ...prev, ...fe }));
+      if (gf) setFormError(gf);
     } finally {
       setSaving(false);
     }
@@ -290,7 +293,7 @@ export default function ServiciosPage() {
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="p-6 space-y-6">
+            <form onSubmit={handleSubmit} onKeyDown={handleEnterAsTab} autoComplete="off" className="p-6 space-y-6">
               <div>
                 <label className="block text-sm font-medium text-neutral-700 mb-2">Tipo de Servicio *</label>
                 <div className="flex gap-3">

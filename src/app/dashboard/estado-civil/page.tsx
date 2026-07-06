@@ -7,7 +7,8 @@ import { estadoCivilService } from '@/services/estadoCivilService';
 import { PencilIcon, TrashIcon, PlusIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import Pagination from '@/components/Pagination';
 import { usePagination } from '@/hooks/usePagination';
-import { extractErrorMessage } from '@/lib/errorUtils';
+import { extractErrorMessage, mapServerErrors } from '@/lib/errorUtils';
+import { handleEnterAsTab } from '@/lib/formUtils';
 
 export default function EstadoCivilPage() {
   const { user } = useAuth();
@@ -108,7 +109,9 @@ export default function EstadoCivilPage() {
       handleCloseModal();
     } catch (error) {
       console.error('Error al guardar:', error);
-      setFormError(extractErrorMessage(error));
+      const { fieldErrors: fe, formError: gf } = mapServerErrors(error, Object.keys(formData));
+      setFieldErrors((prev) => ({ ...prev, ...fe }));
+      if (gf) setFormError(gf);
     } finally {
       setSaving(false);
     }
@@ -270,7 +273,7 @@ export default function EstadoCivilPage() {
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="p-6 space-y-4">
+            <form onSubmit={handleSubmit} onKeyDown={handleEnterAsTab} autoComplete="off" className="p-6 space-y-4">
               <div>
                 <label className="block text-sm font-medium text-neutral-700 mb-1">
                   Código *

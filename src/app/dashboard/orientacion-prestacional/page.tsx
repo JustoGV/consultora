@@ -16,7 +16,8 @@ import { PlusIcon, PencilIcon, TrashIcon, XMarkIcon, MagnifyingGlassIcon } from 
 import SearchableSelect from '@/components/SearchableSelect';
 import Pagination from '@/components/Pagination';
 import { usePagination } from '@/hooks/usePagination';
-import { extractErrorMessage } from '@/lib/errorUtils';
+import { mapServerErrors } from '@/lib/errorUtils';
+import { handleEnterAsTab } from '@/lib/formUtils';
 
 const prioridadOptions = [
   { value: 'ALTA', label: 'Alta' },
@@ -136,7 +137,9 @@ export default function OrientacionPrestacionalPage() {
       handleCloseModal();
     } catch (error) {
       console.error('Error al guardar orientación:', error);
-      setFormError(extractErrorMessage(error));
+      const { fieldErrors: fe, formError: gf } = mapServerErrors(error, Object.keys(formData));
+      setFieldErrors((prev) => ({ ...prev, ...fe }));
+      if (gf) setFormError(gf);
     } finally {
       setSaving(false);
     }
@@ -360,7 +363,7 @@ export default function OrientacionPrestacionalPage() {
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="p-6 space-y-6">
+            <form onSubmit={handleSubmit} onKeyDown={handleEnterAsTab} autoComplete="off" className="p-6 space-y-6">
               <div>
                 <label className="block text-sm font-medium text-neutral-700 mb-1">Título *</label>
                 <input

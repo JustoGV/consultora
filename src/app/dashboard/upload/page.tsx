@@ -10,7 +10,8 @@ import { tipoDiscapacidadService } from '@/services/tipoDiscapacidadService';
 import { CheckCircleIcon, DocumentPlusIcon } from '@heroicons/react/24/outline';
 import { useRouter } from 'next/navigation';
 import SearchableSelect from '@/components/SearchableSelect';
-import { extractErrorMessage } from '@/lib/errorUtils';
+import { mapServerErrors } from '@/lib/errorUtils';
+import { handleEnterAsTab } from '@/lib/formUtils';
 
 export default function UploadPage() {
   const { user } = useAuth();
@@ -87,7 +88,8 @@ export default function UploadPage() {
 
   const sexoOptions = [
     { value: 'M', label: 'Masculino' },
-    { value: 'F', label: 'Femenino' }
+    { value: 'F', label: 'Femenino' },
+    { value: 'X', label: 'Tercer género' }
   ];
 
   const estadoCivilOptions = estadosCiviles.map((estado) => ({
@@ -134,6 +136,10 @@ export default function UploadPage() {
       const afiliadoToCreate = {
         ...afiliadoData,
         edad: calculateAge(afiliadoData.fechaNacimiento),
+        email: afiliadoData.email || undefined,
+        telefono: afiliadoData.telefono || undefined,
+        celular: afiliadoData.celular || undefined,
+        estadoCivilId: afiliadoData.estadoCivilId || undefined,
       };
 
       const nuevoAfiliado = await afiliadosService.create(afiliadoToCreate);
@@ -144,6 +150,8 @@ export default function UploadPage() {
         ...certRest,
         afiliadoId: nuevoAfiliado.id,
         tipoDiscapacidadIds: [tipoDiscapacidadId],
+        fechaVencimiento: certificadoData.fechaVencimiento || undefined,
+        observaciones: certificadoData.observaciones || undefined,
       };
 
       await certificadosDiscapacidadService.create(certificadoToCreate);
@@ -156,7 +164,10 @@ export default function UploadPage() {
       }, 2000);
     } catch (error) {
       console.error('Error al crear afiliado y certificado:', error);
-      setFormError(extractErrorMessage(error));
+      const knownFields = [...Object.keys(afiliadoData), ...Object.keys(certificadoData)];
+      const { fieldErrors: fe, formError: gf } = mapServerErrors(error, knownFields);
+      setFieldErrors((prev) => ({ ...prev, ...fe }));
+      if (gf) setFormError(gf);
     } finally {
       setLoading(false);
     }
@@ -189,7 +200,7 @@ export default function UploadPage() {
         </p>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} onKeyDown={handleEnterAsTab} autoComplete="off" className="space-y-6">
         {/* Sección: Datos del Afiliado */}
         <div className="bg-white rounded-xl shadow-md p-6">
           <h2 className="text-xl font-bold text-gray-900 mb-6 pb-3 border-b flex items-center gap-2">
@@ -325,6 +336,7 @@ export default function UploadPage() {
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                   required
                   maxLength={255}
+                  autoComplete="off"
                 />
               </div>
 
@@ -337,6 +349,7 @@ export default function UploadPage() {
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                   required
                   maxLength={100}
+                  autoComplete="off"
                 />
               </div>
 
@@ -349,6 +362,7 @@ export default function UploadPage() {
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                   required
                   maxLength={100}
+                  autoComplete="off"
                 />
               </div>
 
@@ -361,6 +375,7 @@ export default function UploadPage() {
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                   required
                   maxLength={20}
+                  autoComplete="off"
                 />
               </div>
             </div>

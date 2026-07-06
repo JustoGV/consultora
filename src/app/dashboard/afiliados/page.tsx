@@ -22,7 +22,8 @@ import SearchableSelect from '@/components/SearchableSelect';
 import Pagination from '@/components/Pagination';
 import { usePagination } from '@/hooks/usePagination';
 import Link from 'next/link';
-import { extractErrorMessage } from '@/lib/errorUtils';
+import { extractErrorMessage, mapServerErrors } from '@/lib/errorUtils';
+import { handleEnterAsTab } from '@/lib/formUtils';
 
 export default function AfiliadosPage() {
   const { user, isAdmin, isSuperAdmin } = useAuth();
@@ -46,7 +47,7 @@ export default function AfiliadosPage() {
   };
   type PendingAderente = {
     id: string; nombre: string; apellido: string; caracterAfiliado: string;
-    telefono?: string; direccion?: string; email?: string; codigoPostal?: string;
+    telefono?: string; direccion?: string; codigoPostal?: string;
   };
   const [terceros, setTerceros] = useState<TercerosVinculado[]>([]);
 
@@ -55,7 +56,7 @@ export default function AfiliadosPage() {
   const [modoAdherente, setModoAdherente] = useState<'existente' | 'nuevo'>('existente');
   const [aderentes, setAderentes] = useState<Aderente[]>([]);
   const [selectedAderenteId, setSelectedAderenteId] = useState('');
-  const [nuevaAderenteData, setNuevaAderenteData] = useState({ nombre: '', apellido: '', telefono: '', direccion: '', email: '', codigoPostal: '' });
+  const [nuevaAderenteData, setNuevaAderenteData] = useState({ nombre: '', apellido: '', telefono: '', direccion: '', codigoPostal: '' });
   const [relacionAderenteData, setRelacionAderenteData] = useState({ caracterAfiliado: '', observaciones: '' });
 
   // Terceros Vinculados
@@ -138,7 +139,7 @@ export default function AfiliadosPage() {
     setPendingAdherentes([]);
     setModoAdherente('existente');
     setSelectedAderenteId('');
-    setNuevaAderenteData({ nombre: '', apellido: '', telefono: '', direccion: '', email: '', codigoPostal: '' });
+    setNuevaAderenteData({ nombre: '', apellido: '', telefono: '', direccion: '', codigoPostal: '' });
     setRelacionAderenteData({ caracterAfiliado: '', observaciones: '' });
     setPendingTerceros([]);
     setRelTerceroFormData({ tipoRelacion: '', observaciones: '', tercerosVinculadoId: '' });
@@ -241,7 +242,6 @@ export default function AfiliadosPage() {
         administradoraId: user?.administradoraId || '',
         telefono: pa.telefono || undefined,
         direccion: pa.direccion || undefined,
-        email: pa.email || undefined,
         codigoPostal: pa.codigoPostal || undefined,
         activo: true,
       };
@@ -303,6 +303,10 @@ export default function AfiliadosPage() {
         ...formData,
         edad: calculateAge(formData.fechaNacimiento),
         administradoraId: formData.administradoraId || user?.administradoraId || '',
+        email: formData.email || undefined,
+        telefono: formData.telefono || undefined,
+        celular: formData.celular || undefined,
+        estadoCivilId: formData.estadoCivilId || undefined,
       };
       if (editingAfiliado) {
         await afiliadosService.update(editingAfiliado.id, dataToSend);
@@ -333,7 +337,9 @@ export default function AfiliadosPage() {
       handleCloseModal();
     } catch (error) {
       console.error('Error al guardar:', error);
-      setFormError(extractErrorMessage(error));
+      const { fieldErrors: fe, formError: gf } = mapServerErrors(error, Object.keys(formData));
+      setFieldErrors((prev) => ({ ...prev, ...fe }));
+      if (gf) setFormError(gf);
     } finally {
       setSaving(false);
     }
@@ -357,7 +363,6 @@ export default function AfiliadosPage() {
         caracterAfiliado: relacionAderenteData.caracterAfiliado,
         telefono: existing.telefono,
         direccion: existing.direccion,
-        email: existing.email,
         codigoPostal: existing.codigoPostal,
       }]);
       setSelectedAderenteId('');
@@ -374,7 +379,7 @@ export default function AfiliadosPage() {
       ...nuevaAderenteData,
       caracterAfiliado: relacionAderenteData.caracterAfiliado,
     }]);
-    setNuevaAderenteData({ nombre: '', apellido: '', telefono: '', direccion: '', email: '', codigoPostal: '' });
+    setNuevaAderenteData({ nombre: '', apellido: '', telefono: '', direccion: '', codigoPostal: '' });
     setRelacionAderenteData({ caracterAfiliado: '', observaciones: '' });
   };
 
@@ -406,7 +411,7 @@ export default function AfiliadosPage() {
   };
 
   const tipoRelacionOptions = [
-    'Padre/Madre', 'Hijo/Hija', 'Cónyuge', 'Hermano/Hermana', 'Tutor', 'Curador', 'Otro',
+    'Hijo/a', 'Cónyuge', 'Conviviente', 'Padre', 'Madre', 'Tutor/a', 'Curador/a', 'Hermano/a', 'Otro',
   ];
 
   const handleDelete = async (id: string) => {
@@ -441,7 +446,8 @@ export default function AfiliadosPage() {
   const estadoCivilOptions = estadosCiviles.map(ec => ({ value: ec.id, label: ec.nombre }));
   const sexoOptions = [
     { value: 'M', label: 'Masculino' },
-    { value: 'F', label: 'Femenino' }
+    { value: 'F', label: 'Femenino' },
+    { value: 'X', label: 'Tercer género' }
   ];
 
   return (
@@ -611,7 +617,7 @@ export default function AfiliadosPage() {
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+            <form onSubmit={handleSubmit} onKeyDown={handleEnterAsTab} autoComplete="off" className="flex flex-col flex-1 overflow-hidden">
               <div className="overflow-y-auto flex-1 p-6 space-y-6">
                 {/* Datos Personales */}
                 <div>
@@ -699,28 +705,28 @@ export default function AfiliadosPage() {
                       <input type="text" value={formData.direccion}
                         onChange={(e) => setFormData({ ...formData, direccion: e.target.value })}
                         className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-                        maxLength={200} />
+                        maxLength={200} autoComplete="off" />
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-neutral-700 mb-1">Localidad</label>
                       <input type="text" value={formData.localidad}
                         onChange={(e) => setFormData({ ...formData, localidad: e.target.value })}
                         className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-                        maxLength={100} />
+                        maxLength={100} autoComplete="off" />
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-neutral-700 mb-1">Provincia</label>
                       <input type="text" value={formData.provincia}
                         onChange={(e) => setFormData({ ...formData, provincia: e.target.value })}
                         className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-                        maxLength={100} />
+                        maxLength={100} autoComplete="off" />
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-neutral-700 mb-1">Código Postal</label>
                       <input type="text" value={formData.codigoPostal}
                         onChange={(e) => setFormData({ ...formData, codigoPostal: e.target.value })}
                         className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-                        maxLength={10} />
+                        maxLength={10} autoComplete="off" />
                     </div>
                   </div>
                 </div>
@@ -827,22 +833,35 @@ export default function AfiliadosPage() {
                           <div className="grid grid-cols-2 gap-2">
                             <div><label className="block text-xs font-medium text-neutral-700 mb-1">Apellido *</label>
                               <input type="text" value={nuevaAderenteData.apellido} onChange={e => setNuevaAderenteData(p => ({ ...p, apellido: e.target.value }))}
-                                className="w-full px-2 py-1.5 border border-neutral-300 rounded-md text-sm bg-white" placeholder="Apellido" /></div>
+                                className="w-full px-2 py-1.5 border border-neutral-300 rounded-md text-sm bg-white" placeholder="Apellido" autoComplete="off" /></div>
                             <div><label className="block text-xs font-medium text-neutral-700 mb-1">Nombre *</label>
                               <input type="text" value={nuevaAderenteData.nombre} onChange={e => setNuevaAderenteData(p => ({ ...p, nombre: e.target.value }))}
-                                className="w-full px-2 py-1.5 border border-neutral-300 rounded-md text-sm bg-white" placeholder="Nombre" /></div>
+                                className="w-full px-2 py-1.5 border border-neutral-300 rounded-md text-sm bg-white" placeholder="Nombre" autoComplete="off" /></div>
                             <div><label className="block text-xs font-medium text-neutral-700 mb-1">Teléfono</label>
                               <input type="text" value={nuevaAderenteData.telefono} onChange={e => setNuevaAderenteData(p => ({ ...p, telefono: e.target.value }))}
-                                className="w-full px-2 py-1.5 border border-neutral-300 rounded-md text-sm bg-white" placeholder="Teléfono" /></div>
-                            <div><label className="block text-xs font-medium text-neutral-700 mb-1">Email</label>
-                              <input type="email" value={nuevaAderenteData.email} onChange={e => setNuevaAderenteData(p => ({ ...p, email: e.target.value }))}
-                                className="w-full px-2 py-1.5 border border-neutral-300 rounded-md text-sm bg-white" placeholder="Email" /></div>
+                                className="w-full px-2 py-1.5 border border-neutral-300 rounded-md text-sm bg-white" placeholder="Teléfono" autoComplete="off" /></div>
+                            <div className="col-span-2 flex items-center justify-between">
+                              <label className="block text-xs font-medium text-neutral-700">Domicilio</label>
+                              <button
+                                type="button"
+                                onClick={() => setNuevaAderenteData(p => ({
+                                  ...p,
+                                  direccion: formData.direccion,
+                                  codigoPostal: formData.codigoPostal,
+                                }))}
+                                disabled={!formData.direccion && !formData.codigoPostal}
+                                title={!formData.direccion && !formData.codigoPostal ? 'El titular no tiene domicilio cargado' : undefined}
+                                className="text-xs text-blue-600 hover:text-blue-800 font-medium disabled:text-neutral-400 disabled:cursor-not-allowed disabled:hover:text-neutral-400"
+                              >
+                                Usar domicilio del titular
+                              </button>
+                            </div>
                             <div><label className="block text-xs font-medium text-neutral-700 mb-1">Dirección</label>
                               <input type="text" value={nuevaAderenteData.direccion} onChange={e => setNuevaAderenteData(p => ({ ...p, direccion: e.target.value }))}
-                                className="w-full px-2 py-1.5 border border-neutral-300 rounded-md text-sm bg-white" placeholder="Dirección" /></div>
+                                className="w-full px-2 py-1.5 border border-neutral-300 rounded-md text-sm bg-white" placeholder="Dirección" autoComplete="off" /></div>
                             <div><label className="block text-xs font-medium text-neutral-700 mb-1">Código Postal</label>
                               <input type="text" value={nuevaAderenteData.codigoPostal} onChange={e => setNuevaAderenteData(p => ({ ...p, codigoPostal: e.target.value }))}
-                                className="w-full px-2 py-1.5 border border-neutral-300 rounded-md text-sm bg-white" placeholder="CP" /></div>
+                                className="w-full px-2 py-1.5 border border-neutral-300 rounded-md text-sm bg-white" placeholder="CP" autoComplete="off" /></div>
                           </div>
                         )}
 

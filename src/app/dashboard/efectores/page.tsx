@@ -16,7 +16,8 @@ import {
 } from '@heroicons/react/24/outline';
 import Pagination from '@/components/Pagination';
 import { usePagination } from '@/hooks/usePagination';
-import { extractErrorMessage } from '@/lib/errorUtils';
+import { mapServerErrors } from '@/lib/errorUtils';
+import { handleEnterAsTab } from '@/lib/formUtils';
 
 type FormData = CreateEfectorDto;
 
@@ -122,7 +123,9 @@ export default function EfectoresPage() {
       handleCloseModal();
     } catch (error) {
       console.error('Error al guardar efector:', error);
-      setFormError(extractErrorMessage(error));
+      const { fieldErrors: fe, formError: gf } = mapServerErrors(error, Object.keys(formData));
+      setFieldErrors((prev) => ({ ...prev, ...fe }));
+      if (gf) setFormError(gf);
     } finally {
       setSaving(false);
     }
@@ -180,6 +183,7 @@ export default function EfectoresPage() {
         onChange={(e) => setFormData({ ...formData, [key]: e.target.value })}
         className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
         required={required}
+        autoComplete="off"
       />
     </div>
   );
@@ -347,7 +351,7 @@ export default function EfectoresPage() {
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="p-6 space-y-4">
+            <form onSubmit={handleSubmit} onKeyDown={handleEnterAsTab} autoComplete="off" className="p-6 space-y-4">
               {field('Nombre', 'nombre', 'text', true)}
 
               <div>

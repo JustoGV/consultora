@@ -6,7 +6,8 @@ import { TercerosVinculado, CreateTercerosVinculadoDto } from '@/types';
 import { tercerosVinculadoService } from '@/services/tercerosVinculadoService';
 import { personaTercerosService } from '@/services/personaTercerosService';
 import { PencilIcon, TrashIcon, PlusIcon, XMarkIcon, UsersIcon } from '@heroicons/react/24/outline';
-import { extractErrorMessage } from '@/lib/errorUtils';
+import { extractErrorMessage, mapServerErrors } from '@/lib/errorUtils';
+import { handleEnterAsTab } from '@/lib/formUtils';
 
 export default function TercerosVinculadosPage() {
   const { user } = useAuth();
@@ -137,20 +138,12 @@ export default function TercerosVinculadosPage() {
       handleCloseModal();
     } catch (error) {
       console.error('Error al guardar:', error);
-      setFormError(extractErrorMessage(error));
+      const { fieldErrors: fe, formError: gf } = mapServerErrors(error, Object.keys(formData));
+      setFieldErrors((prev) => ({ ...prev, ...fe }));
+      if (gf) setFormError(gf);
     } finally {
       setSaving(false);
     }
-  };
-
-  const extractErrorMessage = (error: unknown): string => {
-    if (error && typeof error === 'object' && 'response' in error) {
-      const axiosError = error as { response?: { data?: { message?: string | string[] } } };
-      const msg = axiosError.response?.data?.message;
-      if (Array.isArray(msg)) return msg.join(', ');
-      if (typeof msg === 'string') return msg;
-    }
-    return extractErrorMessage(error);
   };
 
   const handleDelete = async (id: string) => {
@@ -284,7 +277,7 @@ export default function TercerosVinculadosPage() {
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="p-6 space-y-4">
+            <form onSubmit={handleSubmit} onKeyDown={handleEnterAsTab} autoComplete="off" className="p-6 space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-neutral-700 mb-1">Nombre *</label>
@@ -363,6 +356,7 @@ export default function TercerosVinculadosPage() {
                     onChange={(e) => setFormData({ ...formData, direccion: e.target.value })}
                     className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500"
                     maxLength={255}
+                    autoComplete="off"
                   />
                 </div>
 

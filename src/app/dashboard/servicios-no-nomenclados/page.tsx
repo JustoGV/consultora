@@ -21,7 +21,8 @@ import {
 import Pagination from '@/components/Pagination';
 import { usePagination } from '@/hooks/usePagination';
 import api from '@/lib/axios';
-import { extractErrorMessage } from '@/lib/errorUtils';
+import { mapServerErrors } from '@/lib/errorUtils';
+import { handleEnterAsTab } from '@/lib/formUtils';
 
 export default function ServiciosNoNomencladosPage() {
   const { isSuperAdmin, isAdmin, user } = useAuth();
@@ -120,7 +121,9 @@ export default function ServiciosNoNomencladosPage() {
       handleCloseModal();
     } catch (error) {
       console.error('Error al guardar:', error);
-      setFormError(extractErrorMessage(error));
+      const { fieldErrors: fe, formError: gf } = mapServerErrors(error, Object.keys(formData));
+      setFieldErrors((prev) => ({ ...prev, ...fe }));
+      if (gf) setFormError(gf);
     } finally {
       setSaving(false);
     }
@@ -351,7 +354,7 @@ export default function ServiciosNoNomencladosPage() {
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="p-6 space-y-5">
+            <form onSubmit={handleSubmit} onKeyDown={handleEnterAsTab} autoComplete="off" className="p-6 space-y-5">
               {/* Título */}
               <div>
                 <label className="block text-sm font-medium text-neutral-700 mb-1">

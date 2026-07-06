@@ -4,13 +4,15 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { nomencladorService } from '@/services/nomencladorService';
 import { Nomenclador, CreateNomencladorDto } from '@/types';
-import { 
-  PlusIcon, 
-  PencilIcon, 
-  TrashIcon, 
+import {
+  PlusIcon,
+  PencilIcon,
+  TrashIcon,
   MagnifyingGlassIcon,
   XMarkIcon
 } from '@heroicons/react/24/outline';
+import { mapServerErrors } from '@/lib/errorUtils';
+import { handleEnterAsTab } from '@/lib/formUtils';
 
 export default function NomenclatorsPage() {
   const { isSuperAdmin, isAdmin, user } = useAuth();
@@ -132,7 +134,8 @@ export default function NomenclatorsPage() {
       handleCloseModal();
     } catch (err) {
       console.error('Error al guardar nomenclador:', err);
-      setFormError(err instanceof Error ? err.message : 'Error al guardar el nomenclador');
+      const { formError: gf } = mapServerErrors(err, Object.keys(formData));
+      setFormError(gf ?? 'Error al guardar el nomenclador');
     } finally {
       setSaving(false);
     }
@@ -331,7 +334,7 @@ export default function NomenclatorsPage() {
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="p-6 space-y-4">
+            <form onSubmit={handleSubmit} onKeyDown={handleEnterAsTab} autoComplete="off" className="p-6 space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label htmlFor="unidadMedida" className="block text-sm font-medium text-gray-700 mb-2">

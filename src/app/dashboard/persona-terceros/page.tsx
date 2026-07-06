@@ -8,7 +8,8 @@ import { afiliadosService } from '@/services/afiliadosService';
 import { tercerosVinculadoService } from '@/services/tercerosVinculadoService';
 import { PencilIcon, TrashIcon, PlusIcon, XMarkIcon, LinkIcon } from '@heroicons/react/24/outline';
 import SearchableSelect from '@/components/SearchableSelect';
-import { extractErrorMessage } from '@/lib/errorUtils';
+import { extractErrorMessage, mapServerErrors } from '@/lib/errorUtils';
+import { handleEnterAsTab } from '@/lib/formUtils';
 
 export default function PersonaTercerosPage() {
   const { user } = useAuth();
@@ -115,7 +116,9 @@ export default function PersonaTercerosPage() {
       handleCloseModal();
     } catch (error) {
       console.error('Error al guardar:', error);
-      setFormError(extractErrorMessage(error));
+      const { fieldErrors: fe, formError: gf } = mapServerErrors(error, Object.keys(formData));
+      setFieldErrors((prev) => ({ ...prev, ...fe }));
+      if (gf) setFormError(gf);
     } finally {
       setSaving(false);
     }
@@ -286,7 +289,7 @@ export default function PersonaTercerosPage() {
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="p-6 space-y-4">
+            <form onSubmit={handleSubmit} onKeyDown={handleEnterAsTab} autoComplete="off" className="p-6 space-y-4">
               <div>
                 <label className="block text-sm font-medium text-neutral-700 mb-1">Afiliado *</label>
                 <SearchableSelect

@@ -22,7 +22,6 @@ import {
   IdentificationIcon,
   AdjustmentsHorizontalIcon,
   BuildingOffice2Icon,
-  MagnifyingGlassIcon,
 } from '@heroicons/react/24/outline';
 
 export default function Sidebar() {
@@ -54,8 +53,7 @@ export default function Sidebar() {
     
     { name: 'Certificados Discapacidad', href: '/dashboard/certificados-discapacidad', icon: DocumentTextIcon, section: 'certificados' },
     { name: 'Certificados', href: '/dashboard/certificates', icon: FolderOpenIcon, section: 'certificados' },
-    { name: 'Diagnósticos', href: '/dashboard/diagnosticos', icon: MagnifyingGlassIcon, section: 'certificados' },
-    
+
     { name: 'Estado Civil', href: '/dashboard/estado-civil', icon: HeartIcon, section: 'catalogos' },
     { name: 'Tipos de Discapacidad', href: '/dashboard/tipo-discapacidad', icon: AdjustmentsHorizontalIcon, section: 'catalogos' },
     { name: 'Categorías', href: '/dashboard/categories', icon: ClipboardDocumentListIcon, section: 'catalogos' },
@@ -80,8 +78,7 @@ export default function Sidebar() {
     
     { name: 'Certificados Discapacidad', href: '/dashboard/certificados-discapacidad', icon: DocumentTextIcon, section: 'certificados' },
     { name: 'Certificados', href: '/dashboard/certificates', icon: FolderOpenIcon, section: 'certificados' },
-    { name: 'Diagnósticos', href: '/dashboard/diagnosticos', icon: MagnifyingGlassIcon, section: 'certificados' },
-    
+
     { name: 'Estado Civil', href: '/dashboard/estado-civil', icon: HeartIcon, section: 'catalogos' },
     { name: 'Tipos de Discapacidad', href: '/dashboard/tipo-discapacidad', icon: AdjustmentsHorizontalIcon, section: 'catalogos' },
     { name: 'Categorías', href: '/dashboard/categories', icon: ClipboardDocumentListIcon, section: 'catalogos' },

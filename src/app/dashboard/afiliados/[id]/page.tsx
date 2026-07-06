@@ -35,6 +35,8 @@ import type {
   UpdatePersonaTercerosVinculadoDto,
   CreateTercerosVinculadoDto,
 } from '@/types';
+import { mapServerErrors } from '@/lib/errorUtils';
+import { handleEnterAsTab } from '@/lib/formUtils';
 
 type NivelAlerta = 'BAJO' | 'MEDIO' | 'ALTO' | 'CRITICO';
 
@@ -220,7 +222,9 @@ export default function AfiliadoDetailPage({ params }: { params: Promise<{ id: s
       handleCloseRelacionModal();
     } catch (err) {
       console.error(err);
-      setRelacionFormError(err instanceof Error ? err.message : 'Error al guardar el adherente');
+      const { fieldErrors: fe, formError: gf } = mapServerErrors(err, ['tipoRelacion', 'observaciones', 'tercerosVinculadoId', 'nombre', 'apellido', 'dni', 'fechaNacimiento', 'telefono', 'email']);
+      setRelacionFieldErrors((prev) => ({ ...prev, ...fe }));
+      setRelacionFormError(gf ?? 'Error al guardar el adherente');
     } finally {
       setSavingRelacion(false);
     }
@@ -602,7 +606,7 @@ export default function AfiliadoDetailPage({ params }: { params: Promise<{ id: s
                 <XMarkIcon className="w-5 h-5" />
               </button>
             </div>
-            <form onSubmit={handleSaveRelacion} className="p-5 space-y-4">
+            <form onSubmit={handleSaveRelacion} onKeyDown={handleEnterAsTab} autoComplete="off" className="p-5 space-y-4">
               {/* Toggle existente/nuevo — solo al crear */}
               {!editingRelacion && (
                 <div className="flex rounded-lg border border-gray-200 overflow-hidden text-sm">

@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { categoriaService } from '@/services/categoriaService';
 import { Categoria, CreateCategoriaDto } from '@/types';
 import { PlusIcon, PencilIcon, TrashIcon, MagnifyingGlassIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { handleEnterAsTab } from '@/lib/formUtils';
 
 export default function CategoriesPage() {
   const { isSuperAdmin } = useAuth();
@@ -245,7 +246,7 @@ export default function CategoriesPage() {
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="p-6 space-y-4">
+            <form onSubmit={handleSubmit} onKeyDown={handleEnterAsTab} autoComplete="off" className="p-6 space-y-4">
               <div>
                 <label htmlFor="nombre" className="block text-sm font-medium text-gray-700 mb-2">
                   Nombre *

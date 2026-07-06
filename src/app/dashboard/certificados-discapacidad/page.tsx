@@ -17,7 +17,8 @@ import { PencilIcon, TrashIcon, PlusIcon, XMarkIcon, DocumentTextIcon } from '@h
 import SearchableSelect from '@/components/SearchableSelect';
 import Pagination from '@/components/Pagination';
 import { usePagination } from '@/hooks/usePagination';
-import { extractErrorMessage } from '@/lib/errorUtils';
+import { extractErrorMessage, mapServerErrors } from '@/lib/errorUtils';
+import { handleEnterAsTab } from '@/lib/formUtils';
 
 export default function CertificadosDiscapacidadPage() {
   const { user } = useAuth();
@@ -157,6 +158,9 @@ export default function CertificadosDiscapacidadPage() {
       const { tipoDiscapacidadId: _drop, ...formRest } = formData;
       const payload: CreateCertificadoDiscapacidadDto = {
         ...formRest,
+        fechaVencimiento: formData.fechaVencimiento || undefined,
+        observaciones: formData.observaciones || undefined,
+        antecedentes: formData.antecedentes || undefined,
         tipoDiscapacidadIds: selectedTiposIds,
         administradoraId: formData.administradoraId || user?.administradoraId || ''
       };
@@ -176,7 +180,9 @@ export default function CertificadosDiscapacidadPage() {
       handleCloseModal();
     } catch (error) {
       console.error('Error al guardar:', error);
-      setFormError(extractErrorMessage(error));
+      const { fieldErrors: fe, formError: gf } = mapServerErrors(error, Object.keys(formData));
+      setFieldErrors((prev) => ({ ...prev, ...fe }));
+      if (gf) setFormError(gf);
     } finally {
       setSaving(false);
     }
@@ -375,7 +381,7 @@ export default function CertificadosDiscapacidadPage() {
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="p-6 space-y-4">
+            <form onSubmit={handleSubmit} onKeyDown={handleEnterAsTab} autoComplete="off" className="p-6 space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-neutral-700 mb-1">Número de Certificado *</label>

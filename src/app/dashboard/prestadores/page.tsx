@@ -16,6 +16,7 @@ import {
 import Pagination from '@/components/Pagination';
 import { usePagination } from '@/hooks/usePagination';
 import api from '@/lib/axios';
+import { handleEnterAsTab } from '@/lib/formUtils';
 
 export default function PrestadoresPage() {
   const { isSuperAdmin, isAdmin, user } = useAuth();
@@ -328,7 +329,7 @@ export default function PrestadoresPage() {
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="p-6 space-y-5">
+            <form onSubmit={handleSubmit} onKeyDown={handleEnterAsTab} autoComplete="off" className="p-6 space-y-5">
               {/* Efector */}
               <div>
                 <label className="block text-sm font-medium text-neutral-700 mb-1">
