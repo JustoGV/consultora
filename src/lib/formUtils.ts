@@ -76,6 +76,15 @@ export function focusNextField(fromElement: HTMLElement, container: HTMLElement)
  * Enter en un input de un formulario NUNCA hace submit: mueve el foco al siguiente
  * campo focusable visible (RN-15). El submit queda reservado al botón explícito.
  *
+ * Antes de saltar, dispara un `blur()` explícito sobre el input actual para que
+ * su validación onBlur corra SIEMPRE al presionar Enter (UX-12d). Sin esto, el
+ * salto por Enter solo movía el foco: cuando el foco efectivamente avanzaba, el
+ * `.focus()` del siguiente campo blureaba al actual y la validación corría de
+ * rebote; pero cuando el campo era el ÚLTIMO focusable (o el salto no encontraba
+ * siguiente), `focusNextField` no movía el foco, no había blur nativo y el error
+ * inline (p. ej. "El DNI debe tener 7 u 8 dígitos" con 5 dígitos) nunca se
+ * mostraba. El `blur()` explícito lo hace consistente en todos los campos.
+ *
  * No aplica a TEXTAREA (donde Enter agrega una línea nueva), a BUTTON, ni a
  * inputs type="submit" (donde Enter debe conservar su comportamiento nativo).
  */
@@ -94,6 +103,12 @@ export function handleEnterAsTab(e: React.KeyboardEvent<HTMLFormElement>) {
   if (inputEl.type === 'submit') return;
 
   e.preventDefault();
+
+  // Dispara la validación onBlur del campo actual antes de saltar. Se hace
+  // ANTES de mover el foco: así corre aunque no haya un campo siguiente al cual
+  // saltar (documento como último campo del form). Si luego el foco avanza, el
+  // `.focus()` del siguiente no re-dispara onBlur sobre un elemento ya blureado.
+  inputEl.blur();
 
   focusNextField(target, e.currentTarget);
 }
