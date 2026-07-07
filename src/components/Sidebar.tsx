@@ -222,7 +222,7 @@ export default function Sidebar({
           return (
             <div key={section} className={cn(idx > 0 && "mt-5")}>
               {!collapsed && (
-                <p className="mb-1.5 px-3 text-[10px] font-semibold uppercase tracking-wider text-[var(--sidebar-fg-muted)]">
+                <p className="mb-1.5 px-3 text-[11px] font-semibold uppercase tracking-wider text-[var(--sidebar-fg-muted)]">
                   {SECTION_LABELS[section]}
                 </p>
               )}

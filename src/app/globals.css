@@ -87,8 +87,10 @@
 
   /* Shell */
   --sidebar-bg: var(--neutral-900);
-  --sidebar-fg: var(--neutral-300);
-  --sidebar-fg-muted: var(--neutral-500);
+  /* Full-contrast nav: pure white items, section labels two steps brighter
+     than before (7.3:1) — legible at 100% while staying visually distinct. */
+  --sidebar-fg: #ffffff;
+  --sidebar-fg-muted: var(--neutral-400);
   --sidebar-active-bg: var(--primary-600);
   --sidebar-hover-bg: var(--neutral-800);
   --topbar-bg: var(--surface-primary);
