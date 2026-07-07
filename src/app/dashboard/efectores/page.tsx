@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useActiveAdministradora, useActiveAdministradoraId } from '@/contexts/ActiveAdministradoraContext';
 import { Efector, CreateEfectorDto, UpdateEfectorDto, TipoEfector } from '@/types';
 import { efectoresService } from '@/services/efectoresService';
 import {
@@ -41,7 +42,9 @@ const emptyForm = (administradoraId: string): FormData => ({
 });
 
 export default function EfectoresPage() {
-  const { isSuperAdmin, isAdmin, user } = useAuth();
+  const { isSuperAdmin, isAdmin } = useAuth();
+  const administradoraId = useActiveAdministradoraId();
+  const { administradoras } = useActiveAdministradora();
   const confirm = useConfirm();
   const [efectores, setEfectores] = useState<Efector[]>([]);
   const [loading, setLoading] = useState(true);
@@ -49,7 +52,7 @@ export default function EfectoresPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingEfector, setEditingEfector] = useState<Efector | null>(null);
-  const [formData, setFormData] = useState<FormData>(emptyForm(''));
+  const [formData, setFormData] = useState<FormData>(emptyForm(administradoraId));
   const [formError, setFormError] = useState('');
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
@@ -86,7 +89,7 @@ export default function EfectoresPage() {
       });
     } else {
       setEditingEfector(null);
-      setFormData(emptyForm(user?.administradoraId ?? ''));
+      setFormData(emptyForm(administradoraId));
     }
     setIsModalOpen(true);
   };
@@ -462,19 +465,16 @@ export default function EfectoresPage() {
               {validatedField('Email', 'email', { type: 'email' })}
               {field('Dirección', 'direccion')}
 
-              {isSuperAdmin && (
+              {isSuperAdmin && !editingEfector && (
                 <div>
                   <label className="block text-sm font-medium text-neutral-700 mb-1">
-                    Administradora ID <span className="text-red-500">*</span>
+                    Administradora
                   </label>
-                  <input
-                    type="text"
-                    value={formData.administradoraId}
-                    onChange={(e) => setFormData({ ...formData, administradoraId: e.target.value })}
-                    placeholder="UUID de la administradora"
-                    className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                    required
-                  />
+                  <p className="w-full rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2 text-sm text-neutral-600">
+                    {administradoras.find((a) => a.id === formData.administradoraId)?.nombre ||
+                      formData.administradoraId ||
+                      'Elegí una administradora activa en la barra superior'}
+                  </p>
                 </div>
               )}
 

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useActiveAdministradoraId } from '@/contexts/ActiveAdministradoraContext';
 import { TipoDiscapacidad, CreateTipoDiscapacidadDto } from '@/types';
 
 type FormState = CreateTipoDiscapacidadDto & { activo?: boolean };
@@ -13,7 +13,7 @@ import { notify } from '@/lib/toast';
 import { useConfirm } from '@/components/ui/confirm-dialog';
 
 export default function TipoDiscapacidadPage() {
-  const { user } = useAuth();
+  const administradoraId = useActiveAdministradoraId();
   const confirm = useConfirm();
   const [tiposDiscapacidad, setTiposDiscapacidad] = useState<TipoDiscapacidad[]>([]);
   const [loading, setLoading] = useState(true);
@@ -27,7 +27,7 @@ export default function TipoDiscapacidadPage() {
     nombre: '',
     codigo: '',
     descripcion: '',
-    administradoraId: user?.administradoraId || '',
+    administradoraId,
   });
 
   useEffect(() => {
@@ -65,7 +65,7 @@ export default function TipoDiscapacidadPage() {
         nombre: '',
         codigo: '',
         descripcion: '',
-        administradoraId: user?.administradoraId || '',
+        administradoraId,
       });
     }
     setIsModalOpen(true);

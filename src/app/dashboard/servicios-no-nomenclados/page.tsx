@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useActiveAdministradora, useActiveAdministradoraId } from '@/contexts/ActiveAdministradoraContext';
 import {
   ServicioNoNomenclado,
   CreateServicioNoNomencladoDto,
@@ -27,7 +28,9 @@ import { notify } from '@/lib/toast';
 import { useConfirm } from '@/components/ui/confirm-dialog';
 
 export default function ServiciosNoNomencladosPage() {
-  const { isSuperAdmin, isAdmin, user } = useAuth();
+  const { isSuperAdmin, isAdmin } = useAuth();
+  const administradoraId = useActiveAdministradoraId();
+  const { administradoras } = useActiveAdministradora();
   const confirm = useConfirm();
   const [servicios, setServicios] = useState<ServicioNoNomenclado[]>([]);
   const [prestadores, setPrestadores] = useState<Prestador[]>([]);
@@ -43,7 +46,7 @@ export default function ServiciosNoNomencladosPage() {
     titulo: '',
     convenio: 'CON_CONVENIO',
     prestadorId: '',
-    administradoraId: '',
+    administradoraId,
   });
 
   useEffect(() => {
@@ -84,7 +87,7 @@ export default function ServiciosNoNomencladosPage() {
         titulo: '',
         convenio: 'CON_CONVENIO',
         prestadorId: '',
-        administradoraId: user?.administradoraId ?? '',
+        administradoraId,
       });
     }
     setIsModalOpen(true);
@@ -430,21 +433,16 @@ export default function ServiciosNoNomencladosPage() {
               </div>
 
               {/* Administradora (solo superadmin) */}
-              {isSuperAdmin && (
+              {isSuperAdmin && !editingServicio && (
                 <div>
                   <label className="block text-sm font-medium text-neutral-700 mb-1">
-                    Administradora ID <span className="text-red-500">*</span>
+                    Administradora
                   </label>
-                  <input
-                    type="text"
-                    value={formData.administradoraId}
-                    onChange={(e) =>
-                      setFormData({ ...formData, administradoraId: e.target.value })
-                    }
-                    placeholder="UUID de la administradora"
-                    className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                    required
-                  />
+                  <p className="w-full rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2 text-sm text-neutral-600">
+                    {administradoras.find((a) => a.id === formData.administradoraId)?.nombre ||
+                      formData.administradoraId ||
+                      'Elegí una administradora activa en la barra superior'}
+                  </p>
                 </div>
               )}
 

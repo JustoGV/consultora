@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useActiveAdministradora, useActiveAdministradoraId } from '@/contexts/ActiveAdministradoraContext';
 import { Prestador, Efector, CreatePrestadorDto } from '@/types';
 import { prestadorService } from '@/services/prestadorService';
 import {
@@ -21,7 +22,9 @@ import { notify } from '@/lib/toast';
 import { useConfirm } from '@/components/ui/confirm-dialog';
 
 export default function PrestadoresPage() {
-  const { isSuperAdmin, isAdmin, user } = useAuth();
+  const { isSuperAdmin, isAdmin } = useAuth();
+  const administradoraId = useActiveAdministradoraId();
+  const { administradoras } = useActiveAdministradora();
   const confirm = useConfirm();
   const [prestadores, setPrestadores] = useState<Prestador[]>([]);
   const [efectores, setEfectores] = useState<Efector[]>([]);
@@ -32,7 +35,7 @@ export default function PrestadoresPage() {
 
   const [formData, setFormData] = useState<CreatePrestadorDto>({
     efectorId: '',
-    administradoraId: '',
+    administradoraId,
   });
   const [formError, setFormError] = useState('');
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -61,7 +64,7 @@ export default function PrestadoresPage() {
   const handleOpenModal = () => {
     setFormData({
       efectorId: '',
-      administradoraId: user?.administradoraId ?? '',
+      administradoraId,
     });
     setFormError('');
     setFieldErrors({});
@@ -378,18 +381,13 @@ export default function PrestadoresPage() {
               {isSuperAdmin && (
                 <div>
                   <label className="block text-sm font-medium text-neutral-700 mb-1">
-                    Administradora ID <span className="text-red-500">*</span>
+                    Administradora
                   </label>
-                  <input
-                    type="text"
-                    value={formData.administradoraId}
-                    onChange={(e) =>
-                      setFormData({ ...formData, administradoraId: e.target.value })
-                    }
-                    placeholder="UUID de la administradora"
-                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent ${fieldErrors.administradoraId ? 'border-red-500 bg-red-50' : 'border-neutral-300'}`}
-                    required
-                  />
+                  <p className="w-full rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2 text-sm text-neutral-600">
+                    {administradoras.find((a) => a.id === formData.administradoraId)?.nombre ||
+                      formData.administradoraId ||
+                      'Elegí una administradora activa en la barra superior'}
+                  </p>
                   {fieldErrors.administradoraId && <p className="text-xs text-red-600 mt-1">{fieldErrors.administradoraId}</p>}
                 </div>
               )}

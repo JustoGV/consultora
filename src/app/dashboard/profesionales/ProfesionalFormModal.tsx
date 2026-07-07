@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useActiveAdministradoraId } from '@/contexts/ActiveAdministradoraContext';
 import { Profesional, CreateProfesionalDto } from '@/types';
 import { profesionalesService } from '@/services/profesionalesService';
 import { mapServerErrors } from '@/lib/errorUtils';
@@ -63,8 +63,7 @@ export default function ProfesionalFormModal({
   onSaved,
   defaultContinuous = true,
 }: ProfesionalFormModalProps) {
-  const { user } = useAuth();
-  const administradoraId = user?.administradoraId || '';
+  const administradoraId = useActiveAdministradoraId();
 
   const [formData, setFormData] = useState<CreateProfesionalDto>(() => emptyForm(administradoraId));
   const [initialSnapshot, setInitialSnapshot] = useState<string>('');

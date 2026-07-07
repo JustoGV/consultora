@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useActiveAdministradoraId } from '@/contexts/ActiveAdministradoraContext';
 import { ObraSocial, CreateObraSocialDto } from '@/types';
 import { obrasSocialesService } from '@/services/obrasSocialesService';
 import { PencilIcon, TrashIcon, PlusIcon, XMarkIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
@@ -13,7 +13,7 @@ import { notify } from '@/lib/toast';
 import { useConfirm } from '@/components/ui/confirm-dialog';
 
 export default function ObrasSocialesPage() {
-  const { user } = useAuth();
+  const administradoraId = useActiveAdministradoraId();
   const confirm = useConfirm();
   const [obrasSociales, setObrasSociales] = useState<ObraSocial[]>([]);
   const [loading, setLoading] = useState(true);
@@ -29,7 +29,7 @@ export default function ObrasSocialesPage() {
     sigla: '',
     codigo: '',
     descripcion: '',
-    administradoraId: user?.administradoraId || '',
+    administradoraId,
     activo: true,
   });
 
@@ -70,7 +70,7 @@ export default function ObrasSocialesPage() {
         sigla: '',
         codigo: '',
         descripcion: '',
-        administradoraId: user?.administradoraId || '',
+        administradoraId,
         activo: true,
       });
     }
@@ -85,7 +85,7 @@ export default function ObrasSocialesPage() {
       sigla: '',
       codigo: '',
       descripcion: '',
-      administradoraId: user?.administradoraId || '',
+      administradoraId,
       activo: true,
     });
     setFormError('');

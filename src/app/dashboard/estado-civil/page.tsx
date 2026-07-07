@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useActiveAdministradoraId } from '@/contexts/ActiveAdministradoraContext';
 import { EstadoCivil, CreateEstadoCivilDto } from '@/types';
 import { estadoCivilService } from '@/services/estadoCivilService';
 import { PencilIcon, TrashIcon, PlusIcon, XMarkIcon } from '@heroicons/react/24/outline';
@@ -13,7 +13,7 @@ import { notify } from '@/lib/toast';
 import { useConfirm } from '@/components/ui/confirm-dialog';
 
 export default function EstadoCivilPage() {
-  const { user } = useAuth();
+  const administradoraId = useActiveAdministradoraId();
   const confirm = useConfirm();
   const [estadosCiviles, setEstadosCiviles] = useState<EstadoCivil[]>([]);
   const [loading, setLoading] = useState(true);
@@ -27,7 +27,7 @@ export default function EstadoCivilPage() {
     nombre: '',
     codigo: '',
     descripcion: '',
-    administradoraId: user?.administradoraId || '',
+    administradoraId,
     activo: true,
   });
 
@@ -66,7 +66,7 @@ export default function EstadoCivilPage() {
         nombre: '',
         codigo: '',
         descripcion: '',
-        administradoraId: user?.administradoraId || '',
+        administradoraId,
         activo: true,
       });
     }
@@ -80,7 +80,7 @@ export default function EstadoCivilPage() {
       nombre: '',
       codigo: '',
       descripcion: '',
-      administradoraId: user?.administradoraId || '',
+      administradoraId,
       activo: true,
     });
     setFormError('');

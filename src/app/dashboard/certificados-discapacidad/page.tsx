@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
+import { useActiveAdministradoraId } from '@/contexts/ActiveAdministradoraContext';
 import {
   CertificadoDiscapacidad,
   CreateCertificadoDiscapacidadDto,
@@ -26,6 +27,7 @@ import { useConfirm } from '@/components/ui/confirm-dialog';
 
 export default function CertificadosDiscapacidadPage() {
   const { user } = useAuth();
+  const activeAdministradoraId = useActiveAdministradoraId();
   const searchParams = useSearchParams();
   const confirm = useConfirm();
   const [certificados, setCertificados] = useState<CertificadoDiscapacidad[]>([]);
@@ -65,6 +67,57 @@ export default function CertificadosDiscapacidadPage() {
       setFormData((prev) => ({ ...prev, administradoraId: user.administradoraId || '' }));
     }
   }, [user?.administradoraId]);
+
+  // ---- administradoraId resolution for SUPERADMIN (UX-15b) ----
+  // ADMIN users already have `user.administradoraId` (handled above, unchanged).
+  // SUPERADMIN has none: the certificado's administradoraId must be DERIVED
+  // FROM THE SELECTED PATIENT (`persona.administradoraId`), since a CUD always
+  // belongs to the same administradora as its afiliado — never from the
+  // "active administradora" global picker, which would be wrong if the
+  // superadmin picked a patient from a different administradora than the one
+  // currently active in the Topbar. Fixes "No se pudo determinar la
+  // administradora del usuario" reported when creating a Certificado as
+  // superadmin.
+  useEffect(() => {
+    if (user?.administradoraId) return; // ADMIN: keep the effect above's value.
+    const personaId = formData.personaId;
+    if (!personaId) return;
+
+    const cached = personasCache[personaId];
+    if (cached?.administradoraId) {
+      setFormData((prev) =>
+        prev.personaId === personaId ? { ...prev, administradoraId: cached.administradoraId } : prev
+      );
+      return;
+    }
+
+    let cancelled = false;
+    personasService
+      .getById(personaId)
+      .then((persona) => {
+        if (cancelled) return;
+        setPersonasCache((prev) => ({ ...prev, [persona.id]: persona }));
+        setFormData((prev) =>
+          prev.personaId === personaId
+            ? { ...prev, administradoraId: persona.administradoraId || activeAdministradoraId }
+            : prev
+        );
+      })
+      .catch(() => {
+        // Persona lookup failed (unlikely — it was just picked from the
+        // fetcher): fall back to the active administradora rather than
+        // leaving administradoraId empty.
+        if (!cancelled) {
+          setFormData((prev) =>
+            prev.personaId === personaId ? { ...prev, administradoraId: activeAdministradoraId } : prev
+          );
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formData.personaId, user?.administradoraId, activeAdministradoraId]);
 
   // Deep-link desde la ficha del paciente (F-6): ?personaId=... abre el modal
   // de carga con el paciente ya preseleccionado.
@@ -208,7 +261,10 @@ export default function CertificadosDiscapacidadPage() {
     setFieldErrors({});
 
     if (!formData.administradoraId) {
-      setFormError('No se pudo determinar la administradora del usuario');
+      // Should be rare: the effect above derives it from the selected persona
+      // (or falls back to the active administradora) as soon as personaId is
+      // set. This only fires if both resolutions failed.
+      setFormError('Seleccioná una administradora activa (barra superior) o verificá el afiliado elegido.');
       return;
     }
 
@@ -222,7 +278,7 @@ export default function CertificadosDiscapacidadPage() {
         observaciones: formData.observaciones || undefined,
         antecedentes: formData.antecedentes || undefined,
         tipoDiscapacidadIds: selectedTiposIds,
-        administradoraId: formData.administradoraId || user?.administradoraId || ''
+        administradoraId: formData.administradoraId || user?.administradoraId || activeAdministradoraId || ''
       };
 
       if (editingCertificado) {

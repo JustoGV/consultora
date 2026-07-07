@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useActiveAdministradoraId } from '@/contexts/ActiveAdministradoraContext';
 import { nomencladorService } from '@/services/nomencladorService';
 import { Nomenclador, CreateNomencladorDto } from '@/types';
 import {
@@ -17,7 +18,8 @@ import { notify } from '@/lib/toast';
 import { useConfirm } from '@/components/ui/confirm-dialog';
 
 export default function NomenclatorsPage() {
-  const { isSuperAdmin, isAdmin, user } = useAuth();
+  const { isSuperAdmin, isAdmin } = useAuth();
+  const administradoraId = useActiveAdministradoraId();
   const confirm = useConfirm();
   const [nomencladores, setNomencladores] = useState<Nomenclador[]>([]);
   const [loading, setLoading] = useState(true);
@@ -35,7 +37,7 @@ export default function NomenclatorsPage() {
     fechaVigenciaEtapa2: '',
     fechaVigenciaEtapa3: '',
     unidadMedida: '',
-    administradoraId: user?.administradoraId || ''
+    administradoraId
   });
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
@@ -106,7 +108,7 @@ export default function NomenclatorsPage() {
         fechaVigenciaEtapa2: '',
         fechaVigenciaEtapa3: '',
         unidadMedida: '',
-        administradoraId: user?.administradoraId || ''
+        administradoraId
       });
     }
     setIsModalOpen(true);
@@ -125,7 +127,7 @@ export default function NomenclatorsPage() {
       fechaVigenciaEtapa2: '',
       fechaVigenciaEtapa3: '',
       unidadMedida: '',
-      administradoraId: user?.administradoraId || ''
+      administradoraId
     });
     setFormError('');
   };
