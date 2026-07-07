@@ -340,7 +340,7 @@ export default function CertificadosDiscapacidadPage() {
         <div className="relative">
           <input
             type="text"
-            placeholder="Buscar por número, paciente, tipo o grado..."
+            placeholder="Buscar por número, afiliado, tipo o grado..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full px-4 py-2 pl-10 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500"
@@ -361,7 +361,7 @@ export default function CertificadosDiscapacidadPage() {
               <thead className="bg-neutral-50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase">N° Certificado</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase">Paciente</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase">Afiliado</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase">Tipo Discapacidad</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase">Grado</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase">Fecha Emisión</th>
@@ -465,12 +465,12 @@ export default function CertificadosDiscapacidadPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-neutral-700 mb-1">Paciente *</label>
+                  <label className="block text-sm font-medium text-neutral-700 mb-1">Afiliado *</label>
                   <SearchableSelectRemote
                     value={formData.personaId}
                     onChange={(value) => setFormData({ ...formData, personaId: value })}
                     fetcher={fetchPersonaOptions}
-                    placeholder="Buscar paciente..."
+                    placeholder="Buscar afiliado..."
                     required
                   />
                 </div>

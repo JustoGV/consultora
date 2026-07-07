@@ -109,12 +109,12 @@ export default function DashboardPage() {
   const info = (dashboard?.porPrioridad.baja ?? 0) + (dashboard?.porPrioridad.info ?? 0);
 
   const focusSearch = () => {
-    const input = document.querySelector<HTMLInputElement>('input[aria-label="Buscar paciente"]');
+    const input = document.querySelector<HTMLInputElement>('input[aria-label="Buscar afiliado"]');
     if (input) {
       input.focus();
       return;
     }
-    router.push('/dashboard/pacientes');
+    router.push('/dashboard/afiliados');
   };
 
   return (
@@ -179,7 +179,7 @@ export default function DashboardPage() {
                   return (
                     <li key={a.id} className="px-4 py-2.5">
                       <Link
-                        href={a.personaId ? `/dashboard/pacientes/${a.personaId}` : '/dashboard/alerts'}
+                        href={a.personaId ? `/dashboard/afiliados/${a.personaId}` : '/dashboard/alerts'}
                         className="flex items-center justify-between gap-3 hover:text-[var(--primary-700)]"
                       >
                         <div className="min-w-0">
@@ -229,13 +229,13 @@ export default function DashboardPage() {
                 {pendientesAntiguas.map((a) => (
                   <li key={a.id} className="px-4 py-2.5">
                     <Link
-                      href={a.personaId ? `/dashboard/pacientes/${a.personaId}` : '/dashboard/alerts'}
+                      href={a.personaId ? `/dashboard/afiliados/${a.personaId}` : '/dashboard/alerts'}
                       className="flex items-center justify-between gap-3 hover:text-[var(--primary-700)]"
                     >
                       <div className="min-w-0">
                         <p className="truncate text-sm font-medium text-[var(--fg)]">{a.titulo}</p>
                         <p className="truncate text-xs text-[var(--fg-muted)]">
-                          {a.persona ? `${a.persona.apellido}, ${a.persona.nombre}` : 'Sin paciente asociado'}
+                          {a.persona ? `${a.persona.apellido}, ${a.persona.nombre}` : 'Sin afiliado asociado'}
                         </p>
                       </div>
                       <span className="shrink-0 text-xs tabular-nums text-[var(--fg-subtle)]">
@@ -252,7 +252,7 @@ export default function DashboardPage() {
 
       {/* 4. Mini-panel operativo — contadores secos, sin gráficos */}
       <section className="flex flex-wrap items-center gap-x-8 gap-y-3 rounded-lg border border-[var(--border)] bg-[var(--surface-sunken)] px-5 py-3.5">
-        <OperativoStat icon={Users} label="Pacientes activos" value={operativo.personas} />
+        <OperativoStat icon={Users} label="Afiliados activos" value={operativo.personas} />
         <OperativoStat icon={FileText} label="Afiliaciones" value={operativo.afiliaciones} />
         <OperativoStat icon={AlertTriangle} label="Certificados" value={operativo.certificados} />
       </section>
@@ -262,11 +262,11 @@ export default function DashboardPage() {
         {isAdmin ? (
           <>
             <Link
-              href="/dashboard/pacientes"
+              href="/dashboard/afiliados"
               className="inline-flex items-center gap-2 rounded-md border border-[var(--border-strong)] bg-[var(--surface)] px-4 py-2 text-sm font-medium text-[var(--fg)] transition-colors hover:bg-[var(--surface-sunken)]"
             >
               <UserPlus className="size-4" />
-              Nuevo paciente
+              Nuevo afiliado
             </Link>
             <button
               type="button"
@@ -299,7 +299,7 @@ export default function DashboardPage() {
               className="inline-flex items-center gap-2 rounded-md border border-[var(--border-strong)] bg-[var(--surface)] px-4 py-2 text-sm font-medium text-[var(--fg)] transition-colors hover:bg-[var(--surface-sunken)]"
             >
               <Search className="size-4" />
-              Buscar paciente
+              Buscar afiliado
             </button>
           </>
         )}

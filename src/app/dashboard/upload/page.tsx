@@ -429,7 +429,7 @@ export default function UploadPage() {
 
       setSuccess(true);
       setTimeout(() => {
-        router.push('/dashboard/pacientes');
+        router.push('/dashboard/afiliados');
       }, 2000);
     } catch (error) {
       const { fieldErrors: fe, formError: gf } = mapServerErrors(error, Object.keys(certificadoData));
@@ -467,9 +467,9 @@ export default function UploadPage() {
           <CheckCircle2 className="w-20 h-20 text-green-600 mx-auto mb-4" />
           <h2 className="text-2xl font-bold text-gray-900 mb-2">¡Registro Exitoso!</h2>
           <p className="text-gray-600 mb-4">
-            El paciente y su certificado de discapacidad han sido creados correctamente.
+            El afiliado y su certificado de discapacidad han sido creados correctamente.
           </p>
-          <p className="text-sm text-gray-500">Redirigiendo a la lista de pacientes...</p>
+          <p className="text-sm text-gray-500">Redirigiendo a la lista de afiliados...</p>
         </div>
       </div>
     );
@@ -480,14 +480,14 @@ export default function UploadPage() {
       <div>
         <h1 className="text-3xl font-bold bg-gradient-to-r from-primary-600 to-primary-800 bg-clip-text text-transparent flex items-center gap-3">
           <FilePlus2 className="w-8 h-8 text-primary-600" />
-          Nuevo Paciente con Certificado
+          Nuevo Afiliado con Certificado
         </h1>
-        <p className="text-gray-600 mt-2">Completá los datos en tres pasos: paciente, afiliación y certificado.</p>
+        <p className="text-gray-600 mt-2">Completá los datos en tres pasos: afiliado, afiliación y certificado.</p>
       </div>
 
       {/* Indicador de pasos */}
       <div className="flex items-center gap-3">
-        <StepBadge n={1} active={step === 1} done={step > 1} label="Paciente" />
+        <StepBadge n={1} active={step === 1} done={step > 1} label="Afiliado" />
         <StepDivider />
         <StepBadge n={2} active={step === 2} done={step > 2} label="Afiliación" />
         <StepDivider />
@@ -501,7 +501,7 @@ export default function UploadPage() {
       >
         {step === 1 && (
           <>
-            <h2 className="text-lg font-semibold text-gray-900 border-b pb-3">Datos del paciente</h2>
+            <h2 className="text-lg font-semibold text-gray-900 border-b pb-3">Datos del afiliado</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Field label="Nombre" required error={fieldErrors.nombre}>
                 <Input

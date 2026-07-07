@@ -147,7 +147,7 @@ export default function PatientMetrics({ patients }: PatientMetricsProps) {
     <div className="space-y-6 fade-in">
       {/* KPIs principales — mismo patrón que las cards del inicio */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <KpiCard icon={Users} label="Total pacientes" value={metrics.total} />
+        <KpiCard icon={Users} label="Total afiliados" value={metrics.total} />
         <KpiCard icon={FileText} label="Certificados activos" value={metrics.activeCertificates} />
         <KpiCard icon={CalendarClock} label="Por renovar" value={metrics.expiredCertificates} />
         <KpiCard
@@ -160,7 +160,7 @@ export default function PatientMetrics({ patients }: PatientMetricsProps) {
 
       {/* Gráficos de distribución */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <ChartCard icon={PieIcon} title="Distribución por género" subtitle={`${metrics.total} pacientes`}>
+        <ChartCard icon={PieIcon} title="Distribución por género" subtitle={`${metrics.total} afiliados`}>
           {chartData.genderData.length === 0 ? (
             <ChartEmpty />
           ) : (
@@ -188,7 +188,7 @@ export default function PatientMetrics({ patients }: PatientMetricsProps) {
                   contentStyle={CHART_TOOLTIP_STYLE}
                   labelStyle={CHART_TOOLTIP_LABEL_STYLE}
                   itemStyle={CHART_TOOLTIP_ITEM_STYLE}
-                  formatter={(value) => [`${value ?? 0} pacientes`, '']}
+                  formatter={(value) => [`${value ?? 0} afiliados`, '']}
                 />
               </PieChart>
             </ResponsiveContainer>
@@ -209,7 +209,7 @@ export default function PatientMetrics({ patients }: PatientMetricsProps) {
                   contentStyle={CHART_TOOLTIP_STYLE}
                   labelStyle={CHART_TOOLTIP_LABEL_STYLE}
                   itemStyle={CHART_TOOLTIP_ITEM_STYLE}
-                  formatter={(value) => [`${value ?? 0}`, 'Pacientes']}
+                  formatter={(value) => [`${value ?? 0}`, 'Afiliados']}
                 />
                 <Bar dataKey="pacientes" fill={CHART_PRIMARY} radius={[4, 4, 0, 0]} maxBarSize={56} animationDuration={CHART_ANIM_MS} />
               </BarChart>

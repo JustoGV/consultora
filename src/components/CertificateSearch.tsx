@@ -60,7 +60,7 @@ export default function CertificateSearch({ onSearch, categories }: CertificateS
           <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
           <input
             type="text"
-            placeholder="Buscar por nombre de paciente, DNI o tipo de discapacidad..."
+            placeholder="Buscar por nombre de afiliado, DNI o tipo de discapacidad..."
             value={filters.searchTerm}
             onChange={(e) => handleInputChange('searchTerm', e.target.value)}
             className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"

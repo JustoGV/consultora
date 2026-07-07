@@ -18,9 +18,9 @@ import {
 
 /**
  * Topbar del shell (UX-1).
- * - Buscador global de pacientes con atajo "/" para enfocar. Por ahora, al
- *   submitear navega a /dashboard/pacientes (el buscador real que lea el
- *   query param queda pendiente — la página de pacientes hoy busca con su
+ * - Buscador global de afiliados con atajo "/" para enfocar. Por ahora, al
+ *   submitear navega a /dashboard/afiliados (el buscador real que lea el
+ *   query param queda pendiente — la página de afiliados hoy busca con su
  *   propio input server-side, no lee `?q=` de la URL todavía).
  * - Campana de alertas (AlertBell) con badge por severidad.
  * - Botón hamburguesa para colapsar la sidebar (controlado por el layout).
@@ -62,10 +62,10 @@ export default function Topbar({
     e.preventDefault();
     // TODO: reemplazar por la búsqueda global real de personas
     // (SearchableSelectRemote / página de resultados). Por ahora navega al
-    // listado de pacientes llevando el término como query param (la página
+    // listado de afiliados llevando el término como query param (la página
     // todavía no lo lee de la URL — queda para una fase posterior).
     const q = query.trim();
-    router.push(q ? `/dashboard/pacientes?q=${encodeURIComponent(q)}` : "/dashboard/pacientes");
+    router.push(q ? `/dashboard/afiliados?q=${encodeURIComponent(q)}` : "/dashboard/afiliados");
   };
 
   const initials = user?.nombre
@@ -97,7 +97,7 @@ export default function Topbar({
         </button>
       )}
 
-      {/* Buscador global de pacientes */}
+      {/* Buscador global de afiliados */}
       <form onSubmit={handleSubmit} className="relative w-full max-w-md" role="search">
         <Search
           className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-[var(--fg-subtle)]"
@@ -108,8 +108,8 @@ export default function Topbar({
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Buscar paciente…"
-          aria-label="Buscar paciente"
+          placeholder="Buscar afiliado…"
+          aria-label="Buscar afiliado"
           className={cn(
             "h-9 w-full rounded-md border border-[var(--border)] bg-[var(--surface-sunken)] pl-8 pr-9 text-sm text-[var(--fg)]",
             "placeholder:text-[var(--fg-subtle)] outline-none transition-[border-color,box-shadow,background-color] duration-150",

@@ -21,6 +21,7 @@ import {
   Building2,
   Landmark,
   UserRound,
+  UsersRound,
   Stethoscope,
   FileBarChart2,
   PieChart,
@@ -98,7 +99,7 @@ export default function Sidebar({
   const userMenuItems: MenuItem[] = [
     { name: "Inicio", href: "/dashboard", icon: Home, section: "main" },
     { name: "Alertas", href: "/dashboard/alerts", icon: Bell, section: "main" },
-    { name: "Nuevo Paciente/Certificado", href: "/dashboard/upload", icon: FilePlus2, section: "main" },
+    { name: "Nuevo Afiliado/Certificado", href: "/dashboard/upload", icon: FilePlus2, section: "main" },
     { name: "Mis Certificados", href: "/dashboard/certificates", icon: FolderOpen, section: "main" },
   ];
 
@@ -109,7 +110,8 @@ export default function Sidebar({
     { name: "Reportes", href: "/dashboard/reportes", icon: FileBarChart2, section: "main" },
     { name: "Métricas", href: "/dashboard/metrics", icon: PieChart, section: "main" },
 
-    { name: "Pacientes", href: "/dashboard/pacientes", icon: UserRound, section: "gestion" },
+    { name: "Afiliados", href: "/dashboard/afiliados", icon: UserRound, section: "gestion" },
+    { name: "Adherentes", href: "/dashboard/adherentes", icon: UsersRound, section: "gestion" },
     { name: "Profesionales", href: "/dashboard/profesionales", icon: Stethoscope, section: "gestion" },
 
     { name: "Certificados Discapacidad", href: "/dashboard/certificados-discapacidad", icon: FileText, section: "certificados" },
@@ -133,7 +135,8 @@ export default function Sidebar({
     { name: "Alertas", href: "/dashboard/alerts", icon: Bell, section: "main" },
     { name: "Reportes", href: "/dashboard/reportes", icon: FileBarChart2, section: "main" },
 
-    { name: "Pacientes", href: "/dashboard/pacientes", icon: UserRound, section: "gestion" },
+    { name: "Afiliados", href: "/dashboard/afiliados", icon: UserRound, section: "gestion" },
+    { name: "Adherentes", href: "/dashboard/adherentes", icon: UsersRound, section: "gestion" },
     { name: "Profesionales", href: "/dashboard/profesionales", icon: Stethoscope, section: "gestion" },
 
     { name: "Certificados Discapacidad", href: "/dashboard/certificados-discapacidad", icon: FileText, section: "certificados" },

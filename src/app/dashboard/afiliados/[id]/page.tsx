@@ -28,7 +28,7 @@ import { timeAgo } from '@/lib/timeAgo';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 
-import PacienteFormModal from '../PacienteFormModal';
+import AfiliadoFormModal from '../AfiliadoFormModal';
 import AfiliacionFormModal from './AfiliacionFormModal';
 import VincularPersonaModal from './VincularPersonaModal';
 
@@ -42,7 +42,7 @@ type GrupoAdherente = {
   titulares: { vinculoId: string; parentesco: { id: string; nombre: string }; afiliacion: Afiliacion }[];
 };
 
-export default function PacienteDetallePage() {
+export default function AfiliadoDetallePage() {
   const params = useParams();
   const router = useRouter();
   const confirm = useConfirm();
@@ -150,16 +150,16 @@ export default function PacienteDetallePage() {
 
   const handleEliminarVinculo = async (afiliacionId: string, vinculoId: string) => {
     const ok = await confirm({
-      title: 'Eliminar vínculo',
-      description: 'Se eliminará el vínculo del grupo familiar. ¿Querés continuar?',
-      confirmLabel: 'Eliminar',
+      title: 'Quitar adherente',
+      description: 'Se quitará el adherente de este afiliado. ¿Querés continuar?',
+      confirmLabel: 'Quitar',
       destructive: true,
     });
     if (!ok) return;
     try {
       await afiliacionesService.deleteVinculo(afiliacionId, vinculoId);
       await loadAfiliaciones();
-      notify.success('Vínculo eliminado');
+      notify.success('Adherente quitado');
     } catch (err) {
       notify.error('No se pudo eliminar el vínculo', extractErrorMessage(err));
     }
@@ -177,7 +177,7 @@ export default function PacienteDetallePage() {
   if (error || !persona) {
     return (
       <div className="rounded-md border border-[var(--sev-critica)] bg-[var(--sev-critica-bg)] px-4 py-3 text-sm text-[var(--sev-critica-fg)]">
-        {error || 'Paciente no encontrado.'}
+        {error || 'Afiliado no encontrado.'}
       </div>
     );
   }
@@ -187,11 +187,11 @@ export default function PacienteDetallePage() {
   return (
     <div className="space-y-6 pb-10">
       <button
-        onClick={() => router.push('/dashboard/pacientes')}
+        onClick={() => router.push('/dashboard/afiliados')}
         className="inline-flex items-center gap-1.5 text-sm text-[var(--fg-muted)] hover:text-[var(--fg)]"
       >
         <ArrowLeft className="size-4" />
-        Volver a Pacientes
+        Volver a Afiliados
       </button>
 
       {/* Alerta 80 — banner ámbar no bloqueante */}
@@ -261,7 +261,7 @@ export default function PacienteDetallePage() {
         </dl>
       </section>
 
-      {/* 2 y 3. Afiliaciones + grupo familiar */}
+      {/* 2 y 3. Afiliaciones + adherentes */}
       <section className="space-y-3">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold text-[var(--fg)]">Afiliaciones</h2>
@@ -273,7 +273,7 @@ export default function PacienteDetallePage() {
 
         {afiliaciones.length === 0 ? (
           <p className="rounded-lg border border-dashed border-[var(--border-strong)] px-4 py-6 text-center text-sm text-[var(--fg-muted)]">
-            Sin afiliaciones. Esta persona es un paciente particular.
+            Sin afiliaciones. Este afiliado es particular.
           </p>
         ) : (
           <div className="space-y-3">
@@ -342,7 +342,7 @@ export default function PacienteDetallePage() {
         </div>
         {alertas.length === 0 ? (
           <p className="rounded-lg border border-dashed border-[var(--border-strong)] px-4 py-6 text-center text-sm text-[var(--fg-muted)]">
-            Sin alertas para este paciente.
+            Sin alertas para este afiliado.
           </p>
         ) : (
           <div className="overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--surface)]">
@@ -370,7 +370,7 @@ export default function PacienteDetallePage() {
         )}
       </section>
 
-      <PacienteFormModal
+      <AfiliadoFormModal
         open={editModalOpen}
         onOpenChange={setEditModalOpen}
         persona={persona}
@@ -454,15 +454,15 @@ function AfiliacionCard({
           <div className="mb-2 flex items-center justify-between">
             <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-[var(--fg-subtle)]">
               <Users className="size-3.5" />
-              Grupo familiar
+              Adherentes
             </p>
             <Button size="sm" variant="subtle" onClick={onVincular}>
               <Plus className="size-3.5" />
-              Vincular persona a cargo
+              Agregar adherente
             </Button>
           </div>
           {!grupoTitular || grupoTitular.adherentes.length === 0 ? (
-            <p className="text-sm text-[var(--fg-subtle)]">Sin personas a cargo.</p>
+            <p className="text-sm text-[var(--fg-subtle)]">Sin adherentes.</p>
           ) : (
             <ul className="space-y-1.5">
               {grupoTitular.adherentes.map((item) => (
@@ -472,7 +472,7 @@ function AfiliacionCard({
                       {item.parentesco.nombre}
                     </Badge>
                     <Link
-                      href={`/dashboard/pacientes/${item.afiliacion.personaId}`}
+                      href={`/dashboard/afiliados/${item.afiliacion.personaId}`}
                       className="font-medium text-[var(--primary-700)] hover:underline"
                     >
                       {item.afiliacion.persona?.apellido}, {item.afiliacion.persona?.nombre}
@@ -495,7 +495,7 @@ function AfiliacionCard({
         <div className="mt-3 border-t border-[var(--border)] pt-3">
           <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-[var(--fg-subtle)]">
             <Users className="size-3.5" />
-            A cargo de
+            Titular/es
           </p>
           {!grupoAdherente || grupoAdherente.titulares.length === 0 ? (
             <p className="text-sm text-[var(--fg-subtle)]">Sin titular vinculado.</p>
@@ -508,7 +508,7 @@ function AfiliacionCard({
                       {item.parentesco.nombre}
                     </Badge>
                     <Link
-                      href={`/dashboard/pacientes/${item.afiliacion.personaId}`}
+                      href={`/dashboard/afiliados/${item.afiliacion.personaId}`}
                       className="font-medium text-[var(--primary-700)] hover:underline"
                     >
                       {item.afiliacion.persona?.apellido}, {item.afiliacion.persona?.nombre}

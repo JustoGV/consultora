@@ -80,7 +80,7 @@ interface DuplicateMatch {
   numeroDocumento: string;
 }
 
-interface PacienteFormModalProps {
+interface AfiliadoFormModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   persona: Persona | null; // null = alta
@@ -89,13 +89,13 @@ interface PacienteFormModalProps {
   defaultContinuous?: boolean;
 }
 
-export default function PacienteFormModal({
+export default function AfiliadoFormModal({
   open,
   onOpenChange,
   persona,
   onSaved,
   defaultContinuous = true,
-}: PacienteFormModalProps) {
+}: AfiliadoFormModalProps) {
   const { user } = useAuth();
   const administradoraId = user?.administradoraId || '';
 
@@ -375,7 +375,7 @@ export default function PacienteFormModal({
         }}
       >
         <DialogHeader>
-          <DialogTitle>{isEditing ? 'Editar paciente' : 'Nuevo paciente'}</DialogTitle>
+          <DialogTitle>{isEditing ? 'Editar afiliado' : 'Nuevo afiliado'}</DialogTitle>
           <DialogDescription>
             Datos de identidad. La obra social y el rol se cargan en Afiliaciones.
           </DialogDescription>
@@ -475,7 +475,7 @@ export default function PacienteFormModal({
               </p>
               <div className="flex gap-2">
                 <Link
-                  href={`/dashboard/pacientes/${duplicateMatch.id}`}
+                  href={`/dashboard/afiliados/${duplicateMatch.id}`}
                   target="_blank"
                   className="inline-flex items-center gap-1 text-xs font-medium underline"
                 >

@@ -291,7 +291,7 @@ function AlertRow({
     <li className="px-5 py-3.5">
       {alerta.personaId ? (
         <Link
-          href={`/dashboard/pacientes/${alerta.personaId}`}
+          href={`/dashboard/afiliados/${alerta.personaId}`}
           onClick={onNavigate}
           className="-mx-1 block rounded-md px-1 py-0.5 transition-colors hover:bg-[var(--surface-sunken)]"
         >

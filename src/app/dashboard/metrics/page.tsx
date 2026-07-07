@@ -51,7 +51,7 @@ export default function MetricsPage() {
       <div>
         <h1 className="text-3xl font-semibold text-[var(--fg)]">Métricas</h1>
         <p className="mt-1 text-sm text-[var(--fg-muted)]">
-          Análisis de pacientes y certificados
+          Análisis de afiliados y certificados
           {user?.administradoraId && user.administradoraId !== 'global'
             ? ' de tu administradora.'
             : ' del sistema completo.'}
@@ -68,11 +68,11 @@ export default function MetricsPage() {
           <div className="space-y-1">
             <p className="text-sm font-semibold text-[var(--fg)]">Sin datos disponibles</p>
             <p className="mx-auto max-w-xs text-sm text-[var(--fg-muted)]">
-              Aún no hay pacientes registrados para mostrar métricas.
+              Aún no hay afiliados registrados para mostrar métricas.
             </p>
           </div>
           <Button asChild className="mt-1">
-            <Link href="/dashboard/pacientes">Ver pacientes</Link>
+            <Link href="/dashboard/afiliados">Ver afiliados</Link>
           </Button>
         </div>
       )}
@@ -86,7 +86,7 @@ export default function MetricsPage() {
             <li>Se calculan en tiempo real a partir de los datos actuales.</li>
             <li>La distribución por edad se agrupa en rangos para su lectura.</li>
             <li>Los certificados por renovar son aquellos cuya fecha de vencimiento ya pasó.</li>
-            <li>Los porcentajes se calculan sobre el total de pacientes o certificados según corresponda.</li>
+            <li>Los porcentajes se calculan sobre el total de afiliados o certificados según corresponda.</li>
           </ul>
         </div>
       </div>

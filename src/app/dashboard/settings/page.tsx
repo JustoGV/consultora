@@ -84,8 +84,8 @@ export default function SettingsPage() {
 
             <div className="flex items-center justify-between">
               <div>
-                <p className="font-medium text-gray-900">Nuevos pacientes</p>
-                <p className="text-sm text-gray-600">Notificar cuando se registra un nuevo paciente</p>
+                <p className="font-medium text-gray-900">Nuevos afiliados</p>
+                <p className="text-sm text-gray-600">Notificar cuando se registra un nuevo afiliado</p>
               </div>
               <input
                 type="checkbox"

@@ -14,7 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import SearchableSelect from '@/components/SearchableSelect';
 import Pagination from '@/components/Pagination';
-import PacienteFormModal from './PacienteFormModal';
+import AfiliadoFormModal from './AfiliadoFormModal';
 
 const DEBOUNCE_MS = 300;
 
@@ -27,7 +27,7 @@ const ROL_OPTIONS: { value: RolFiltro; label: string }[] = [
   { value: 'SIN_AFILIACION', label: 'Sin afiliación' },
 ];
 
-export default function PacientesPage() {
+export default function AfiliadosPage() {
   const router = useRouter();
 
   const [personas, setPersonas] = useState<Persona[]>([]);
@@ -82,7 +82,7 @@ export default function PacientesPage() {
       setTotalItems(result.total);
       setTotalPages(result.totalPages);
     } catch (error) {
-      console.error('Error al cargar pacientes:', extractErrorMessage(error));
+      console.error('Error al cargar afiliados:', extractErrorMessage(error));
     } finally {
       setLoading(false);
     }
@@ -102,7 +102,7 @@ export default function PacientesPage() {
     debounceRef.current = setTimeout(() => setPage(1), DEBOUNCE_MS);
   };
 
-  // Alt+N — atajo global para "Nuevo paciente"
+  // Alt+N — atajo global para "Nuevo afiliado"
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.altKey && (e.key === 'n' || e.key === 'N')) {
@@ -190,9 +190,9 @@ export default function PacientesPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-semibold text-[var(--fg)]">Pacientes</h1>
+          <h1 className="text-3xl font-semibold text-[var(--fg)]">Afiliados</h1>
           <p className="mt-1 text-sm text-[var(--fg-muted)]">
-            Identidad, afiliaciones y grupo familiar de cada paciente.
+            Identidad, afiliación y adherentes de cada afiliado.
           </p>
         </div>
         <Button
@@ -202,7 +202,7 @@ export default function PacientesPage() {
           }}
         >
           <UserPlus className="size-4" />
-          Nuevo paciente
+          Nuevo afiliado
           <kbd className="ml-1 rounded border border-white/30 bg-white/10 px-1 text-[10px]">Alt+N</kbd>
         </Button>
       </div>
@@ -235,7 +235,7 @@ export default function PacientesPage() {
         searchValue={search}
         onSearchChange={handleSearchChange}
         searchPlaceholder="Buscar por nombre, apellido, documento o CUIL…"
-        onRowClick={(p) => router.push(`/dashboard/pacientes/${p.id}`)}
+        onRowClick={(p) => router.push(`/dashboard/afiliados/${p.id}`)}
         pagination={
           <Pagination
             currentPage={page}
@@ -249,7 +249,7 @@ export default function PacientesPage() {
             }}
           />
         }
-        emptyTitle="Sin pacientes"
+        emptyTitle="Sin afiliados"
         emptyDescription="Cargá el primero para empezar."
         emptyAction={
           <Button
@@ -258,12 +258,12 @@ export default function PacientesPage() {
               setModalOpen(true);
             }}
           >
-            Nuevo paciente
+            Nuevo afiliado
           </Button>
         }
       />
 
-      <PacienteFormModal
+      <AfiliadoFormModal
         open={modalOpen}
         onOpenChange={setModalOpen}
         persona={editingPersona}

@@ -280,12 +280,12 @@ export default function AlertsPage() {
       ),
     },
     {
-      id: 'paciente',
-      header: 'Paciente',
+      id: 'afiliado',
+      header: 'Afiliado',
       cell: (a) =>
         a.personaId ? (
           <Link
-            href={`/dashboard/pacientes/${a.personaId}`}
+            href={`/dashboard/afiliados/${a.personaId}`}
             onClick={(e) => e.stopPropagation()}
             className="font-medium text-[var(--primary-700)] hover:underline"
           >
@@ -461,7 +461,7 @@ export default function AlertsPage() {
         searchable
         searchValue={search}
         onSearchChange={handleSearchChange}
-        searchPlaceholder="Buscar por título, paciente, DNI…"
+        searchPlaceholder="Buscar por título, afiliado, DNI…"
         onRowClick={(a) => setDetailId(a.id)}
         pagination={
           <Pagination

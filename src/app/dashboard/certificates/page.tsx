@@ -177,7 +177,7 @@ export default function CertificatesPage() {
                         </div>
                         
                         <div>
-                          <p className="text-xs text-gray-600">Documento del paciente</p>
+                          <p className="text-xs text-gray-600">Documento del afiliado</p>
                           <p className="font-medium text-gray-900">{certificate.afiliadoDni}</p>
                         </div>
                         
@@ -259,7 +259,7 @@ export default function CertificatesPage() {
             <div className="p-6 space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <p className="text-xs text-gray-600">Paciente</p>
+                  <p className="text-xs text-gray-600">Afiliado</p>
                   <p className="font-medium text-gray-900">{selectedCertificate.afiliadoNombre}</p>
                 </div>
                 <div>

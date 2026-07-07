@@ -66,7 +66,7 @@ function formatFechaLarga(value?: string | null): string {
 function resolveSolucionHref(sol: PosibleSolucion, alerta: Alerta): string | null {
   switch (sol.accion) {
     case "ver_persona":
-      return alerta.personaId ? `/dashboard/pacientes/${alerta.personaId}` : null;
+      return alerta.personaId ? `/dashboard/afiliados/${alerta.personaId}` : null;
     case "listar_orientaciones":
       return "/dashboard/orientacion-prestacional";
     case "cargar_certificado":
@@ -224,10 +224,10 @@ export function AlertDetailSheet({
 
           {/* Metadatos */}
           <div className="mt-4 divide-y divide-[var(--border)] border-t border-[var(--border)]">
-            <DetailRow icon={User} label="Paciente">
+            <DetailRow icon={User} label="Afiliado">
               {alerta.personaId ? (
                 <Link
-                  href={`/dashboard/pacientes/${alerta.personaId}`}
+                  href={`/dashboard/afiliados/${alerta.personaId}`}
                   onClick={() => onOpenChange(false)}
                   className="inline-flex items-center gap-1 font-medium text-[var(--primary-700)] hover:underline"
                 >
@@ -237,7 +237,7 @@ export function AlertDetailSheet({
                   <ArrowUpRight className="size-3.5" />
                 </Link>
               ) : (
-                <span className="text-[var(--fg-subtle)]">Sin paciente asociado</span>
+                <span className="text-[var(--fg-subtle)]">Sin afiliado asociado</span>
               )}
               {alerta.persona?.numeroDocumento && (
                 <span className="ml-2 text-xs tabular-nums text-[var(--fg-subtle)]">
