@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import Sidebar from '@/components/Sidebar';
 import Topbar from '@/components/shell/Topbar';
+import { Toaster } from '@/components/ui/sonner';
+import { ConfirmProvider } from '@/components/ui/confirm-dialog';
 
 export default function DashboardLayout({
   children,
@@ -62,14 +64,17 @@ export default function DashboardLayout({
   }
 
   return (
-    <div className="flex h-screen bg-[var(--bg)]">
-      <Sidebar collapsed={collapsed} />
-      <div className="flex min-w-0 flex-1 flex-col">
-        <Topbar onToggleSidebar={toggleSidebar} />
-        <main className="flex-1 overflow-y-auto">
-          <div className="p-6 lg:p-8">{children}</div>
-        </main>
+    <ConfirmProvider>
+      <div className="flex h-screen bg-[var(--bg)]">
+        <Sidebar collapsed={collapsed} />
+        <div className="flex min-w-0 flex-1 flex-col">
+          <Topbar onToggleSidebar={toggleSidebar} />
+          <main className="flex-1 overflow-y-auto">
+            <div className="p-6 lg:p-8">{children}</div>
+          </main>
+        </div>
+        <Toaster />
       </div>
-    </div>
+    </ConfirmProvider>
   );
 }

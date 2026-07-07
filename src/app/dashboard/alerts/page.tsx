@@ -14,11 +14,17 @@ import {
 import { alertasService } from '@/services/alertasService';
 import { extractErrorMessage } from '@/lib/errorUtils';
 import { timeAgo } from '@/lib/timeAgo';
+import { notify } from '@/lib/toast';
 import { priorityToTone, TONE_VARS, type SeverityTone } from '@/lib/severity';
 import { cn } from '@/lib/utils';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import {
   Dialog,
   DialogContent,
@@ -27,6 +33,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog';
+import { AlertDetailSheet } from '@/components/alerts/AlertDetailSheet';
 import Pagination from '@/components/Pagination';
 import SearchableSelect from '@/components/SearchableSelect';
 import type { Alerta, DashboardAlertas, EstadoAlerta, PrioridadAlerta } from '@/types';
@@ -56,6 +63,13 @@ const estadoBadge: Record<EstadoAlerta, string> = {
   VISTA: 'text-[var(--primary-700)] border-[var(--primary-200)] bg-[var(--primary-50)]',
   RESUELTA: 'text-[var(--sev-baja-fg)] border-transparent bg-[var(--sev-baja-bg)]',
   DESCARTADA: 'text-[var(--fg-subtle)] border-[var(--border)] bg-[var(--surface-sunken)]',
+};
+
+const estadoLabel: Record<EstadoAlerta, string> = {
+  PENDIENTE: 'Pendiente',
+  VISTA: 'Vista',
+  RESUELTA: 'Resuelta',
+  DESCARTADA: 'Descartada',
 };
 
 const formatFecha = (value?: string | null) => {
@@ -91,6 +105,9 @@ export default function AlertsPage() {
   const [estado, setEstado] = useState<EstadoAlerta | ''>('');
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(20);
+
+  // Panel de detalle (abre al click de fila)
+  const [detailId, setDetailId] = useState<string | null>(null);
 
   const [notasModal, setNotasModal] = useState<{ id: string; tipo: 'resolver' | 'descartar' } | null>(null);
   const [notas, setNotas] = useState('');
@@ -172,6 +189,11 @@ export default function AlertsPage() {
     });
   }, [alertas, semaforo, search]);
 
+  const detailAlerta = useMemo(
+    () => alertas.find((a) => a.id === detailId) ?? null,
+    [alertas, detailId]
+  );
+
   const chipCount = (f: SemaforoFiltro): number | null => {
     if (!dashboard) return null;
     if (f === 'TODAS') return dashboard.pendientes;
@@ -186,41 +208,74 @@ export default function AlertsPage() {
       await fn();
       refetchAll();
     } catch (err) {
-      setError(extractErrorMessage(err, 'No se pudo completar la acción'));
+      const msg = extractErrorMessage(err, 'No se pudo completar la acción');
+      setError(msg);
+      notify.error('No se pudo completar la acción', msg);
     } finally {
       setBusyId(null);
     }
   };
 
-  const handleVista = (id: string) => runAction(id, () => alertasService.marcarVista(id));
+  const handleVista = (id: string) =>
+    runAction(id, async () => {
+      await alertasService.marcarVista(id);
+      notify.success('Alerta marcada como vista');
+    });
 
   const handleConfirmModal = () => {
     if (!notasModal) return;
     const { id, tipo } = notasModal;
     runAction(id, async () => {
-      if (tipo === 'resolver') await alertasService.resolver(id, notas.trim() || undefined);
-      else await alertasService.descartar(id, notas.trim() || undefined);
+      if (tipo === 'resolver') {
+        await alertasService.resolver(id, notas.trim() || undefined);
+        notify.success('Alerta resuelta', 'Quedó registrada con sus notas.');
+      } else {
+        await alertasService.descartar(id, notas.trim() || undefined);
+        notify.info('Alerta descartada');
+      }
       setNotasModal(null);
       setNotas('');
+      setDetailId(null);
     });
+  };
+
+  const openNotas = (id: string, tipo: 'resolver' | 'descartar') => {
+    setNotas('');
+    setNotasModal({ id, tipo });
   };
 
   const columns: DataTableColumn<Alerta>[] = [
     {
       id: 'severidad',
       header: 'Severidad',
+      className: 'w-[130px] pl-0',
       cell: (a) => {
         const tone = priorityToTone(a.prioridad);
-        return <Badge variant={tone}>{a.prioridad}</Badge>;
+        return (
+          <div className="flex items-center gap-2.5">
+            {/* Banda de severidad — indicador cromático de prioridad (RN-11) */}
+            <span
+              className="h-8 w-1 shrink-0 rounded-full"
+              style={{ backgroundColor: TONE_VARS[tone].solid }}
+              aria-hidden
+            />
+            <Badge variant={tone}>{a.prioridad}</Badge>
+          </div>
+        );
       },
     },
     {
       id: 'titulo',
       header: 'Alerta',
+      className: 'max-w-md',
       cell: (a) => (
         <div className="max-w-md">
-          <p className="font-medium text-[var(--fg)]">{a.titulo}</p>
-          <p className="mt-0.5 line-clamp-1 text-xs text-[var(--fg-muted)]">{a.mensaje}</p>
+          <p className="font-medium leading-snug text-[var(--fg)] [text-wrap:pretty]">
+            {a.titulo}
+          </p>
+          <p className="mt-0.5 line-clamp-2 text-xs leading-relaxed text-[var(--fg-muted)]">
+            {a.mensaje}
+          </p>
         </div>
       ),
     },
@@ -246,11 +301,11 @@ export default function AlertsPage() {
       cell: (a) => (
         <span
           className={cn(
-            'inline-flex items-center rounded-sm border px-2 py-0.5 text-xs font-medium',
+            'inline-flex items-center rounded-sm border px-2 py-0.5 text-xs font-medium transition-colors',
             estadoBadge[a.estado]
           )}
         >
-          {a.estado}
+          {estadoLabel[a.estado]}
         </span>
       ),
     },
@@ -275,45 +330,32 @@ export default function AlertsPage() {
       cell: (a) => {
         const isBusy = busyId === a.id;
         return (
-          <div className="flex justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
+          <div className="flex justify-end gap-1" onClick={(e) => e.stopPropagation()}>
             {a.estado === 'PENDIENTE' && (
-              <button
-                type="button"
+              <IconAction
+                label="Marcar vista"
                 onClick={() => handleVista(a.id)}
                 disabled={isBusy}
-                title="Marcar vista"
-                className="inline-flex size-7 items-center justify-center rounded-sm text-[var(--fg-muted)] transition-colors hover:bg-[var(--surface-sunken)] hover:text-[var(--fg)] disabled:opacity-50"
-              >
-                {isBusy ? <Loader2 className="size-4 animate-spin" /> : <Eye className="size-4" />}
-              </button>
+                icon={isBusy ? <Loader2 className="size-4 animate-spin" /> : <Eye className="size-4" />}
+              />
             )}
             {a.estado !== 'RESUELTA' && (
-              <button
-                type="button"
-                onClick={() => {
-                  setNotas('');
-                  setNotasModal({ id: a.id, tipo: 'resolver' });
-                }}
+              <IconAction
+                label="Resolver"
+                tone="primary"
+                onClick={() => openNotas(a.id, 'resolver')}
                 disabled={isBusy}
-                title="Resolver"
-                className="inline-flex size-7 items-center justify-center rounded-sm text-[var(--primary-700)] transition-colors hover:bg-[var(--primary-50)] disabled:opacity-50"
-              >
-                <CheckCircle2 className="size-4" />
-              </button>
+                icon={<CheckCircle2 className="size-4" />}
+              />
             )}
             {a.estado !== 'DESCARTADA' && (
-              <button
-                type="button"
-                onClick={() => {
-                  setNotas('');
-                  setNotasModal({ id: a.id, tipo: 'descartar' });
-                }}
+              <IconAction
+                label="Descartar"
+                tone="danger"
+                onClick={() => openNotas(a.id, 'descartar')}
                 disabled={isBusy}
-                title="Descartar"
-                className="inline-flex size-7 items-center justify-center rounded-sm text-[var(--fg-subtle)] transition-colors hover:bg-[var(--surface-sunken)] hover:text-[var(--sev-critica-fg)] disabled:opacity-50"
-              >
-                <XCircle className="size-4" />
-              </button>
+                icon={<XCircle className="size-4" />}
+              />
             )}
           </div>
         );
@@ -327,7 +369,7 @@ export default function AlertsPage() {
         <div>
           <h1 className="text-3xl font-semibold text-[var(--fg)]">Alertas</h1>
           <p className="mt-1 text-sm text-[var(--fg-muted)]">
-            Gestión de alertas generadas por reglas del sistema.
+            Gestión de alertas generadas por reglas del sistema. Hacé clic en una fila para ver el detalle.
           </p>
         </div>
         <Button variant="outline" onClick={refetchAll} disabled={loading}>
@@ -352,22 +394,39 @@ export default function AlertsPage() {
                   chip.value === 'TODAS' ? '/dashboard/alerts' : `/dashboard/alerts?semaforo=${chip.value}`
                 );
               }}
+              aria-pressed={active}
               className={cn(
-                'inline-flex items-center gap-2 rounded-md border px-3 py-1.5 text-sm font-medium transition-colors',
+                'group inline-flex items-center gap-2 rounded-md border px-3 py-1.5 text-sm font-medium',
+                'transition-[background-color,border-color,color,box-shadow] duration-150 ease-out',
+                'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)]',
                 active
-                  ? 'border-[var(--primary-600)] bg-[var(--primary-50)] text-[var(--primary-700)]'
-                  : 'border-[var(--border)] bg-[var(--surface)] text-[var(--fg-muted)] hover:bg-[var(--surface-sunken)]'
+                  ? 'border-[var(--primary-600)] bg-[var(--primary-50)] text-[var(--primary-700)] shadow-[var(--shadow-sm)]'
+                  : 'border-[var(--border)] bg-[var(--surface)] text-[var(--fg-muted)] hover:border-[var(--border-strong)] hover:bg-[var(--surface-sunken)] hover:text-[var(--fg)]'
               )}
             >
               {tone && (
                 <span
-                  className="size-2 rounded-full"
+                  className={cn(
+                    'size-2 rounded-full transition-transform duration-150',
+                    active && 'scale-125'
+                  )}
                   style={{ backgroundColor: TONE_VARS[tone].solid }}
                   aria-hidden
                 />
               )}
               {chip.label}
-              {count !== null && <span className="tabular-nums text-xs opacity-80">{count}</span>}
+              {count !== null && (
+                <span
+                  className={cn(
+                    'inline-flex min-w-[1.25rem] items-center justify-center rounded-full px-1.5 text-xs tabular-nums transition-colors',
+                    active
+                      ? 'bg-[var(--primary-600)] text-white'
+                      : 'bg-[var(--surface-sunken)] text-[var(--fg-muted)] group-hover:bg-[var(--border)]'
+                  )}
+                >
+                  {count}
+                </span>
+              )}
             </button>
           );
         })}
@@ -403,6 +462,7 @@ export default function AlertsPage() {
         searchValue={search}
         onSearchChange={handleSearchChange}
         searchPlaceholder="Buscar por título, paciente, DNI…"
+        onRowClick={(a) => setDetailId(a.id)}
         pagination={
           <Pagination
             currentPage={page}
@@ -420,7 +480,20 @@ export default function AlertsPage() {
         emptyDescription="No hay alertas con los filtros actuales."
       />
 
-      {/* Modal de resolución/descarte con notas (se mantiene el flujo actual) */}
+      {/* Panel de detalle lateral (UX-8a) */}
+      <AlertDetailSheet
+        alerta={detailAlerta}
+        open={detailId !== null}
+        onOpenChange={(open) => {
+          if (!open) setDetailId(null);
+        }}
+        busy={busyId !== null}
+        onVista={handleVista}
+        onResolver={(id) => openNotas(id, 'resolver')}
+        onDescartar={(id) => openNotas(id, 'descartar')}
+      />
+
+      {/* Modal de resolución/descarte con notas */}
       <Dialog
         open={notasModal !== null}
         onOpenChange={(open) => {
@@ -479,5 +552,48 @@ export default function AlertsPage() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+/** Botón de acción con icono + tooltip (affordance clara, no icono crudo). */
+function IconAction({
+  label,
+  icon,
+  onClick,
+  disabled,
+  tone = 'neutral',
+}: {
+  label: string;
+  icon: React.ReactNode;
+  onClick: () => void;
+  disabled?: boolean;
+  tone?: 'neutral' | 'primary' | 'danger';
+}) {
+  const toneClass = {
+    neutral: 'text-[var(--fg-muted)] hover:bg-[var(--surface-sunken)] hover:text-[var(--fg)]',
+    primary: 'text-[var(--primary-700)] hover:bg-[var(--primary-50)]',
+    danger: 'text-[var(--fg-subtle)] hover:bg-[var(--sev-critica-bg)] hover:text-[var(--sev-critica-fg)]',
+  }[tone];
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button
+          type="button"
+          onClick={onClick}
+          disabled={disabled}
+          aria-label={label}
+          className={cn(
+            'inline-flex size-8 items-center justify-center rounded-md transition-colors duration-150',
+            'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)]',
+            'disabled:opacity-50 disabled:pointer-events-none',
+            toneClass
+          )}
+        >
+          {icon}
+        </button>
+      </TooltipTrigger>
+      <TooltipContent>{label}</TooltipContent>
+    </Tooltip>
   );
 }
