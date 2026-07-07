@@ -28,7 +28,6 @@ import { timeAgo } from '@/lib/timeAgo';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 
-import AfiliadoFormModal from '../AfiliadoFormModal';
 import AfiliacionFormModal from './AfiliacionFormModal';
 import VincularPersonaModal from './VincularPersonaModal';
 
@@ -56,7 +55,6 @@ export default function AfiliadoDetallePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [editModalOpen, setEditModalOpen] = useState(false);
   const [afiliacionModalOpen, setAfiliacionModalOpen] = useState(false);
   const [vincularModalOpen, setVincularModalOpen] = useState(false);
   const [afiliacionParaVincular, setAfiliacionParaVincular] = useState<Afiliacion | null>(null);
@@ -242,7 +240,7 @@ export default function AfiliadoDetallePage() {
               )}
             </div>
           </div>
-          <Button variant="outline" onClick={() => setEditModalOpen(true)}>
+          <Button variant="outline" onClick={() => router.push(`/dashboard/afiliados/${personaId}/editar`)}>
             <Pencil className="size-4" />
             Editar
           </Button>
@@ -369,14 +367,6 @@ export default function AfiliadoDetallePage() {
           </div>
         )}
       </section>
-
-      <AfiliadoFormModal
-        open={editModalOpen}
-        onOpenChange={setEditModalOpen}
-        persona={persona}
-        onSaved={() => loadPersona()}
-        defaultContinuous={false}
-      />
 
       <AfiliacionFormModal
         open={afiliacionModalOpen}

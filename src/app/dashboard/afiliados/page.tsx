@@ -14,7 +14,6 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import SearchableSelect from '@/components/SearchableSelect';
 import Pagination from '@/components/Pagination';
-import AfiliadoFormModal from './AfiliadoFormModal';
 
 const DEBOUNCE_MS = 300;
 
@@ -47,9 +46,6 @@ export default function AfiliadosPage() {
   // esos filtros en GET /personas (TODO(B-5) en personas.service.ts) — ver
   // desvío documentado en el reporte final.
   const [afiliacionesPorPersona, setAfiliacionesPorPersona] = useState<Record<string, Afiliacion[]>>({});
-
-  const [modalOpen, setModalOpen] = useState(false);
-  const [editingPersona, setEditingPersona] = useState<Persona | null>(null);
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -107,13 +103,12 @@ export default function AfiliadosPage() {
     const onKey = (e: KeyboardEvent) => {
       if (e.altKey && (e.key === 'n' || e.key === 'N')) {
         e.preventDefault();
-        setEditingPersona(null);
-        setModalOpen(true);
+        router.push('/dashboard/afiliados/nuevo');
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, []);
+  }, [router]);
 
   const filteredPersonas = personas.filter((p) => {
     if (!rolFiltro) return true;
@@ -195,12 +190,7 @@ export default function AfiliadosPage() {
             Identidad, afiliación y adherentes de cada afiliado.
           </p>
         </div>
-        <Button
-          onClick={() => {
-            setEditingPersona(null);
-            setModalOpen(true);
-          }}
-        >
+        <Button onClick={() => router.push('/dashboard/afiliados/nuevo')}>
           <UserPlus className="size-4" />
           Nuevo afiliado
           <kbd className="ml-1 rounded border border-white/30 bg-white/10 px-1 text-[10px]">Alt+N</kbd>
@@ -252,25 +242,8 @@ export default function AfiliadosPage() {
         emptyTitle="Sin afiliados"
         emptyDescription="Cargá el primero para empezar."
         emptyAction={
-          <Button
-            onClick={() => {
-              setEditingPersona(null);
-              setModalOpen(true);
-            }}
-          >
-            Nuevo afiliado
-          </Button>
+          <Button onClick={() => router.push('/dashboard/afiliados/nuevo')}>Nuevo afiliado</Button>
         }
-      />
-
-      <AfiliadoFormModal
-        open={modalOpen}
-        onOpenChange={setModalOpen}
-        persona={editingPersona}
-        onSaved={() => {
-          load();
-        }}
-        defaultContinuous={!editingPersona}
       />
     </div>
   );
