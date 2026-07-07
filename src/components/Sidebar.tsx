@@ -23,6 +23,7 @@ import {
   UserRound,
   Stethoscope,
   FileBarChart2,
+  PieChart,
 } from "lucide-react";
 
 import { useAuth } from "@/contexts/AuthContext";
@@ -79,6 +80,7 @@ export default function Sidebar({
     { name: "Inicio", href: "/dashboard", icon: Home, section: "main" },
     { name: "Alertas", href: "/dashboard/alerts", icon: Bell, section: "main" },
     { name: "Reportes", href: "/dashboard/reportes", icon: FileBarChart2, section: "main" },
+    { name: "Métricas", href: "/dashboard/metrics", icon: PieChart, section: "main" },
 
     { name: "Pacientes", href: "/dashboard/pacientes", icon: UserRound, section: "gestion" },
     { name: "Profesionales", href: "/dashboard/profesionales", icon: Stethoscope, section: "gestion" },
