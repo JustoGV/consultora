@@ -21,10 +21,13 @@ import Pagination from '@/components/Pagination';
 import { usePagination } from '@/hooks/usePagination';
 import { extractErrorMessage, mapServerErrors } from '@/lib/errorUtils';
 import { handleEnterAsTab } from '@/lib/formUtils';
+import { notify } from '@/lib/toast';
+import { useConfirm } from '@/components/ui/confirm-dialog';
 
 export default function CertificadosDiscapacidadPage() {
   const { user } = useAuth();
   const searchParams = useSearchParams();
+  const confirm = useConfirm();
   const [certificados, setCertificados] = useState<CertificadoDiscapacidad[]>([]);
   const [personasCache, setPersonasCache] = useState<Record<string, Persona>>({});
   const [tiposDiscapacidad, setTiposDiscapacidad] = useState<TipoDiscapacidad[]>([]);
@@ -114,7 +117,7 @@ export default function CertificadosDiscapacidadPage() {
       setPersonasCache(embebidas);
     } catch (error) {
       console.error('Error al cargar datos:', error);
-      alert('Error al cargar datos');
+      notify.error('No se pudieron cargar los datos');
     } finally {
       setLoading(false);
     }
@@ -228,14 +231,21 @@ export default function CertificadosDiscapacidadPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('¿Está seguro de eliminar este certificado?')) return;
+    const ok = await confirm({
+      title: 'Eliminar certificado',
+      description: 'Esta acción da de baja el certificado de discapacidad. ¿Querés continuar?',
+      confirmLabel: 'Eliminar',
+      destructive: true,
+    });
+    if (!ok) return;
 
     try {
       await certificadosDiscapacidadService.delete(id);
       await loadData();
+      notify.success('Certificado eliminado');
     } catch (error) {
       console.error('Error al eliminar:', error);
-      alert(extractErrorMessage(error));
+      notify.error('No se pudo eliminar', extractErrorMessage(error));
     }
   };
 

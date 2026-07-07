@@ -23,9 +23,12 @@ import { usePagination } from '@/hooks/usePagination';
 import api from '@/lib/axios';
 import { mapServerErrors } from '@/lib/errorUtils';
 import { handleEnterAsTab } from '@/lib/formUtils';
+import { notify } from '@/lib/toast';
+import { useConfirm } from '@/components/ui/confirm-dialog';
 
 export default function ServiciosNoNomencladosPage() {
   const { isSuperAdmin, isAdmin, user } = useAuth();
+  const confirm = useConfirm();
   const [servicios, setServicios] = useState<ServicioNoNomenclado[]>([]);
   const [prestadores, setPrestadores] = useState<Prestador[]>([]);
   const [loading, setLoading] = useState(true);
@@ -58,7 +61,7 @@ export default function ServiciosNoNomencladosPage() {
       setPrestadores(prestadoresData);
     } catch (error) {
       console.error('Error al cargar datos:', error);
-      alert('Error al cargar servicios no nomenclados');
+      notify.error('No se pudieron cargar los servicios no nomenclados');
     } finally {
       setLoading(false);
     }
@@ -130,13 +133,20 @@ export default function ServiciosNoNomencladosPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('¿Está seguro de dar de baja este servicio no nomenclado?')) return;
+    const ok = await confirm({
+      title: 'Dar de baja servicio',
+      description: 'El servicio no nomenclado quedará inactivo. Podés reactivarlo luego.',
+      confirmLabel: 'Dar de baja',
+      destructive: true,
+    });
+    if (!ok) return;
     try {
       await serviciosNoNomencladosService.delete(id);
       await loadData();
+      notify.success('Servicio dado de baja');
     } catch (error) {
       console.error('Error al eliminar:', error);
-      alert('Error al eliminar servicio no nomenclado');
+      notify.error('No se pudo dar de baja el servicio');
     }
   };
 
@@ -144,9 +154,10 @@ export default function ServiciosNoNomencladosPage() {
     try {
       await serviciosNoNomencladosService.restore(id);
       await loadData();
+      notify.success('Servicio reactivado');
     } catch (error) {
       console.error('Error al restaurar:', error);
-      alert('Error al restaurar servicio no nomenclado');
+      notify.error('No se pudo reactivar el servicio');
     }
   };
 

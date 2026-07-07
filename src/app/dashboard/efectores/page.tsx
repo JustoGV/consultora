@@ -18,6 +18,8 @@ import Pagination from '@/components/Pagination';
 import { usePagination } from '@/hooks/usePagination';
 import { mapServerErrors } from '@/lib/errorUtils';
 import { handleEnterAsTab } from '@/lib/formUtils';
+import { notify } from '@/lib/toast';
+import { useConfirm } from '@/components/ui/confirm-dialog';
 
 type FormData = CreateEfectorDto;
 
@@ -33,6 +35,7 @@ const emptyForm = (administradoraId: string): FormData => ({
 
 export default function EfectoresPage() {
   const { isSuperAdmin, isAdmin, user } = useAuth();
+  const confirm = useConfirm();
   const [efectores, setEfectores] = useState<Efector[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -54,7 +57,7 @@ export default function EfectoresPage() {
       setEfectores(data);
     } catch (error) {
       console.error('Error al cargar efectores:', error);
-      alert('Error al cargar efectores');
+      notify.error('No se pudieron cargar los efectores');
     } finally {
       setLoading(false);
     }
@@ -132,13 +135,20 @@ export default function EfectoresPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('¿Está seguro de dar de baja este efector?')) return;
+    const ok = await confirm({
+      title: 'Dar de baja efector',
+      description: 'El efector quedará inactivo. Podés reactivarlo luego.',
+      confirmLabel: 'Dar de baja',
+      destructive: true,
+    });
+    if (!ok) return;
     try {
       await efectoresService.delete(id);
       await loadData();
+      notify.success('Efector dado de baja');
     } catch (error) {
       console.error('Error al eliminar:', error);
-      alert('Error al eliminar efector');
+      notify.error('No se pudo dar de baja el efector');
     }
   };
 
@@ -146,9 +156,10 @@ export default function EfectoresPage() {
     try {
       await efectoresService.restore(id);
       await loadData();
+      notify.success('Efector reactivado');
     } catch (error) {
       console.error('Error al restaurar:', error);
-      alert('Error al restaurar efector');
+      notify.error('No se pudo reactivar el efector');
     }
   };
 

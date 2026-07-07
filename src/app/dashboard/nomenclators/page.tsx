@@ -13,9 +13,12 @@ import {
 } from '@heroicons/react/24/outline';
 import { mapServerErrors } from '@/lib/errorUtils';
 import { handleEnterAsTab } from '@/lib/formUtils';
+import { notify } from '@/lib/toast';
+import { useConfirm } from '@/components/ui/confirm-dialog';
 
 export default function NomenclatorsPage() {
   const { isSuperAdmin, isAdmin, user } = useAuth();
+  const confirm = useConfirm();
   const [nomencladores, setNomencladores] = useState<Nomenclador[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -57,14 +60,21 @@ export default function NomenclatorsPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('¿Estás seguro de que deseas eliminar este nomenclador?')) return;
-    
+    const ok = await confirm({
+      title: 'Eliminar nomenclador',
+      description: 'Esta acción da de baja el nomenclador. ¿Querés continuar?',
+      confirmLabel: 'Eliminar',
+      destructive: true,
+    });
+    if (!ok) return;
+
     try {
       await nomencladorService.delete(id);
       await loadData();
+      notify.success('Nomenclador eliminado');
     } catch (err) {
       console.error('Error al eliminar nomenclador:', err);
-      alert('Error al eliminar el nomenclador');
+      notify.error('No se pudo eliminar el nomenclador');
     }
   };
 

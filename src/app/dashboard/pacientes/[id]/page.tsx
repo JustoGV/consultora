@@ -20,6 +20,8 @@ import { afiliacionesService } from '@/services/afiliacionesService';
 import { alertasService } from '@/services/alertasService';
 import { certificadosDiscapacidadService } from '@/services/certificadosDiscapacidadService';
 import { extractErrorMessage } from '@/lib/errorUtils';
+import { notify } from '@/lib/toast';
+import { useConfirm } from '@/components/ui/confirm-dialog';
 import { calcularEdad } from '@/lib/age';
 import { priorityToTone, TONE_VARS } from '@/lib/severity';
 import { timeAgo } from '@/lib/timeAgo';
@@ -43,6 +45,7 @@ type GrupoAdherente = {
 export default function PacienteDetallePage() {
   const params = useParams();
   const router = useRouter();
+  const confirm = useConfirm();
   const personaId = params.id as string;
 
   const [persona, setPersona] = useState<Persona | null>(null);
@@ -129,22 +132,36 @@ export default function PacienteDetallePage() {
   };
 
   const handleEliminarAfiliacion = async (afiliacion: Afiliacion) => {
-    if (!confirm(`¿Eliminar la afiliación con ${afiliacion.obraSocial?.nombre}?`)) return;
+    const ok = await confirm({
+      title: 'Eliminar afiliación',
+      description: `Se eliminará la afiliación con ${afiliacion.obraSocial?.nombre ?? 'la obra social'}. ¿Querés continuar?`,
+      confirmLabel: 'Eliminar',
+      destructive: true,
+    });
+    if (!ok) return;
     try {
       await afiliacionesService.delete(afiliacion.id);
       await loadAfiliaciones();
+      notify.success('Afiliación eliminada');
     } catch (err) {
-      alert(extractErrorMessage(err));
+      notify.error('No se pudo eliminar la afiliación', extractErrorMessage(err));
     }
   };
 
   const handleEliminarVinculo = async (afiliacionId: string, vinculoId: string) => {
-    if (!confirm('¿Eliminar este vínculo?')) return;
+    const ok = await confirm({
+      title: 'Eliminar vínculo',
+      description: 'Se eliminará el vínculo del grupo familiar. ¿Querés continuar?',
+      confirmLabel: 'Eliminar',
+      destructive: true,
+    });
+    if (!ok) return;
     try {
       await afiliacionesService.deleteVinculo(afiliacionId, vinculoId);
       await loadAfiliaciones();
+      notify.success('Vínculo eliminado');
     } catch (err) {
-      alert(extractErrorMessage(err));
+      notify.error('No se pudo eliminar el vínculo', extractErrorMessage(err));
     }
   };
 

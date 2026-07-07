@@ -9,9 +9,12 @@ import { tipoDiscapacidadService } from '@/services/tipoDiscapacidadService';
 import { PencilIcon, TrashIcon, PlusIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import { extractErrorMessage, mapServerErrors } from '@/lib/errorUtils';
 import { handleEnterAsTab } from '@/lib/formUtils';
+import { notify } from '@/lib/toast';
+import { useConfirm } from '@/components/ui/confirm-dialog';
 
 export default function TipoDiscapacidadPage() {
   const { user } = useAuth();
+  const confirm = useConfirm();
   const [tiposDiscapacidad, setTiposDiscapacidad] = useState<TipoDiscapacidad[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -38,7 +41,7 @@ export default function TipoDiscapacidadPage() {
       setTiposDiscapacidad(data);
     } catch (error) {
       console.error('Error al cargar tipos de discapacidad:', error);
-      alert('Error al cargar tipos de discapacidad');
+      notify.error('No se pudieron cargar los tipos de discapacidad');
     } finally {
       setLoading(false);
     }
@@ -110,16 +113,21 @@ export default function TipoDiscapacidadPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('¿Está seguro de eliminar este tipo de discapacidad?')) {
-      return;
-    }
+    const ok = await confirm({
+      title: 'Eliminar tipo de discapacidad',
+      description: 'Esta acción da de baja el tipo de discapacidad. ¿Querés continuar?',
+      confirmLabel: 'Eliminar',
+      destructive: true,
+    });
+    if (!ok) return;
 
     try {
       await tipoDiscapacidadService.delete(id);
       await loadTiposDiscapacidad();
+      notify.success('Tipo de discapacidad eliminado');
     } catch (error) {
       console.error('Error al eliminar:', error);
-      alert(extractErrorMessage(error));
+      notify.error('No se pudo eliminar', extractErrorMessage(error));
     }
   };
 

@@ -12,9 +12,12 @@ import Pagination from '@/components/Pagination';
 import { usePagination } from '@/hooks/usePagination';
 import { mapServerErrors } from '@/lib/errorUtils';
 import { handleEnterAsTab } from '@/lib/formUtils';
+import { notify } from '@/lib/toast';
+import { useConfirm } from '@/components/ui/confirm-dialog';
 
 export default function ServiciosPage() {
   const { isSuperAdmin, isAdmin } = useAuth();
+  const confirm = useConfirm();
   const [servicios, setServicios] = useState<Servicio[]>([]);
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [nomencladores, setNomencladores] = useState<Nomenclador[]>([]);
@@ -50,7 +53,7 @@ export default function ServiciosPage() {
       setNomencladores(nomencladoresData);
     } catch (error) {
       console.error('Error al cargar datos:', error);
-      alert('Error al cargar servicios');
+      notify.error('No se pudieron cargar los servicios');
     } finally {
       setLoading(false);
     }
@@ -119,14 +122,21 @@ export default function ServiciosPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('¿Está seguro de eliminar este servicio?')) return;
+    const ok = await confirm({
+      title: 'Eliminar servicio',
+      description: 'Esta acción da de baja el servicio. ¿Querés continuar?',
+      confirmLabel: 'Eliminar',
+      destructive: true,
+    });
+    if (!ok) return;
 
     try {
       await serviciosService.delete(id);
       await loadData();
+      notify.success('Servicio eliminado');
     } catch (error) {
       console.error('Error al eliminar:', error);
-      alert('Error al eliminar servicio');
+      notify.error('No se pudo eliminar el servicio');
     }
   };
 

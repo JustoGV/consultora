@@ -5,6 +5,8 @@ import { MoreHorizontal, Pencil, RotateCcw, Trash2, UserPlus } from 'lucide-reac
 import { Profesional } from '@/types';
 import { profesionalesService } from '@/services/profesionalesService';
 import { extractErrorMessage } from '@/lib/errorUtils';
+import { notify } from '@/lib/toast';
+import { useConfirm } from '@/components/ui/confirm-dialog';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -20,6 +22,7 @@ import ProfesionalFormModal from './ProfesionalFormModal';
 const DEBOUNCE_MS = 300;
 
 export default function ProfesionalesPage() {
+  const confirm = useConfirm();
   const [profesionales, setProfesionales] = useState<Profesional[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -63,12 +66,19 @@ export default function ProfesionalesPage() {
   };
 
   const handleDelete = async (p: Profesional) => {
-    if (!confirm(`¿Eliminar a ${p.apellido}, ${p.nombre}?`)) return;
+    const ok = await confirm({
+      title: 'Eliminar profesional',
+      description: `Se dará de baja a ${p.apellido}, ${p.nombre}. Podés reactivarlo luego.`,
+      confirmLabel: 'Eliminar',
+      destructive: true,
+    });
+    if (!ok) return;
     try {
       await profesionalesService.delete(p.id);
       await load();
+      notify.success('Profesional dado de baja');
     } catch (error) {
-      alert(extractErrorMessage(error));
+      notify.error('No se pudo eliminar', extractErrorMessage(error));
     }
   };
 
@@ -76,8 +86,9 @@ export default function ProfesionalesPage() {
     try {
       await profesionalesService.restore(p.id);
       await load();
+      notify.success('Profesional reactivado');
     } catch (error) {
-      alert(extractErrorMessage(error));
+      notify.error('No se pudo reactivar', extractErrorMessage(error));
     }
   };
 

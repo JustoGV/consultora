@@ -18,6 +18,8 @@ import Pagination from '@/components/Pagination';
 import { usePagination } from '@/hooks/usePagination';
 import { mapServerErrors } from '@/lib/errorUtils';
 import { handleEnterAsTab } from '@/lib/formUtils';
+import { notify } from '@/lib/toast';
+import { useConfirm } from '@/components/ui/confirm-dialog';
 
 const prioridadOptions = [
   { value: 'ALTA', label: 'Alta' },
@@ -27,6 +29,7 @@ const prioridadOptions = [
 
 export default function OrientacionPrestacionalPage() {
   const { isSuperAdmin, isAdmin } = useAuth();
+  const confirm = useConfirm();
   const [orientaciones, setOrientaciones] = useState<OrientacionPrestacional[]>([]);
   const [servicios, setServicios] = useState<Servicio[]>([]);
   const [serviciosNoNom, setServiciosNoNom] = useState<ServicioNoNomenclado[]>([]);
@@ -67,7 +70,7 @@ export default function OrientacionPrestacionalPage() {
       }
     } catch (error) {
       console.error('Error al cargar datos:', error);
-      alert('Error al cargar orientaciones');
+      notify.error('No se pudieron cargar las orientaciones');
     } finally {
       setLoading(false);
     }
@@ -146,14 +149,21 @@ export default function OrientacionPrestacionalPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('¿Está seguro de eliminar esta orientación?')) return;
+    const ok = await confirm({
+      title: 'Eliminar orientación',
+      description: 'Esta acción da de baja la orientación prestacional. ¿Querés continuar?',
+      confirmLabel: 'Eliminar',
+      destructive: true,
+    });
+    if (!ok) return;
 
     try {
       await orientacionPrestacionalService.delete(id);
       await loadData();
+      notify.success('Orientación eliminada');
     } catch (error) {
       console.error('Error al eliminar:', error);
-      alert('Error al eliminar orientación');
+      notify.error('No se pudo eliminar la orientación');
     }
   };
 
@@ -164,9 +174,10 @@ export default function OrientacionPrestacionalPage() {
       await orientacionPrestacionalService.addServicio(editingOrientacion.id, { servicioId: selectedServicioId });
       await loadData();
       setSelectedServicioId('');
+      notify.success('Servicio agregado');
     } catch (error) {
       console.error('Error al agregar servicio:', error);
-      alert('Error al agregar servicio');
+      notify.error('No se pudo agregar el servicio');
     }
   };
 
@@ -177,9 +188,10 @@ export default function OrientacionPrestacionalPage() {
       await orientacionPrestacionalService.addServicioNoNomenclado(editingOrientacion.id, { servicioNoNomencladoId: selectedServicioNoNomId });
       await loadData();
       setSelectedServicioNoNomId('');
+      notify.success('Servicio no nomenclado agregado');
     } catch (error) {
       console.error('Error al agregar servicio no nomenclado:', error);
-      alert('Error al agregar servicio no nomenclado');
+      notify.error('No se pudo agregar el servicio no nomenclado');
     }
   };
 
@@ -189,9 +201,10 @@ export default function OrientacionPrestacionalPage() {
     try {
       await orientacionPrestacionalService.removeServicio(editingOrientacion.id, servicioId);
       await loadData();
+      notify.success('Servicio quitado');
     } catch (error) {
       console.error('Error al remover servicio:', error);
-      alert('Error al remover servicio');
+      notify.error('No se pudo quitar el servicio');
     }
   };
 
@@ -201,9 +214,10 @@ export default function OrientacionPrestacionalPage() {
     try {
       await orientacionPrestacionalService.removeServicioNoNomenclado(editingOrientacion.id, servicioId);
       await loadData();
+      notify.success('Servicio no nomenclado quitado');
     } catch (error) {
       console.error('Error al remover servicio no nomenclado:', error);
-      alert('Error al remover servicio no nomenclado');
+      notify.error('No se pudo quitar el servicio no nomenclado');
     }
   };
 

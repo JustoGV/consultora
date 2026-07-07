@@ -6,9 +6,12 @@ import { categoriaService } from '@/services/categoriaService';
 import { Categoria, CreateCategoriaDto } from '@/types';
 import { PlusIcon, PencilIcon, TrashIcon, MagnifyingGlassIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import { handleEnterAsTab } from '@/lib/formUtils';
+import { notify } from '@/lib/toast';
+import { useConfirm } from '@/components/ui/confirm-dialog';
 
 export default function CategoriesPage() {
   const { isSuperAdmin } = useAuth();
+  const confirm = useConfirm();
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -43,14 +46,21 @@ export default function CategoriesPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('¿Estás seguro de que deseas eliminar esta categoría?')) return;
-    
+    const ok = await confirm({
+      title: 'Eliminar categoría',
+      description: 'Esta acción da de baja la categoría. ¿Querés continuar?',
+      confirmLabel: 'Eliminar',
+      destructive: true,
+    });
+    if (!ok) return;
+
     try {
       await categoriaService.delete(id);
       await loadCategorias();
+      notify.success('Categoría eliminada');
     } catch (err) {
       console.error('Error al eliminar categoría:', err);
-      alert('Error al eliminar la categoría');
+      notify.error('No se pudo eliminar la categoría');
     }
   };
 

@@ -17,9 +17,12 @@ import Pagination from '@/components/Pagination';
 import { usePagination } from '@/hooks/usePagination';
 import api from '@/lib/axios';
 import { handleEnterAsTab } from '@/lib/formUtils';
+import { notify } from '@/lib/toast';
+import { useConfirm } from '@/components/ui/confirm-dialog';
 
 export default function PrestadoresPage() {
   const { isSuperAdmin, isAdmin, user } = useAuth();
+  const confirm = useConfirm();
   const [prestadores, setPrestadores] = useState<Prestador[]>([]);
   const [efectores, setEfectores] = useState<Efector[]>([]);
   const [loading, setLoading] = useState(true);
@@ -49,7 +52,7 @@ export default function PrestadoresPage() {
       setEfectores(efectoresData);
     } catch (error) {
       console.error('Error al cargar datos:', error);
-      alert('Error al cargar prestadores');
+      notify.error('No se pudieron cargar los prestadores');
     } finally {
       setLoading(false);
     }
@@ -100,13 +103,20 @@ export default function PrestadoresPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('¿Está seguro de dar de baja este prestador?')) return;
+    const ok = await confirm({
+      title: 'Dar de baja prestador',
+      description: 'El prestador quedará inactivo. Podés reactivarlo luego.',
+      confirmLabel: 'Dar de baja',
+      destructive: true,
+    });
+    if (!ok) return;
     try {
       await prestadorService.delete(id);
       await loadData();
+      notify.success('Prestador dado de baja');
     } catch (error) {
       console.error('Error al eliminar:', error);
-      alert('Error al eliminar prestador');
+      notify.error('No se pudo dar de baja el prestador');
     }
   };
 
@@ -114,9 +124,10 @@ export default function PrestadoresPage() {
     try {
       await prestadorService.restore(id);
       await loadData();
+      notify.success('Prestador reactivado');
     } catch (error) {
       console.error('Error al restaurar:', error);
-      alert('Error al restaurar prestador');
+      notify.error('No se pudo reactivar el prestador');
     }
   };
 

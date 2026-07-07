@@ -9,9 +9,12 @@ import Pagination from '@/components/Pagination';
 import { usePagination } from '@/hooks/usePagination';
 import { extractErrorMessage, mapServerErrors } from '@/lib/errorUtils';
 import { handleEnterAsTab } from '@/lib/formUtils';
+import { notify } from '@/lib/toast';
+import { useConfirm } from '@/components/ui/confirm-dialog';
 
 export default function EstadoCivilPage() {
   const { user } = useAuth();
+  const confirm = useConfirm();
   const [estadosCiviles, setEstadosCiviles] = useState<EstadoCivil[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -39,7 +42,7 @@ export default function EstadoCivilPage() {
       setEstadosCiviles(data);
     } catch (error) {
       console.error('Error al cargar estados civiles:', error);
-      alert('Error al cargar estados civiles');
+      notify.error('No se pudieron cargar los estados civiles');
     } finally {
       setLoading(false);
     }
@@ -118,16 +121,21 @@ export default function EstadoCivilPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('¿Está seguro de eliminar este estado civil?')) {
-      return;
-    }
+    const ok = await confirm({
+      title: 'Eliminar estado civil',
+      description: 'Esta acción da de baja el estado civil. ¿Querés continuar?',
+      confirmLabel: 'Eliminar',
+      destructive: true,
+    });
+    if (!ok) return;
 
     try {
       await estadoCivilService.delete(id);
       await loadEstadosCiviles();
+      notify.success('Estado civil eliminado');
     } catch (error) {
       console.error('Error al eliminar:', error);
-      alert(extractErrorMessage(error));
+      notify.error('No se pudo eliminar', extractErrorMessage(error));
     }
   };
 

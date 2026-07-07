@@ -9,9 +9,12 @@ import Pagination from '@/components/Pagination';
 import { usePagination } from '@/hooks/usePagination';
 import { extractErrorMessage, mapServerErrors } from '@/lib/errorUtils';
 import { handleEnterAsTab } from '@/lib/formUtils';
+import { notify } from '@/lib/toast';
+import { useConfirm } from '@/components/ui/confirm-dialog';
 
 export default function ObrasSocialesPage() {
   const { user } = useAuth();
+  const confirm = useConfirm();
   const [obrasSociales, setObrasSociales] = useState<ObraSocial[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -41,7 +44,7 @@ export default function ObrasSocialesPage() {
       setObrasSociales(data);
     } catch (error) {
       console.error('Error al cargar obras sociales:', error);
-      alert('Error al cargar obras sociales');
+      notify.error('No se pudieron cargar las obras sociales');
     } finally {
       setLoading(false);
     }
@@ -134,16 +137,21 @@ export default function ObrasSocialesPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('¿Está seguro de eliminar esta obra social?')) {
-      return;
-    }
+    const ok = await confirm({
+      title: 'Eliminar obra social',
+      description: 'Esta acción da de baja la obra social. ¿Querés continuar?',
+      confirmLabel: 'Eliminar',
+      destructive: true,
+    });
+    if (!ok) return;
 
     try {
       await obrasSocialesService.delete(id);
       await loadObrasSociales();
+      notify.success('Obra social eliminada');
     } catch (error) {
       console.error('Error al eliminar:', error);
-      alert(extractErrorMessage(error));
+      notify.error('No se pudo eliminar', extractErrorMessage(error));
     }
   };
 
