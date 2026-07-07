@@ -17,7 +17,13 @@ import {
 import Pagination from '@/components/Pagination';
 import { usePagination } from '@/hooks/usePagination';
 import { mapServerErrors } from '@/lib/errorUtils';
-import { handleEnterAsTab } from '@/lib/formUtils';
+import {
+  handleEnterAsTab,
+  sanitizeDigits,
+  validateCuitCuil,
+  validateTelefonoAR,
+  validateEmailLive,
+} from '@/lib/formUtils';
 import { notify } from '@/lib/toast';
 import { useConfirm } from '@/components/ui/confirm-dialog';
 
@@ -91,11 +97,42 @@ export default function EfectoresPage() {
     setFieldErrors({});
   };
 
+  const clearFieldError = (key: string) => {
+    setFieldErrors((prev) => {
+      if (!(key in prev)) return prev;
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+  };
+
+  // UX-9 — validación en vivo onBlur (también se dispara con Enter).
+  const handleBlurValidate = (field: 'cuit' | 'telefono' | 'email') => {
+    const value = (formData[field] as string) || '';
+    const validators: Record<typeof field, (v: string) => string | null> = {
+      cuit: validateCuitCuil,
+      telefono: validateTelefonoAR,
+      email: validateEmailLive,
+    };
+    const error = validators[field](value);
+    if (error) {
+      setFieldErrors((prev) => ({ ...prev, [field]: error }));
+    } else {
+      clearFieldError(field);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const errors: Record<string, string> = {};
     if (!formData.nombre) errors.nombre = 'Requerido';
     if (!formData.tipo) errors.tipo = 'Requerido';
+    const errorCuit = validateCuitCuil(formData.cuit || '');
+    if (errorCuit) errors.cuit = errorCuit;
+    const errorTelefono = validateTelefonoAR(formData.telefono || '');
+    if (errorTelefono) errors.telefono = errorTelefono;
+    const errorEmail = validateEmailLive(formData.email || '');
+    if (errorEmail) errors.email = errorEmail;
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors);
       return;
@@ -196,6 +233,32 @@ export default function EfectoresPage() {
         required={required}
         autoComplete="off"
       />
+    </div>
+  );
+
+  // UX-9 — CUIT/teléfono/email con máscara numérica y validación en vivo.
+  const validatedField = (
+    label: string,
+    key: 'cuit' | 'telefono' | 'email',
+    opts: { type?: string; numeric?: boolean; maxLength?: number } = {}
+  ) => (
+    <div>
+      <label className="block text-sm font-medium text-neutral-700 mb-1">{label}</label>
+      <input
+        type={opts.type ?? 'text'}
+        value={(formData[key] as string) ?? ''}
+        onChange={(e) => {
+          const raw = e.target.value;
+          const value = opts.numeric ? sanitizeDigits(raw, opts.maxLength ?? 20) : raw;
+          setFormData({ ...formData, [key]: value });
+        }}
+        onBlur={() => handleBlurValidate(key)}
+        inputMode={opts.numeric ? 'numeric' : undefined}
+        maxLength={opts.maxLength}
+        className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent ${fieldErrors[key] ? 'border-red-400' : 'border-neutral-300'}`}
+        autoComplete="off"
+      />
+      {fieldErrors[key] && <p className="text-xs text-red-600 mt-1">{fieldErrors[key]}</p>}
     </div>
   );
 
@@ -380,9 +443,9 @@ export default function EfectoresPage() {
                 </select>
               </div>
 
-              {field('CUIT', 'cuit')}
-              {field('Teléfono', 'telefono', 'tel')}
-              {field('Email', 'email', 'email')}
+              {validatedField('CUIT', 'cuit', { numeric: true, maxLength: 11 })}
+              {validatedField('Teléfono', 'telefono', { type: 'tel', numeric: true, maxLength: 13 })}
+              {validatedField('Email', 'email', { type: 'email' })}
               {field('Dirección', 'direccion')}
 
               {isSuperAdmin && (

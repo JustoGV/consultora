@@ -11,6 +11,9 @@ import {
   isValidCuil,
   isValidEmailFormat,
   isValidFechaNacimiento,
+  sanitizeDigits,
+  validateTelefonoAR,
+  validateCodigoPostalAR,
 } from '@/lib/formUtils';
 import { getLastLocation, saveLastLocation } from '@/lib/frequency';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
@@ -244,6 +247,33 @@ export default function PacienteFormModal({
           clearFieldError('email');
         }
         break;
+      case 'telefono': {
+        const errorTelefono = validateTelefonoAR(formData.telefono || '');
+        if (errorTelefono) {
+          setFieldErrors((prev) => ({ ...prev, telefono: errorTelefono }));
+        } else {
+          clearFieldError('telefono');
+        }
+        break;
+      }
+      case 'celular': {
+        const errorCelular = validateTelefonoAR(formData.celular || '');
+        if (errorCelular) {
+          setFieldErrors((prev) => ({ ...prev, celular: errorCelular }));
+        } else {
+          clearFieldError('celular');
+        }
+        break;
+      }
+      case 'codigoPostal': {
+        const errorCp = validateCodigoPostalAR(formData.codigoPostal || '');
+        if (errorCp) {
+          setFieldErrors((prev) => ({ ...prev, codigoPostal: errorCp }));
+        } else {
+          clearFieldError('codigoPostal');
+        }
+        break;
+      }
     }
   };
 
@@ -261,6 +291,12 @@ export default function PacienteFormModal({
       errors.fechaNacimiento = 'Fecha inválida (no futura, no > 120 años)';
     }
     if (formData.email && !isValidEmailFormat(formData.email)) errors.email = 'Email con formato inválido';
+    const errorTelefono = validateTelefonoAR(formData.telefono || '');
+    if (errorTelefono) errors.telefono = errorTelefono;
+    const errorCelular = validateTelefonoAR(formData.celular || '');
+    if (errorCelular) errors.celular = errorCelular;
+    const errorCp = validateCodigoPostalAR(formData.codigoPostal || '');
+    if (errorCp) errors.codigoPostal = errorCp;
     return errors;
   };
 
@@ -393,8 +429,19 @@ export default function PacienteFormModal({
             <Input
               name="numeroDocumento"
               value={formData.numeroDocumento}
-              onChange={(e) => setField('numeroDocumento', e.target.value)}
+              onChange={(e) => {
+                const raw = e.target.value;
+                const value =
+                  formData.tipoDocumento === 'DNI'
+                    ? sanitizeDigits(raw, 8)
+                    : formData.tipoDocumento === 'CUIL'
+                      ? sanitizeDigits(raw, 11)
+                      : raw;
+                setField('numeroDocumento', value);
+              }}
               onBlur={() => handleBlurValidate('numeroDocumento')}
+              inputMode={formData.tipoDocumento === 'DNI' || formData.tipoDocumento === 'CUIL' ? 'numeric' : 'text'}
+              maxLength={formData.tipoDocumento === 'DNI' ? 8 : formData.tipoDocumento === 'CUIL' ? 11 : undefined}
               className="tabular-nums"
               autoComplete="off"
               aria-invalid={!!fieldErrors.numeroDocumento}
@@ -436,8 +483,10 @@ export default function PacienteFormModal({
             <Input
               name="cuil"
               value={formData.cuil}
-              onChange={(e) => setField('cuil', e.target.value)}
+              onChange={(e) => setField('cuil', sanitizeDigits(e.target.value, 11))}
               onBlur={() => handleBlurValidate('cuil')}
+              inputMode="numeric"
+              maxLength={11}
               className="tabular-nums"
               autoComplete="off"
               aria-invalid={!!fieldErrors.cuil}
@@ -487,23 +536,31 @@ export default function PacienteFormModal({
               aria-invalid={!!fieldErrors.email}
             />
           </Field>
-          <Field label="Teléfono">
+          <Field label="Teléfono" error={fieldErrors.telefono}>
             <Input
               name="telefono"
               value={formData.telefono}
-              onChange={(e) => setField('telefono', e.target.value)}
+              onChange={(e) => setField('telefono', sanitizeDigits(e.target.value, 13))}
+              onBlur={() => handleBlurValidate('telefono')}
+              inputMode="numeric"
+              maxLength={13}
               className="tabular-nums"
               autoComplete="off"
+              aria-invalid={!!fieldErrors.telefono}
             />
           </Field>
         </div>
 
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Celular">
+          <Field label="Celular" error={fieldErrors.celular}>
             <Input
               name="celular"
               value={formData.celular}
-              onChange={(e) => setField('celular', e.target.value)}
+              onChange={(e) => setField('celular', sanitizeDigits(e.target.value, 13))}
+              onBlur={() => handleBlurValidate('celular')}
+              inputMode="numeric"
+              maxLength={13}
+              aria-invalid={!!fieldErrors.celular}
               className="tabular-nums"
               autoComplete="off"
             />
@@ -535,13 +592,16 @@ export default function PacienteFormModal({
               autoComplete="off"
             />
           </Field>
-          <Field label="Código postal">
+          <Field label="Código postal" error={fieldErrors.codigoPostal}>
             <Input
               name="codigoPostal-sistema"
               value={formData.codigoPostal}
-              onChange={(e) => setField('codigoPostal', e.target.value)}
+              onChange={(e) => setField('codigoPostal', e.target.value.slice(0, 8))}
+              onBlur={() => handleBlurValidate('codigoPostal')}
+              maxLength={8}
               className="tabular-nums"
               autoComplete="off"
+              aria-invalid={!!fieldErrors.codigoPostal}
             />
           </Field>
         </div>

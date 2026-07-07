@@ -26,6 +26,16 @@ import SearchableSelect from '@/components/SearchableSelect';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { mapServerErrors } from '@/lib/errorUtils';
+import {
+  sanitizeDigits,
+  isValidDni,
+  isValidCuil,
+  isValidEmailFormat,
+  validateTelefonoAR,
+  validateCodigoPostalAR,
+  validateEmailLive,
+  validarFechasCertificadoAR,
+} from '@/lib/formUtils';
 import { useFormKeyboard } from '@/hooks/useFormKeyboard';
 
 const TIPOS_DOCUMENTO: { value: TipoDocumento; label: string }[] = [
@@ -206,8 +216,96 @@ export default function UploadPage() {
     if (!personaData.nombre.trim()) errors.nombre = 'Requerido';
     if (!personaData.apellido.trim()) errors.apellido = 'Requerido';
     if (!personaData.numeroDocumento.trim()) errors.numeroDocumento = 'Requerido';
+    else if (personaData.tipoDocumento === 'DNI' && !isValidDni(personaData.numeroDocumento)) {
+      errors.numeroDocumento = 'El DNI debe tener 7 u 8 dígitos';
+    }
+    if (personaData.cuil && !isValidCuil(personaData.cuil)) {
+      errors.cuil = 'CUIL inválido (11 dígitos + verificador)';
+    }
     if (!personaData.fechaNacimiento) errors.fechaNacimiento = 'Requerido';
+    if (personaData.email && !isValidEmailFormat(personaData.email)) {
+      errors.email = 'Email con formato inválido';
+    }
+    const errorTelefono = validateTelefonoAR(personaData.telefono || '');
+    if (errorTelefono) errors.telefono = errorTelefono;
+    const errorCelular = validateTelefonoAR(personaData.celular || '');
+    if (errorCelular) errors.celular = errorCelular;
+    const errorCp = validateCodigoPostalAR(personaData.codigoPostal || '');
+    if (errorCp) errors.codigoPostal = errorCp;
     return errors;
+  };
+
+  const clearFieldError = (key: string) => {
+    setFieldErrors((prev) => {
+      if (!(key in prev)) return prev;
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+  };
+
+  // UX-9 — validación en vivo onBlur del paso 1 (también se dispara con Enter).
+  const handleBlurValidatePersona = (field: string) => {
+    switch (field) {
+      case 'numeroDocumento':
+        if (personaData.tipoDocumento === 'DNI' && personaData.numeroDocumento && !isValidDni(personaData.numeroDocumento)) {
+          setFieldErrors((prev) => ({ ...prev, numeroDocumento: 'El DNI debe tener 7 u 8 dígitos' }));
+        } else {
+          clearFieldError('numeroDocumento');
+        }
+        break;
+      case 'cuil':
+        if (personaData.cuil && !isValidCuil(personaData.cuil)) {
+          setFieldErrors((prev) => ({ ...prev, cuil: 'CUIL inválido (11 dígitos + verificador)' }));
+        } else {
+          clearFieldError('cuil');
+        }
+        break;
+      case 'email': {
+        const errorEmail = validateEmailLive(personaData.email || '');
+        if (errorEmail) setFieldErrors((prev) => ({ ...prev, email: errorEmail }));
+        else clearFieldError('email');
+        break;
+      }
+      case 'telefono': {
+        const errorTelefono = validateTelefonoAR(personaData.telefono || '');
+        if (errorTelefono) setFieldErrors((prev) => ({ ...prev, telefono: errorTelefono }));
+        else clearFieldError('telefono');
+        break;
+      }
+      case 'celular': {
+        const errorCelular = validateTelefonoAR(personaData.celular || '');
+        if (errorCelular) setFieldErrors((prev) => ({ ...prev, celular: errorCelular }));
+        else clearFieldError('celular');
+        break;
+      }
+      case 'codigoPostal': {
+        const errorCp = validateCodigoPostalAR(personaData.codigoPostal || '');
+        if (errorCp) setFieldErrors((prev) => ({ ...prev, codigoPostal: errorCp }));
+        else clearFieldError('codigoPostal');
+        break;
+      }
+    }
+  };
+
+  // ---------- Paso 3: fechas del certificado ----------
+  const handleBlurValidateCertificado = (field: 'fechaEmision' | 'fechaVencimiento') => {
+    const error = validarFechasCertificadoAR(certificadoData.fechaEmision, certificadoData.fechaVencimiento || '');
+    // El error de fechas se asocia al campo de vencimiento (es la relación
+    // entre ambas fechas la que falla), salvo que la emisión sea futura por
+    // sí sola, en cuyo caso se marca en emisión.
+    const emisionFutura =
+      !!certificadoData.fechaEmision && new Date(certificadoData.fechaEmision) > new Date();
+    setFieldErrors((prev) => {
+      const next = { ...prev };
+      delete next.fechaEmision;
+      delete next.fechaVencimiento;
+      if (error) {
+        if (emisionFutura && field === 'fechaEmision') next.fechaEmision = error;
+        else next.fechaVencimiento = error;
+      }
+      return next;
+    });
   };
 
   const handleSubmitPaso1 = async () => {
@@ -305,6 +403,8 @@ export default function UploadPage() {
     if (!certificadoData.fechaEmision) errors.fechaEmision = 'Requerido';
     if (!certificadoData.tipoDiscapacidadId) errors.tipoDiscapacidadId = 'Requerido';
     if (!certificadoData.grado) errors.grado = 'Requerido';
+    const errorFechas = validarFechasCertificadoAR(certificadoData.fechaEmision, certificadoData.fechaVencimiento || '');
+    if (errorFechas) errors.fechaVencimiento = errorFechas;
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors);
       focusFirstError(errors);
@@ -431,19 +531,35 @@ export default function UploadPage() {
                 <Input
                   name="numeroDocumento"
                   value={personaData.numeroDocumento}
-                  onChange={(e) => setPersonaData({ ...personaData, numeroDocumento: e.target.value })}
+                  onChange={(e) => {
+                    const raw = e.target.value;
+                    const value =
+                      personaData.tipoDocumento === 'DNI'
+                        ? sanitizeDigits(raw, 8)
+                        : personaData.tipoDocumento === 'CUIL'
+                          ? sanitizeDigits(raw, 11)
+                          : raw;
+                    setPersonaData({ ...personaData, numeroDocumento: value });
+                  }}
+                  onBlur={() => handleBlurValidatePersona('numeroDocumento')}
+                  inputMode={personaData.tipoDocumento === 'DNI' || personaData.tipoDocumento === 'CUIL' ? 'numeric' : 'text'}
+                  maxLength={personaData.tipoDocumento === 'DNI' ? 8 : personaData.tipoDocumento === 'CUIL' ? 11 : undefined}
                   className="tabular-nums"
                   autoComplete="off"
                   aria-invalid={!!fieldErrors.numeroDocumento}
                 />
               </Field>
-              <Field label="CUIL">
+              <Field label="CUIL" error={fieldErrors.cuil}>
                 <Input
                   name="cuil"
                   value={personaData.cuil}
-                  onChange={(e) => setPersonaData({ ...personaData, cuil: e.target.value })}
+                  onChange={(e) => setPersonaData({ ...personaData, cuil: sanitizeDigits(e.target.value, 11) })}
+                  onBlur={() => handleBlurValidatePersona('cuil')}
+                  inputMode="numeric"
+                  maxLength={11}
                   className="tabular-nums"
                   autoComplete="off"
+                  aria-invalid={!!fieldErrors.cuil}
                 />
               </Field>
               <Field label="Fecha de nacimiento" required error={fieldErrors.fechaNacimiento}>
@@ -472,31 +588,41 @@ export default function UploadPage() {
                   emptyMessage="Sin estados civiles cargados"
                 />
               </Field>
-              <Field label="Email">
+              <Field label="Email" error={fieldErrors.email}>
                 <Input
                   type="email"
                   name="email"
                   value={personaData.email}
                   onChange={(e) => setPersonaData({ ...personaData, email: e.target.value })}
+                  onBlur={() => handleBlurValidatePersona('email')}
                   autoComplete="off"
+                  aria-invalid={!!fieldErrors.email}
                 />
               </Field>
-              <Field label="Teléfono">
+              <Field label="Teléfono" error={fieldErrors.telefono}>
                 <Input
                   name="telefono"
                   value={personaData.telefono}
-                  onChange={(e) => setPersonaData({ ...personaData, telefono: e.target.value })}
+                  onChange={(e) => setPersonaData({ ...personaData, telefono: sanitizeDigits(e.target.value, 13) })}
+                  onBlur={() => handleBlurValidatePersona('telefono')}
+                  inputMode="numeric"
+                  maxLength={13}
                   className="tabular-nums"
                   autoComplete="off"
+                  aria-invalid={!!fieldErrors.telefono}
                 />
               </Field>
-              <Field label="Celular">
+              <Field label="Celular" error={fieldErrors.celular}>
                 <Input
                   name="celular"
                   value={personaData.celular}
-                  onChange={(e) => setPersonaData({ ...personaData, celular: e.target.value })}
+                  onChange={(e) => setPersonaData({ ...personaData, celular: sanitizeDigits(e.target.value, 13) })}
+                  onBlur={() => handleBlurValidatePersona('celular')}
+                  inputMode="numeric"
+                  maxLength={13}
                   className="tabular-nums"
                   autoComplete="off"
+                  aria-invalid={!!fieldErrors.celular}
                 />
               </Field>
               <Field label="Dirección">
@@ -523,13 +649,16 @@ export default function UploadPage() {
                   autoComplete="off"
                 />
               </Field>
-              <Field label="Código postal">
+              <Field label="Código postal" error={fieldErrors.codigoPostal}>
                 <Input
                   name="codigoPostal-sistema"
                   value={personaData.codigoPostal}
-                  onChange={(e) => setPersonaData({ ...personaData, codigoPostal: e.target.value })}
+                  onChange={(e) => setPersonaData({ ...personaData, codigoPostal: e.target.value.slice(0, 8) })}
+                  onBlur={() => handleBlurValidatePersona('codigoPostal')}
+                  maxLength={8}
                   className="tabular-nums"
                   autoComplete="off"
+                  aria-invalid={!!fieldErrors.codigoPostal}
                 />
               </Field>
             </div>
@@ -633,17 +762,20 @@ export default function UploadPage() {
                   name="fechaEmision"
                   value={certificadoData.fechaEmision}
                   onChange={(e) => setCertificadoData({ ...certificadoData, fechaEmision: e.target.value })}
+                  onBlur={() => handleBlurValidateCertificado('fechaEmision')}
                   className="tabular-nums"
                   aria-invalid={!!fieldErrors.fechaEmision}
                 />
               </Field>
-              <Field label="Fecha de vencimiento">
+              <Field label="Fecha de vencimiento" error={fieldErrors.fechaVencimiento}>
                 <Input
                   type="date"
                   name="fechaVencimiento"
                   value={certificadoData.fechaVencimiento}
                   onChange={(e) => setCertificadoData({ ...certificadoData, fechaVencimiento: e.target.value })}
+                  onBlur={() => handleBlurValidateCertificado('fechaVencimiento')}
                   className="tabular-nums"
+                  aria-invalid={!!fieldErrors.fechaVencimiento}
                 />
               </Field>
               <div className="md:col-span-2">

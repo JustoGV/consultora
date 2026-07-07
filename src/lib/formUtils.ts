@@ -144,3 +144,148 @@ export function isValidFechaNacimiento(value: string): boolean {
 
   return true;
 }
+
+// ============================================
+// UX-9 — Validación anticipada con formatos argentinos
+// ============================================
+// Anticiparse a errores antes de crear: onChange filtra lo que NO puede ser
+// (letras en un DNI), onBlur avisa lo que SÍ se puede tipear pero está mal
+// (CUIL con verificador incorrecto). Ninguna de estas funciones bloquea el
+// tipeo por sí sola — sanitizeDigits es la única que filtra caracteres, y
+// solo en los campos numéricos donde aplica.
+
+/**
+ * Filtra todo lo que no sea dígito y corta a `max` caracteres. Pensada para
+ * usarse en `onChange` de campos numéricos (DNI, CUIL/CUIT, teléfono, celular,
+ * código postal numérico): el usuario físicamente no puede tipear letras ni
+ * exceder la longitud esperada.
+ *
+ * @example
+ * sanitizeDigits('12a3.456-7', 8) // -> '1234567'
+ */
+export function sanitizeDigits(value: string, max: number): string {
+  return value.replace(/\D/g, '').slice(0, max);
+}
+
+/**
+ * DNI argentino: 7 u 8 dígitos. Opcional en la mayoría de los formularios de
+ * terceros (efectores/profesionales no siempre piden DNI) — el llamador
+ * decide si es requerido; acá solo se valida el formato si hay contenido.
+ */
+export function validateDniAR(value: string): string | null {
+  if (!value.trim()) return null;
+  return /^\d{7,8}$/.test(value.trim()) ? null : 'DNI inválido (7 u 8 dígitos)';
+}
+
+/**
+ * CUIL/CUIT: 11 dígitos + dígito verificador módulo 11 (algoritmo estándar
+ * ARCA/AFIP). Unifica `isValidCuil` para reutilizarse tanto en CUIL de
+ * personas como en CUIT de profesionales/efectores — el algoritmo es idéntico.
+ */
+export function validateCuitCuil(value: string): string | null {
+  if (!value.trim()) return null;
+  return isValidCuil(value) ? null : 'CUIL/CUIT inválido (11 dígitos, verificá el número)';
+}
+
+/**
+ * Teléfono argentino (fijo o móvil con característica): opcional; si viene,
+ * solo dígitos, 6 a 13 dígitos. No exige formato de característica porque
+ * varía demasiado entre fijo/móvil/código de área — solo rango razonable de
+ * longitud.
+ */
+export function validateTelefonoAR(value: string): string | null {
+  if (!value.trim()) return null;
+  const digits = value.trim().replace(/\D/g, '');
+  return /^\d{6,13}$/.test(digits) ? null : 'Teléfono inválido (solo números, 6 a 13 dígitos)';
+}
+
+/**
+ * Código postal argentino: opcional; acepta 4 dígitos (formato clásico) o
+ * CPA (1 letra + 4 dígitos + 3 letras, case-insensitive, ej. C1425ABC).
+ */
+export function validateCodigoPostalAR(value: string): string | null {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  const esClasico = /^\d{4}$/.test(trimmed);
+  const esCPA = /^[a-zA-Z]\d{4}[a-zA-Z]{3}$/.test(trimmed);
+  return esClasico || esCPA ? null : 'Código postal inválido (4 dígitos o CPA, ej. C1425ABC)';
+}
+
+/** Email: opcional; formato básico (el backend valida con @IsEmail). */
+export function validateEmailLive(value: string): string | null {
+  if (!value.trim()) return null;
+  return isValidEmailFormat(value) ? null : 'Email inválido (ej: nombre@dominio.com)';
+}
+
+/**
+ * Matrícula profesional: requerida, 1-50 caracteres. Las matrículas
+ * provinciales varían mucho en formato (numéricas, alfanuméricas, con
+ * guiones/barras) — deliberadamente NO se inventa un patrón rígido, solo
+ * no-vacío + longitud razonable.
+ */
+export function validateMatricula(value: string): string | null {
+  const trimmed = value.trim();
+  if (!trimmed) return 'Requerido';
+  if (trimmed.length > 50) return 'Matrícula demasiado larga (máx. 50 caracteres)';
+  return null;
+}
+
+/**
+ * Valida el par fecha de emisión / fecha de vencimiento de un certificado:
+ * la emisión no puede ser futura, y si hay vencimiento cargado, debe ser
+ * posterior a la emisión. `emision`/`vencimiento` en formato `yyyy-mm-dd`
+ * (el value nativo de `<input type="date">`). Devuelve un mensaje único —
+ * el llamador decide en qué campo mostrarlo (normalmente vencimiento, salvo
+ * que la emisión en sí sea futura).
+ */
+export function validarFechasCertificadoAR(emision: string, vencimiento: string): string | null {
+  if (!emision) return null;
+  const fechaEmision = new Date(emision);
+  if (Number.isNaN(fechaEmision.getTime())) return null;
+
+  const hoy = new Date();
+  hoy.setHours(23, 59, 59, 999);
+  if (fechaEmision > hoy) return 'La fecha de emisión no puede ser futura';
+
+  if (vencimiento) {
+    const fechaVencimiento = new Date(vencimiento);
+    if (!Number.isNaN(fechaVencimiento.getTime()) && fechaVencimiento <= fechaEmision) {
+      return 'El vencimiento debe ser posterior a la emisión';
+    }
+  }
+  return null;
+}
+
+/**
+ * Fábrica de un `onBlur` genérico por campo: recibe un mapa de reglas
+ * (field -> validador que devuelve `string | null`) y un setter de
+ * fieldErrors, y devuelve una función `(field, value) => void` que setea o
+ * limpia el error de ese campo al vuelo. Evita repetir el mismo switch/case
+ * de "validar y setFieldErrors" en cada formulario.
+ *
+ * @example
+ * const validateOnBlur = createBlurValidator(
+ *   { email: validateEmailLive, telefono: validateTelefonoAR },
+ *   setFieldErrors
+ * );
+ * <Input onBlur={() => validateOnBlur('email', formData.email)} />
+ */
+export function createBlurValidator<F extends string>(
+  rules: Partial<Record<F, (value: string) => string | null>>,
+  setFieldErrors: React.Dispatch<React.SetStateAction<Record<string, string>>>
+) {
+  return (field: F, value: string) => {
+    const rule = rules[field];
+    if (!rule) return;
+    const message = rule(value);
+    setFieldErrors((prev) => {
+      if (!message) {
+        if (!(field in prev)) return prev;
+        const next = { ...prev };
+        delete next[field];
+        return next;
+      }
+      return { ...prev, [field]: message };
+    });
+  };
+}

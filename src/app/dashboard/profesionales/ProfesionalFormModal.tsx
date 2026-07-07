@@ -5,6 +5,13 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Profesional, CreateProfesionalDto } from '@/types';
 import { profesionalesService } from '@/services/profesionalesService';
 import { mapServerErrors } from '@/lib/errorUtils';
+import {
+  sanitizeDigits,
+  validateMatricula,
+  validateCuitCuil,
+  validateTelefonoAR,
+  validateEmailLive,
+} from '@/lib/formUtils';
 import { CheckCircle2, Loader2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { useFormKeyboard } from '@/hooks/useFormKeyboard';
@@ -106,11 +113,44 @@ export default function ProfesionalFormModal({
     setFormData((prev) => ({ ...prev, [key]: value }));
   };
 
+  const clearFieldError = (key: string) => {
+    setFieldErrors((prev) => {
+      if (!(key in prev)) return prev;
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+  };
+
+  // UX-9 — validación en vivo onBlur (también se dispara al saltar con Enter).
+  const handleBlurValidate = (field: 'matricula' | 'cuit' | 'telefono' | 'email') => {
+    const value = formData[field] || '';
+    const validators: Record<typeof field, (v: string) => string | null> = {
+      matricula: validateMatricula,
+      cuit: validateCuitCuil,
+      telefono: validateTelefonoAR,
+      email: validateEmailLive,
+    };
+    const error = validators[field](value);
+    if (error) {
+      setFieldErrors((prev) => ({ ...prev, [field]: error }));
+    } else {
+      clearFieldError(field);
+    }
+  };
+
   const validateAll = (): Record<string, string> => {
     const errors: Record<string, string> = {};
     if (!formData.nombre.trim()) errors.nombre = 'Requerido';
     if (!formData.apellido.trim()) errors.apellido = 'Requerido';
-    if (!formData.matricula.trim()) errors.matricula = 'Requerido';
+    const errorMatricula = validateMatricula(formData.matricula);
+    if (errorMatricula) errors.matricula = errorMatricula;
+    const errorCuit = validateCuitCuil(formData.cuit || '');
+    if (errorCuit) errors.cuit = errorCuit;
+    const errorTelefono = validateTelefonoAR(formData.telefono || '');
+    if (errorTelefono) errors.telefono = errorTelefono;
+    const errorEmail = validateEmailLive(formData.email || '');
+    if (errorEmail) errors.email = errorEmail;
     return errors;
   };
 
@@ -220,6 +260,8 @@ export default function ProfesionalFormModal({
                 name="matricula"
                 value={formData.matricula}
                 onChange={(e) => setField('matricula', e.target.value)}
+                onBlur={() => handleBlurValidate('matricula')}
+                maxLength={50}
                 className="tabular-nums"
                 autoComplete="off"
                 aria-invalid={!!fieldErrors.matricula}
@@ -240,19 +282,26 @@ export default function ProfesionalFormModal({
               <Input
                 name="cuit"
                 value={formData.cuit}
-                onChange={(e) => setField('cuit', e.target.value)}
+                onChange={(e) => setField('cuit', sanitizeDigits(e.target.value, 11))}
+                onBlur={() => handleBlurValidate('cuit')}
+                inputMode="numeric"
+                maxLength={11}
                 className="tabular-nums"
                 autoComplete="off"
                 aria-invalid={!!fieldErrors.cuit}
               />
             </Field>
-            <Field label="Teléfono">
+            <Field label="Teléfono" error={fieldErrors.telefono}>
               <Input
                 name="telefono"
                 value={formData.telefono}
-                onChange={(e) => setField('telefono', e.target.value)}
+                onChange={(e) => setField('telefono', sanitizeDigits(e.target.value, 13))}
+                onBlur={() => handleBlurValidate('telefono')}
+                inputMode="numeric"
+                maxLength={13}
                 className="tabular-nums"
                 autoComplete="off"
+                aria-invalid={!!fieldErrors.telefono}
               />
             </Field>
           </div>
@@ -264,6 +313,7 @@ export default function ProfesionalFormModal({
                 name="email"
                 value={formData.email}
                 onChange={(e) => setField('email', e.target.value)}
+                onBlur={() => handleBlurValidate('email')}
                 autoComplete="off"
                 aria-invalid={!!fieldErrors.email}
               />
