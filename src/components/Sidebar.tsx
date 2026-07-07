@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import type { LucideIcon } from "lucide-react";
 import {
@@ -12,7 +13,6 @@ import {
   BarChart3,
   ClipboardList,
   LogOut,
-  Activity,
   Bell,
   Heart,
   Link2,
@@ -188,28 +188,33 @@ export default function Sidebar({
         collapsed ? "w-16" : "w-64"
       )}
     >
-      {/* Marca GV-G — tile de acento cyan + wordmark Fraunces */}
+      {/* Marca GV-G — logo real (variante blanca para fondo ink-deep) */}
       <div
         className={cn(
-          "flex h-14 shrink-0 items-center border-b border-[var(--neutral-800)]",
-          collapsed ? "justify-center px-0" : "gap-2.5 px-4"
+          "flex h-16 shrink-0 items-center border-b border-[var(--neutral-800)]",
+          collapsed ? "justify-center px-1" : "gap-2.5 px-4"
         )}
       >
-        <div className="flex size-8 shrink-0 items-center justify-center bg-[var(--accent-ink)]">
-          <Activity className="size-[18px] text-white" />
-        </div>
+        {/* The brand PNGs are square with internal padding; constrain by height
+            and let width follow to keep the mark crisp. */}
+        <Image
+          src="/logo-gvg-footer.png"
+          alt="GV-G Consulting"
+          width={512}
+          height={512}
+          priority
+          className={cn(
+            "w-auto object-contain",
+            collapsed ? "h-10" : "h-12"
+          )}
+        />
         {!collapsed && (
-          <div className="leading-tight">
-            <p
-              className="text-[15px] font-medium tracking-tight text-white"
-              style={{ fontFamily: "var(--font-display)" }}
-            >
-              GV-G Consulting
-            </p>
-            <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--sidebar-fg-muted)]" style={{ fontFamily: "var(--font-mono)" }}>
-              Gestión de salud
-            </p>
-          </div>
+          <p
+            className="text-[10px] uppercase tracking-[0.14em] text-[var(--sidebar-fg-muted)]"
+            style={{ fontFamily: "var(--font-mono)" }}
+          >
+            Gestión de discapacidad
+          </p>
         )}
       </div>
 
