@@ -120,7 +120,7 @@ export default function Topbar({
 
         {/* Identidad del usuario (menú completo llega con UX posteriores) */}
         <div className="flex items-center gap-2 pl-0.5">
-          <div className="flex size-8 items-center justify-center rounded-full bg-[var(--primary-600)] text-xs font-semibold text-white">
+          <div className="flex size-8 items-center justify-center bg-[var(--accent-ink)] text-xs font-semibold text-white tabular-nums">
             {initials}
           </div>
           <div className="hidden leading-tight lg:block">

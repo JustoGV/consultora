@@ -8,7 +8,8 @@ import Image from 'next/image';
 import { Fraunces, Inter, JetBrains_Mono } from 'next/font/google';
 import { Eye, EyeOff, ShieldAlert, WifiOff } from 'lucide-react';
 
-// Tipografía de marca GV-G — cargada SOLO en esta página (el resto del app usa Lexend).
+// Tipografía de marca GV-G — cargada en esta página con sus propias variables
+// scoped (el resto del app la carga en layout.tsx con los mismos tres tipos).
 // Fraunces = voz display de la marca · Inter = UI/body · JetBrains Mono = eyebrows/metadata.
 const fraunces = Fraunces({
   subsets: ['latin'],
@@ -168,16 +169,16 @@ export default function LoginPage() {
                 style={{ '--d': '160ms' } as React.CSSProperties}
                 data-in={mounted}
               >
-                Consultoría estratégica de salud · Argentina
+                Sistema de gestión de discapacidad
               </p>
               <h1
                 className="gvg-reveal gvg-display"
                 style={{ '--d': '240ms' } as React.CSSProperties}
                 data-in={mounted}
               >
-                Análisis verificable.
+                Certificados al día.
                 <br />
-                <em>Decisiones defendibles.</em>
+                <em>Alertas que se anticipan.</em>
               </h1>
               <div
                 className="gvg-reveal gvg-accent-line"
@@ -190,8 +191,9 @@ export default function LoginPage() {
                 style={{ '--d': '520ms' } as React.CSSProperties}
                 data-in={mounted}
               >
-                Consultoría para Obras Sociales, Prepagas y Hospitales. Gestión de
-                discapacidad, certificados y alertas proactivas en un solo lugar.
+                Pacientes, certificados de discapacidad y coberturas en un solo
+                lugar. La plataforma anticipa vencimientos y límites de edad antes
+                de que ocurran, para obras sociales, prepagas y hospitales.
               </p>
             </div>
 
@@ -201,7 +203,7 @@ export default function LoginPage() {
               data-in={mounted}
             >
               <span>Acceso exclusivo para personal autorizado</span>
-              <span className="gvg-mono-meta">v2 · 2026</span>
+              <span className="gvg-mono-meta">Desarrollado por GV-G Consulting</span>
             </p>
           </div>
         </aside>
@@ -213,22 +215,8 @@ export default function LoginPage() {
           <div className="gvg-form-grid" aria-hidden="true" />
 
           <div className="gvg-form-wrap">
-            {/* Logo para fondo claro — solo desktop (en mobile ya está en la franja) */}
-            <div
-              className="gvg-reveal gvg-form-logo"
-              style={{ '--d': '80ms' } as React.CSSProperties}
-              data-in={mounted}
-            >
-              <Image
-                src="/logo-gvg.png"
-                alt="GV-G Consulting"
-                width={540}
-                height={540}
-                priority
-                className="gvg-logo-img"
-              />
-            </div>
-
+            {/* El logo vive SOLO en el panel de marca izquierdo — acá alcanza con
+                el eyebrow "ACCESO AL SISTEMA" + el título. */}
             <div className="gvg-card">
               <div className="gvg-card-rule" aria-hidden="true" />
 
@@ -357,9 +345,9 @@ export default function LoginPage() {
               style={{ '--d': '540ms' } as React.CSSProperties}
               data-in={mounted}
             >
-              <span className="gvg-mono-meta">GV-G CONSULTING</span>
+              <span className="gvg-mono-meta">Sistema de gestión de discapacidad</span>
               <span className="gvg-foot-dot" aria-hidden="true" />
-              <span className="gvg-mono-meta">Análisis verificable. Decisiones defendibles.</span>
+              <span className="gvg-mono-meta">Desarrollado por GV-G Consulting</span>
             </p>
           </div>
         </main>
@@ -371,7 +359,7 @@ export default function LoginPage() {
 /* ============================================================
    Estilos de marca GV-G — scoped a `.gvg`. Radius 0, bordes 1px rule,
    sombra editorial, grid-lines, noise, motion editorial (cubic-bezier
-   0.22,1,0.36,1). No toca el design system global (Lexend).
+   0.22,1,0.36,1). Scoped a `.gvg` — no depende del design system global.
    ============================================================ */
 const gvgStyles = `
 .gvg {
@@ -454,7 +442,6 @@ const gvgStyles = `
   object-fit: contain;
   margin: -0.9rem 0 -0.9rem -0.65rem;
 }
-.gvg .gvg-form-logo .gvg-logo-img { height: 4.75rem; }
 
 .gvg-eyebrow {
   font-family: var(--font-mono-gvg), ui-monospace, monospace;
@@ -533,9 +520,8 @@ const gvgStyles = `
 .gvg-form-wrap {
   position: relative;
   width: 100%;
-  max-width: 25rem;
+  max-width: 32rem;
 }
-.gvg-form-logo { display: none; margin-bottom: 1.5rem; }
 
 .gvg-card {
   position: relative;
@@ -549,29 +535,29 @@ const gvgStyles = `
   height: 3px;
   background: linear-gradient(90deg, hsl(var(--accent)), hsl(var(--accent-bright)) 60%, hsl(var(--accent-ink)));
 }
-.gvg-card-body { padding: 2rem 1.75rem 1.875rem; }
+.gvg-card-body { padding: 2.75rem 2.5rem 2.5rem; }
 
 .gvg-title {
   font-family: var(--font-fraunces), Georgia, serif;
   font-weight: 400;
-  font-size: 1.875rem;
-  line-height: 1.05;
-  letter-spacing: -0.02em;
+  font-size: 2.375rem;
+  line-height: 1.02;
+  letter-spacing: -0.025em;
   color: hsl(var(--ink));
-  margin: 0.625rem 0 0;
+  margin: 0.75rem 0 0;
 }
 .gvg-title-sub {
-  font-size: 0.875rem;
+  font-size: 0.9375rem;
   line-height: 1.5;
   color: hsl(var(--ink-soft));
-  margin: 0.5rem 0 0;
+  margin: 0.625rem 0 0;
 }
 
 .gvg-form {
   display: flex;
   flex-direction: column;
-  gap: 1.125rem;
-  margin-top: 1.75rem;
+  gap: 1.375rem;
+  margin-top: 2rem;
 }
 .gvg-field { display: flex; flex-direction: column; }
 .gvg-label {
@@ -589,19 +575,19 @@ const gvgStyles = `
 .gvg-input-wrap { position: relative; }
 .gvg-input {
   width: 100%;
-  height: 2.875rem;
-  padding: 0 0.875rem;
+  height: 3.25rem;
+  padding: 0 1rem;
   border: 1px solid hsl(var(--rule-strong));
   border-radius: 0;
   background: hsl(var(--canvas));
   color: hsl(var(--ink));
   font-family: var(--font-inter), system-ui, sans-serif;
-  font-size: 0.9375rem;
+  font-size: 1rem;
   line-height: 1.2;
   outline: none;
   transition: border-color 250ms var(--ease-ed), background-color 250ms var(--ease-ed);
 }
-.gvg-input-pw { padding-right: 2.75rem; }
+.gvg-input-pw { padding-right: 3rem; }
 .gvg-input::placeholder { color: hsl(var(--dim) / 0.7); }
 .gvg-input:hover { border-color: hsl(var(--ink-soft) / 0.55); }
 .gvg-input:focus { border-color: hsl(var(--accent)); }
@@ -626,8 +612,8 @@ const gvgStyles = `
 .gvg-pw-toggle {
   position: absolute;
   top: 0; right: 0;
-  height: 2.875rem;
-  width: 2.75rem;
+  height: 3.25rem;
+  width: 3rem;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -674,13 +660,13 @@ const gvgStyles = `
 .gvg-submit {
   position: relative;
   width: 100%;
-  height: 3rem;
+  height: 3.5rem;
   border: 0;
   border-radius: 0;
   background: hsl(var(--ink-deep));
   color: hsl(var(--canvas));
   font-family: var(--font-inter), system-ui, sans-serif;
-  font-size: 0.9375rem;
+  font-size: 1rem;
   font-weight: 500;
   letter-spacing: 0.01em;
   cursor: pointer;
@@ -783,18 +769,17 @@ const gvgStyles = `
 @media (min-width: 1024px) {
   .gvg-root { flex-direction: row; height: 100dvh; }
   .gvg-brand {
-    width: 56%;
+    width: 50%;
     padding: 3rem 3.25rem;
   }
   .gvg-brand-inner { justify-content: space-between; gap: 2rem; }
   .gvg-logo-img { height: 2.75rem; }
   .gvg-brand-sub { font-size: 0.9375rem; }
-  .gvg-form-side { width: 44%; padding: 3rem; }
-  .gvg-form-logo { display: block; }
+  .gvg-form-side { width: 50%; padding: 3rem; }
 }
 @media (min-width: 1280px) {
   .gvg-brand { padding: 4rem 4.5rem; }
-  .gvg-form-side { padding: 4rem; }
+  .gvg-form-side { padding: 4rem 4.5rem; }
 }
 
 /* Mobile: franja de marca compacta, sin headline gigante ni pie. */

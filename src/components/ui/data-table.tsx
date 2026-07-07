@@ -269,7 +269,7 @@ function DataTableEmpty({
 }) {
   return (
     <div className="flex flex-col items-center justify-center gap-3 px-6 py-16 text-center">
-      <div className="flex size-12 items-center justify-center rounded-full bg-[var(--surface-sunken)] text-[var(--fg-subtle)]">
+      <div className="flex size-12 items-center justify-center border border-[var(--border)] bg-[var(--surface-sunken)] text-[var(--fg-subtle)]">
         {icon ?? <Inbox className="size-6" aria-hidden />}
       </div>
       <div className="space-y-1">

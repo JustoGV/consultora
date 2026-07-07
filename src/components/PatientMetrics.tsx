@@ -158,11 +158,12 @@ export default function PatientMetrics({ patients }: PatientMetricsProps) {
     };
   }, [metrics]);
 
-  // Colores para los gráficos - Admindek Style
-  const GENDER_COLORS = ['#4680ff', '#ff5370', '#adb5bd'];
-  const AGE_COLORS = '#2ed8b6';
-  const DISABILITY_TYPE_COLORS = '#4680ff';
-  const LEVEL_COLORS = ['#ffb64d', '#ff9226', '#ff5370', '#e63757'];
+  // Paleta de gráficos — familia de marca GV-G (cyan/ink + neutrales).
+  // El semáforo (rojo/ámbar/verde) NO se usa aquí: estas son series de datos, no severidad.
+  const GENDER_COLORS = ['#0d7791', '#07b6d5', '#8298b0'];
+  const AGE_COLORS = '#0d7791';
+  const DISABILITY_TYPE_COLORS = '#0d7791';
+  const LEVEL_COLORS = ['#aae5ee', '#07b6d5', '#0d7791', '#193c57'];
 
   return (
     <div className="space-y-6">
@@ -175,8 +176,8 @@ export default function PatientMetrics({ patients }: PatientMetricsProps) {
               <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Total Pacientes</p>
               <p className="text-3xl font-bold text-gray-900">{metrics.total}</p>
             </div>
-            <div className="p-3 bg-blue-50 rounded-lg">
-              <UserGroupIcon className="w-8 h-8 text-[#4680ff]" />
+            <div className="p-3 bg-[var(--accent-wash)]">
+              <UserGroupIcon className="w-8 h-8 text-[var(--accent-ink)]" />
             </div>
           </div>
         </div>
@@ -188,8 +189,8 @@ export default function PatientMetrics({ patients }: PatientMetricsProps) {
               <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Certificados Activos</p>
               <p className="text-3xl font-bold text-gray-900">{metrics.activeCertificates}</p>
             </div>
-            <div className="p-3 bg-teal-50 rounded-lg">
-              <DocumentTextIcon className="w-8 h-8 text-[#2ed8b6]" />
+            <div className="p-3 bg-[var(--accent-soft)]">
+              <DocumentTextIcon className="w-8 h-8 text-[var(--accent-ink)]" />
             </div>
           </div>
         </div>
@@ -201,8 +202,8 @@ export default function PatientMetrics({ patients }: PatientMetricsProps) {
               <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Por Renovar</p>
               <p className="text-3xl font-bold text-gray-900">{metrics.expiredCertificates}</p>
             </div>
-            <div className="p-3 bg-orange-50 rounded-lg">
-              <ClockIcon className="w-8 h-8 text-[#ffb64d]" />
+            <div className="p-3 bg-[var(--surface-sunken)]">
+              <ClockIcon className="w-8 h-8 text-[var(--neutral-600)]" />
             </div>
           </div>
         </div>
@@ -214,8 +215,8 @@ export default function PatientMetrics({ patients }: PatientMetricsProps) {
               <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Edad Promedio</p>
               <p className="text-3xl font-bold text-gray-900">{metrics.avgAge} <span className="text-lg text-gray-500">años</span></p>
             </div>
-            <div className="p-3 bg-gray-100 rounded-lg">
-              <ChartBarIcon className="w-8 h-8 text-gray-600" />
+            <div className="p-3 bg-[var(--surface-sunken)]">
+              <ChartBarIcon className="w-8 h-8 text-[var(--neutral-600)]" />
             </div>
           </div>
         </div>
@@ -227,8 +228,8 @@ export default function PatientMetrics({ patients }: PatientMetricsProps) {
         {/* Distribución por Género - Pie Chart */}
         <div className="bg-white rounded-lg shadow-sm p-5 border border-gray-200">
           <div className="flex items-center gap-2 mb-5">
-            <div className="p-2 bg-blue-50 rounded-lg">
-              <UserGroupIcon className="w-5 h-5 text-[#4680ff]" />
+            <div className="p-2 bg-[var(--accent-wash)]">
+              <UserGroupIcon className="w-5 h-5 text-[var(--accent-ink)]" />
             </div>
             <div>
               <h3 className="text-base font-semibold text-gray-900">Distribución por Género</h3>
@@ -259,8 +260,8 @@ export default function PatientMetrics({ patients }: PatientMetricsProps) {
         {/* Distribución por Edad - Bar Chart */}
         <div className="bg-white rounded-lg shadow-sm p-5 border border-gray-200">
           <div className="flex items-center gap-2 mb-5">
-            <div className="p-2 bg-teal-50 rounded-lg">
-              <ChartBarIcon className="w-5 h-5 text-[#2ed8b6]" />
+            <div className="p-2 bg-[var(--accent-soft)]">
+              <ChartBarIcon className="w-5 h-5 text-[var(--accent-ink)]" />
             </div>
             <div>
               <h3 className="text-base font-semibold text-gray-900">Distribución por Edad</h3>
@@ -289,8 +290,8 @@ export default function PatientMetrics({ patients }: PatientMetricsProps) {
         {/* Tipo de Discapacidad - Bar Chart */}
         <div className="bg-white rounded-lg shadow-sm p-5 border border-gray-200">
           <div className="flex items-center gap-2 mb-5">
-            <div className="p-2 bg-blue-50 rounded-lg">
-              <DocumentTextIcon className="w-5 h-5 text-[#4680ff]" />
+            <div className="p-2 bg-[var(--accent-wash)]">
+              <DocumentTextIcon className="w-5 h-5 text-[var(--accent-ink)]" />
             </div>
             <div>
               <h3 className="text-base font-semibold text-gray-900">Tipo de Discapacidad</h3>
@@ -319,8 +320,8 @@ export default function PatientMetrics({ patients }: PatientMetricsProps) {
         {/* Nivel de Discapacidad - Pie Chart */}
         <div className="bg-white rounded-lg shadow-sm p-5 border border-gray-200">
           <div className="flex items-center gap-2 mb-5">
-            <div className="p-2 bg-orange-50 rounded-lg">
-              <ChartBarIcon className="w-5 h-5 text-[#ffb64d]" />
+            <div className="p-2 bg-[var(--surface-sunken)]">
+              <ChartBarIcon className="w-5 h-5 text-[var(--neutral-600)]" />
             </div>
             <div>
               <h3 className="text-base font-semibold text-gray-900">Nivel de Discapacidad</h3>
@@ -356,8 +357,8 @@ export default function PatientMetrics({ patients }: PatientMetricsProps) {
       {/* Certificados por Mes - Line Chart */}
       <div className="bg-white rounded-lg shadow-sm p-5 border border-gray-200">
         <div className="flex items-center gap-2 mb-5">
-          <div className="p-2 bg-gray-100 rounded-lg">
-            <ChartBarIcon className="w-5 h-5 text-gray-600" />
+          <div className="p-2 bg-[var(--surface-sunken)]">
+            <ChartBarIcon className="w-5 h-5 text-[var(--neutral-600)]" />
           </div>
           <div>
             <h3 className="text-base font-semibold text-gray-900">Tendencia Mensual</h3>
@@ -379,12 +380,12 @@ export default function PatientMetrics({ patients }: PatientMetricsProps) {
               }}
             />
             <Legend wrapperStyle={{ fontSize: '13px' }} />
-            <Line 
-              type="monotone" 
-              dataKey="certificados" 
-              stroke="#4680ff" 
+            <Line
+              type="monotone"
+              dataKey="certificados"
+              stroke="#0d7791"
               strokeWidth={2}
-              dot={{ fill: '#4680ff', r: 4 }}
+              dot={{ fill: '#0d7791', r: 4 }}
               activeDot={{ r: 6 }}
             />
           </LineChart>

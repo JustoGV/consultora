@@ -156,9 +156,9 @@ export default function Sidebar({
             : "text-[var(--sidebar-fg)] hover:bg-[var(--sidebar-hover-bg)] hover:text-white"
         )}
       >
-        {/* Barra de estado activo a la izquierda (grid-break sutil) */}
+        {/* Barra de estado activo a la izquierda — línea de acento cyan (marca) */}
         {isActive && !collapsed && (
-          <span className="absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-full bg-white/80" />
+          <span className="absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 bg-[var(--accent-bright)]" />
         )}
         <span className="relative shrink-0">
           <Icon className="size-[18px]" />
@@ -188,21 +188,26 @@ export default function Sidebar({
         collapsed ? "w-16" : "w-64"
       )}
     >
-      {/* Marca */}
+      {/* Marca GV-G — tile de acento cyan + wordmark Fraunces */}
       <div
         className={cn(
           "flex h-14 shrink-0 items-center border-b border-[var(--neutral-800)]",
           collapsed ? "justify-center px-0" : "gap-2.5 px-4"
         )}
       >
-        <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-[var(--primary-600)] shadow-sm">
+        <div className="flex size-8 shrink-0 items-center justify-center bg-[var(--accent-ink)]">
           <Activity className="size-[18px] text-white" />
         </div>
         {!collapsed && (
           <div className="leading-tight">
-            <p className="text-sm font-semibold text-white">GV-G Consulting</p>
-            <p className="text-[11px] text-[var(--sidebar-fg-muted)]">
-              Sistema de gestión
+            <p
+              className="text-[15px] font-medium tracking-tight text-white"
+              style={{ fontFamily: "var(--font-display)" }}
+            >
+              GV-G Consulting
+            </p>
+            <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--sidebar-fg-muted)]" style={{ fontFamily: "var(--font-mono)" }}>
+              Gestión de salud
             </p>
           </div>
         )}
