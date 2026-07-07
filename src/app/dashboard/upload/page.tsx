@@ -21,7 +21,7 @@ import { estadoCivilService } from '@/services/estadoCivilService';
 import { obrasSocialesService } from '@/services/obrasSocialesService';
 import { administradoraService } from '@/services/administradoraService';
 import { tipoDiscapacidadService } from '@/services/tipoDiscapacidadService';
-import { CheckCircle2, FilePlus2, Check } from 'lucide-react';
+import { CheckCircle2, FilePlus2, Check, Loader2 } from 'lucide-react';
 import SearchableSelect from '@/components/SearchableSelect';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -678,6 +678,7 @@ export default function UploadPage() {
             </Button>
           )}
           <Button type="button" onClick={handleSubmitStep} disabled={loading}>
+            {loading && <Loader2 className="size-4 animate-spin" />}
             {loading ? 'Guardando…' : step === 3 ? 'Crear certificado' : 'Continuar'}
           </Button>
         </div>

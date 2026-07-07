@@ -19,7 +19,7 @@ import { useContinuousCreate } from '@/hooks/useContinuousCreate';
 import SearchableSelect from '@/components/SearchableSelect';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { AlertTriangle, ExternalLink, CheckCircle2 } from 'lucide-react';
+import { AlertTriangle, ExternalLink, CheckCircle2, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 
 const TIPOS_DOCUMENTO: { value: TipoDocumento; label: string }[] = [
@@ -588,6 +588,7 @@ export default function PacienteFormModal({
               Cancelar
             </Button>
             <Button type="submit" disabled={saving}>
+              {saving && <Loader2 className="size-4 animate-spin" />}
               {saving ? 'Guardando…' : isEditing ? 'Actualizar' : 'Crear'}
             </Button>
           </div>

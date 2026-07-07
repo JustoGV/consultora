@@ -5,7 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Profesional, CreateProfesionalDto } from '@/types';
 import { profesionalesService } from '@/services/profesionalesService';
 import { mapServerErrors } from '@/lib/errorUtils';
-import { CheckCircle2 } from 'lucide-react';
+import { CheckCircle2, Loader2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { useFormKeyboard } from '@/hooks/useFormKeyboard';
 import { useContinuousCreate } from '@/hooks/useContinuousCreate';
@@ -314,6 +314,7 @@ export default function ProfesionalFormModal({
                 Cancelar
               </Button>
               <Button type="submit" disabled={saving}>
+                {saving && <Loader2 className="size-4 animate-spin" />}
                 {saving ? 'Guardando…' : isEditing ? 'Actualizar' : 'Crear'}
               </Button>
             </div>

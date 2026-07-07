@@ -7,6 +7,7 @@ import { afiliacionesService } from '@/services/afiliacionesService';
 import { obrasSocialesService } from '@/services/obrasSocialesService';
 import { administradoraService } from '@/services/administradoraService';
 import { mapServerErrors } from '@/lib/errorUtils';
+import { Loader2 } from 'lucide-react';
 import { sortByFrequency, bumpFrequency, OBRA_SOCIAL_FREQUENCY_NS } from '@/lib/frequency';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { useFormKeyboard } from '@/hooks/useFormKeyboard';
@@ -243,6 +244,7 @@ export default function AfiliacionFormModal({
               Cancelar
             </Button>
             <Button type="submit" disabled={saving}>
+              {saving && <Loader2 className="size-4 animate-spin" />}
               {saving ? 'Guardando…' : 'Agregar'}
             </Button>
           </div>
