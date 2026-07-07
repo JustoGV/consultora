@@ -94,6 +94,11 @@
   --sidebar-fg-muted: var(--neutral-200);
   --sidebar-active-bg: var(--primary-600);
   --sidebar-hover-bg: var(--neutral-800);
+  /* UX-10: los eyebrows (etiquetas de sección + nombre del tenant) se
+     distinguen por COLOR DE MARCA, no por gris — el gris casi-blanco no
+     "cantaba" a título. --primary-300 sobre --sidebar-bg (#1c1a16) da
+     ~11.2:1 (>= 7:1 exigido). */
+  --sidebar-section-fg: var(--primary-300);
   --topbar-bg: var(--surface-primary);
 
   /* --- Sombras — mayormente planas + una elevación considerada --- */

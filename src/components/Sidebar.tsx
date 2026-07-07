@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
@@ -9,7 +10,6 @@ import {
   FilePlus2,
   FolderOpen,
   Users,
-  Settings,
   BarChart3,
   ClipboardList,
   LogOut,
@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 
 import { useAuth } from "@/contexts/AuthContext";
+import { administradoraService } from "@/services/administradoraService";
 import { cn } from "@/lib/utils";
 import {
   Tooltip,
@@ -38,7 +39,7 @@ type MenuItem = {
   name: string;
   href: string;
   icon: LucideIcon;
-  section: "main" | "gestion" | "certificados" | "catalogos" | "config";
+  section: "main" | "gestion" | "certificados" | "catalogos";
 };
 
 const SECTION_LABELS: Record<MenuItem["section"], string> = {
@@ -46,7 +47,6 @@ const SECTION_LABELS: Record<MenuItem["section"], string> = {
   gestion: "Gestión",
   certificados: "Certificados",
   catalogos: "Catálogos",
-  config: "Config",
 };
 
 /**
@@ -61,12 +61,39 @@ export default function Sidebar({
 }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { logout, isAdmin, isSuperAdmin } = useAuth();
+  const { user, logout, isAdmin, isSuperAdmin } = useAuth();
 
   const handleLogout = () => {
     logout();
     router.push("/login");
   };
+
+  // UX-10: nombre del tenant junto al logo, reemplaza el genérico "Sistema de
+  // gestión". Superadmin (sin administradoraId) → nombre de la marca propia.
+  // Mientras carga o si falla, no se muestra nada (evita flicker de texto genérico).
+  const [fetchedTenantName, setFetchedTenantName] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!user?.administradoraId) return;
+    let cancelled = false;
+    administradoraService
+      .getById(user.administradoraId)
+      .then((administradora) => {
+        if (!cancelled) setFetchedTenantName(administradora.nombre);
+      })
+      .catch(() => {
+        if (!cancelled) setFetchedTenantName(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.administradoraId]);
+
+  const tenantName = !user
+    ? null
+    : !user.administradoraId
+      ? "GV-G Consulting"
+      : fetchedTenantName;
 
   const userMenuItems: MenuItem[] = [
     { name: "Inicio", href: "/dashboard", icon: Home, section: "main" },
@@ -98,8 +125,6 @@ export default function Sidebar({
     { name: "Prestadores", href: "/dashboard/prestadores", icon: Users, section: "catalogos" },
     { name: "Orientación Prestacional", href: "/dashboard/orientacion-prestacional", icon: Link2, section: "catalogos" },
     { name: "Obras Sociales", href: "/dashboard/obras-sociales", icon: Landmark, section: "catalogos" },
-
-    { name: "Configuración", href: "/dashboard/settings", icon: Settings, section: "config" },
   ];
 
   // Menú Admin de Obra Social (con Reportes; sin acceso a Configuración global)
@@ -124,8 +149,6 @@ export default function Sidebar({
     { name: "Prestadores", href: "/dashboard/prestadores", icon: Users, section: "catalogos" },
     { name: "Orientación Prestacional", href: "/dashboard/orientacion-prestacional", icon: Link2, section: "catalogos" },
     { name: "Obras Sociales", href: "/dashboard/obras-sociales", icon: Landmark, section: "catalogos" },
-
-    { name: "Configuración", href: "/dashboard/settings", icon: Settings, section: "config" },
   ];
 
   const menuItems = isSuperAdmin
@@ -136,7 +159,7 @@ export default function Sidebar({
 
   const isPrivileged = isAdmin || isSuperAdmin;
   const sectionOrder: MenuItem["section"][] = isPrivileged
-    ? ["main", "gestion", "certificados", "catalogos", "config"]
+    ? ["main", "gestion", "certificados", "catalogos"]
     : ["main"];
 
   const renderItem = (item: MenuItem) => {
@@ -207,9 +230,9 @@ export default function Sidebar({
           priority
           className={cn("w-auto object-contain", collapsed ? "h-10" : "h-12")}
         />
-        {!collapsed && (
-          <p className="text-[11px] text-[var(--sidebar-fg-muted)]">
-            Sistema de gestión
+        {!collapsed && tenantName && (
+          <p className="truncate text-[12px] font-bold uppercase tracking-wider text-[var(--sidebar-section-fg)]">
+            {tenantName}
           </p>
         )}
       </div>
@@ -222,8 +245,9 @@ export default function Sidebar({
           return (
             <div key={section} className={cn(idx > 0 && "mt-5")}>
               {!collapsed && (
-                <p className="mb-1.5 px-3 text-[11px] font-semibold uppercase tracking-wider text-[var(--sidebar-fg-muted)]">
+                <p className="mb-1.5 flex items-center gap-2 px-3 text-[12px] font-bold uppercase tracking-wider text-[var(--sidebar-section-fg)]">
                   {SECTION_LABELS[section]}
+                  <span className="h-px flex-1 bg-[color-mix(in_srgb,var(--sidebar-section-fg)_35%,transparent)]" aria-hidden />
                 </p>
               )}
               {collapsed && idx > 0 && (

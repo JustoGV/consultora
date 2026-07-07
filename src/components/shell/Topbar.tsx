@@ -2,11 +2,19 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Search, Menu } from "lucide-react";
+import { Search, Menu, ChevronDown, Settings, LogOut } from "lucide-react";
 
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 import AlertBell from "@/components/shell/AlertBell";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
 
 /**
  * Topbar del shell (UX-1).
@@ -23,9 +31,14 @@ export default function Topbar({
   onToggleSidebar?: () => void;
 }) {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const [query, setQuery] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const handleLogout = () => {
+    logout();
+    router.push("/login");
+  };
 
   // Atajo global "/" → foco en el buscador (no dispara dentro de inputs/textareas)
   useEffect(() => {
@@ -118,16 +131,46 @@ export default function Topbar({
 
         <div className="mx-1 h-6 w-px bg-[var(--border)]" aria-hidden />
 
-        {/* Identidad del usuario (menú completo llega con UX posteriores) */}
-        <div className="flex items-center gap-2 pl-0.5">
-          <div className="flex size-8 items-center justify-center rounded-full bg-[var(--primary-600)] text-xs font-semibold text-white">
-            {initials}
-          </div>
-          <div className="hidden leading-tight lg:block">
-            <p className="text-sm font-medium text-[var(--fg)]">{user?.nombre}</p>
-            <p className="text-xs text-[var(--fg-subtle)]">{rolLabel}</p>
-          </div>
-        </div>
+        {/* Identidad del usuario — chip con acceso a Configuración (UX-10) */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              className={cn(
+                "flex items-center gap-2 rounded-md py-1 pl-1 pr-2 transition-colors duration-150",
+                "hover:bg-[var(--surface-sunken)]",
+                "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)]"
+              )}
+            >
+              <div className="flex size-8 items-center justify-center rounded-full bg-[var(--primary-600)] text-xs font-semibold text-white">
+                {initials}
+              </div>
+              <span className="hidden text-sm font-medium text-[var(--fg)] lg:block">
+                {rolLabel}
+              </span>
+              <ChevronDown className="hidden size-4 text-[var(--fg-subtle)] lg:block" aria-hidden />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuLabel className="normal-case tracking-normal">
+              <p className="text-sm font-medium text-[var(--fg)]">{user?.nombre}</p>
+              <p className="truncate text-xs font-normal text-[var(--fg-subtle)]">{user?.email}</p>
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onSelect={() => router.push("/dashboard/settings")}>
+              <Settings />
+              Configuración
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onSelect={handleLogout}
+              className="text-[var(--sev-critica-fg)] focus:bg-[color-mix(in_srgb,var(--sev-critica)_12%,transparent)] focus:text-[var(--sev-critica-fg)] [&_svg]:text-[var(--sev-critica-fg)]"
+            >
+              <LogOut />
+              Cerrar sesión
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </header>
   );
