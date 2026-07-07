@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback, useId } from 'react';
 import { Search, ChevronsUpDown, X, Loader2 } from 'lucide-react';
+import { focusNextField, registerDropdownOpen, registerDropdownClosed } from '@/lib/formUtils';
 
 interface Option {
   value: string;
@@ -58,6 +59,7 @@ export default function SearchableSelectRemote({
   const [selectedOption, setSelectedOption] = useState<Option | null>(null);
 
   const containerRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const requestIdRef = useRef(0);
@@ -138,12 +140,37 @@ export default function SearchableSelectRemote({
     }
   }, [isOpen]);
 
-  const handleSelect = (option: Option) => {
+  // UX-11 — registra el dropdown como abierto/cerrado (formUtils.ts) para que
+  // `useFormKeyboard`/`handleEscape` sepa no cerrar el Dialog padre cuando un
+  // Escape ya fue consumido acá (ver comentario largo en formUtils.ts sobre
+  // por qué Radix intercepta Escape antes de que este componente pueda frenarlo).
+  useEffect(() => {
+    if (!isOpen) return;
+    registerDropdownOpen();
+    return () => registerDropdownClosed();
+  }, [isOpen]);
+
+  /**
+   * `advanceFocus` en `true` solo cuando la selección vino de teclado (Enter
+   * en el dropdown, UX-11): mueve el foco al siguiente campo del form a
+   * partir del trigger. La selección por MOUSE (click en una opción) NO
+   * fuerza salto de foco — se mantiene el comportamiento actual.
+   */
+  const handleSelect = (option: Option, advanceFocus = false) => {
     onChange(option.value);
     setSelectedOption(option);
     setIsOpen(false);
     setSearchTerm('');
     setHighlightedIndex(-1);
+    if (advanceFocus) {
+      requestAnimationFrame(() => {
+        const trigger = triggerRef.current;
+        if (!trigger) return;
+        const form = trigger.closest('form') || document.body;
+        const advanced = focusNextField(trigger, form as HTMLElement);
+        if (!advanced) trigger.focus();
+      });
+    }
   };
 
   const handleClear = (e: React.MouseEvent) => {
@@ -165,10 +192,23 @@ export default function SearchableSelectRemote({
       // e.defaultPrevented: al hacer preventDefault acá, el form padre no le
       // roba el foco a esta interacción.
       e.preventDefault();
-      handleSelect(options[highlightedIndex]);
+      handleSelect(options[highlightedIndex], true);
     } else if (e.key === 'Escape') {
+      // Cierra SOLO el dropdown (no el modal/Dialog contenedor) y deja el foco
+      // en el trigger. `preventDefault`/`stopPropagation` acá son defensa en
+      // profundidad, pero NO alcanzan por sí solos: Radix `DialogContent`
+      // intercepta Escape con un listener nativo en fase de CAPTURA sobre
+      // `document`, que corre antes de que este handler (fase de burbuja) se
+      // ejecute. La fuente de verdad real es `registerDropdownOpen`/
+      // `isAnyDropdownOpen` (formUtils.ts): `useFormKeyboard.handleEscape`
+      // consulta esa bandera antes de cerrar el modal (bug detectado en
+      // verificación manual de UX-11: sin la bandera, Escape cerraba el modal
+      // entero en vez de solo el dropdown).
+      e.preventDefault();
+      e.stopPropagation();
       setIsOpen(false);
       setSearchTerm('');
+      triggerRef.current?.focus();
     }
   };
 
@@ -194,6 +234,7 @@ export default function SearchableSelectRemote({
     <div ref={containerRef} className={`relative ${className}`}>
       {/* Trigger */}
       <div
+        ref={triggerRef}
         onClick={() => !disabled && setIsOpen(!isOpen)}
         onKeyDown={handleTriggerKeyDown}
         tabIndex={disabled ? -1 : 0}
@@ -243,6 +284,14 @@ export default function SearchableSelectRemote({
                 }}
                 onKeyDown={handleKeyDown}
                 placeholder="Buscar..."
+                role="combobox"
+                aria-expanded
+                aria-controls={listboxId}
+                aria-activedescendant={
+                  highlightedIndex >= 0 && options[highlightedIndex]
+                    ? `${listboxId}-opt-${highlightedIndex}`
+                    : undefined
+                }
                 className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
               />
             </div>
@@ -263,6 +312,7 @@ export default function SearchableSelectRemote({
               options.map((option, index) => (
                 <div
                   key={option.value}
+                  id={`${listboxId}-opt-${index}`}
                   role="option"
                   aria-selected={option.value === value}
                   onClick={() => handleSelect(option)}

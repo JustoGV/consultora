@@ -1,3 +1,77 @@
+// ============================================
+// UX-11 — coordinación Escape entre SearchableSelect/Remote y el Dialog padre
+// ============================================
+// Radix `DialogContent` escucha Escape con un listener nativo propio en fase
+// de CAPTURA sobre `document` (vía su hook interno `useEscapeKeydown`), que se
+// dispara ANTES de que el evento llegue a burbujear desde el input de
+// búsqueda del dropdown — por eso un `preventDefault`/`stopPropagation` hecho
+// DENTRO del dropdown no alcanza a evitar que Radix cierre el modal entero
+// (confirmado en verificación manual: Escape con el dropdown abierto cerraba
+// el modal completo en vez de solo el dropdown).
+//
+// Contador simple a nivel de módulo: cada `SearchableSelect`/
+// `SearchableSelectRemote` se registra al abrir su dropdown y se
+// desregistra al cerrarlo. `handleEscape` de `useFormKeyboard` (que alimenta
+// el `onEscapeKeyDown` de `DialogContent` en todos los modales) consulta
+// `isAnyDropdownOpen()` antes de cerrar el modal: si hay un dropdown abierto,
+// el Escape ya fue consumido por el propio SearchableSelect (que cierra SOLO
+// el dropdown) y el modal no debe cerrarse en la misma pulsación.
+let openDropdownCount = 0;
+
+/** Un `SearchableSelect`/`SearchableSelectRemote` abrió su dropdown. */
+export function registerDropdownOpen(): void {
+  openDropdownCount += 1;
+}
+
+/** Un `SearchableSelect`/`SearchableSelectRemote` cerró su dropdown. */
+export function registerDropdownClosed(): void {
+  openDropdownCount = Math.max(0, openDropdownCount - 1);
+}
+
+/** `true` si hay al menos un dropdown de SearchableSelect/Remote abierto. */
+export function isAnyDropdownOpen(): boolean {
+  return openDropdownCount > 0;
+}
+
+const FOCUSABLE_SELECTOR = 'input, select, [tabindex]';
+
+/** Mismo criterio de "focusable visible" usado por `handleEnterAsTab` y `focusNextField`. */
+function isFocusableVisible(el: HTMLElement): boolean {
+  if (el.hasAttribute('disabled')) return false;
+  if (el.getAttribute('tabindex') === '-1') return false;
+  // Visible: sin display:none / visibility:hidden y con tamaño en el layout.
+  if (el.offsetParent === null && el.getClientRects().length === 0) return false;
+  return true;
+}
+
+/**
+ * Busca, dentro de `container`, el siguiente elemento focusable visible
+ * después de `fromElement`, y le hace foco. Devuelve `true` si encontró y
+ * enfocó un elemento siguiente, `false` si `fromElement` era el último (o no
+ * se encontró en la lista).
+ *
+ * Extraída de `handleEnterAsTab` para reutilizarse también fuera de un Enter
+ * en un `<input>` — ej. `SearchableSelect`/`SearchableSelectRemote` al
+ * seleccionar una opción del dropdown con Enter (UX-11): el trigger del
+ * select no es un `<input>`, así que `handleEnterAsTab` no aplica directo,
+ * pero el criterio de "siguiente campo" es el mismo.
+ */
+export function focusNextField(fromElement: HTMLElement, container: HTMLElement): boolean {
+  const elements = Array.from(
+    container.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)
+  ).filter(isFocusableVisible);
+
+  const currentIndex = elements.indexOf(fromElement);
+  if (currentIndex === -1) return false;
+
+  const next = elements[currentIndex + 1];
+  if (next) {
+    next.focus();
+    return true;
+  }
+  return false;
+}
+
 /**
  * Enter en un input de un formulario NUNCA hace submit: mueve el foco al siguiente
  * campo focusable visible (RN-15). El submit queda reservado al botón explícito.
@@ -21,24 +95,7 @@ export function handleEnterAsTab(e: React.KeyboardEvent<HTMLFormElement>) {
 
   e.preventDefault();
 
-  const focusableSelector = 'input, select, [tabindex]';
-  const elements = Array.from(
-    e.currentTarget.querySelectorAll<HTMLElement>(focusableSelector)
-  ).filter((el) => {
-    if (el.hasAttribute('disabled')) return false;
-    if (el.getAttribute('tabindex') === '-1') return false;
-    // Visible: sin display:none / visibility:hidden y con tamaño en el layout.
-    if (el.offsetParent === null && el.getClientRects().length === 0) return false;
-    return true;
-  });
-
-  const currentIndex = elements.indexOf(target as HTMLInputElement);
-  if (currentIndex === -1) return;
-
-  const next = elements[currentIndex + 1];
-  if (next) {
-    next.focus();
-  }
+  focusNextField(target, e.currentTarget);
 }
 
 /**

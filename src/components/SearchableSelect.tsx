@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useId } from 'react';
 import { MagnifyingGlassIcon, ChevronUpDownIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { focusNextField, registerDropdownOpen, registerDropdownClosed } from '@/lib/formUtils';
 
 interface Option {
   value: string;
@@ -33,6 +34,7 @@ export default function SearchableSelect({
   const [searchTerm, setSearchTerm] = useState('');
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const containerRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const listboxId = useId();
 
@@ -64,11 +66,38 @@ export default function SearchableSelect({
     }
   }, [isOpen]);
 
-  const handleSelect = (optionValue: string) => {
+  // UX-11 — registra el dropdown como abierto/cerrado (formUtils.ts) para que
+  // `useFormKeyboard`/`handleEscape` sepa no cerrar el Dialog padre cuando un
+  // Escape ya fue consumido acá (ver comentario largo en formUtils.ts sobre
+  // por qué Radix intercepta Escape antes de que este componente pueda frenarlo).
+  useEffect(() => {
+    if (!isOpen) return;
+    registerDropdownOpen();
+    return () => registerDropdownClosed();
+  }, [isOpen]);
+
+  /**
+   * `advanceFocus` en `true` solo cuando la selección vino de teclado (Enter
+   * en el dropdown, UX-11): mueve el foco al siguiente campo del form a
+   * partir del trigger. La selección por MOUSE (click en una opción) NO
+   * fuerza salto de foco — se mantiene el comportamiento actual.
+   */
+  const handleSelect = (optionValue: string, advanceFocus = false) => {
     onChange(optionValue);
     setIsOpen(false);
     setSearchTerm('');
     setHighlightedIndex(-1);
+    if (advanceFocus) {
+      // Se ejecuta después de que el dropdown se cierre (próximo tick) para
+      // no competir con el propio foco que React podría restaurar en el trigger.
+      requestAnimationFrame(() => {
+        const trigger = triggerRef.current;
+        if (!trigger) return;
+        const form = trigger.closest('form') || document.body;
+        const advanced = focusNextField(trigger, form as HTMLElement);
+        if (!advanced) trigger.focus();
+      });
+    }
   };
 
   const handleClear = (e: React.MouseEvent) => {
@@ -88,10 +117,23 @@ export default function SearchableSelect({
       setHighlightedIndex(prev => prev > 0 ? prev - 1 : 0);
     } else if (e.key === 'Enter' && highlightedIndex >= 0) {
       e.preventDefault();
-      handleSelect(filteredOptions[highlightedIndex].value);
+      handleSelect(filteredOptions[highlightedIndex].value, true);
     } else if (e.key === 'Escape') {
+      // Cierra SOLO el dropdown (no el modal/Dialog contenedor) y deja el foco
+      // en el trigger. `preventDefault`/`stopPropagation` acá son defensa en
+      // profundidad, pero NO alcanzan por sí solos: Radix `DialogContent`
+      // intercepta Escape con un listener nativo en fase de CAPTURA sobre
+      // `document`, que corre antes de que este handler (fase de burbuja) se
+      // ejecute. La fuente de verdad real es `registerDropdownOpen`/
+      // `isAnyDropdownOpen` (formUtils.ts): `useFormKeyboard.handleEscape`
+      // consulta esa bandera antes de cerrar el modal (bug detectado en
+      // verificación manual de UX-11: sin la bandera, Escape cerraba el modal
+      // entero en vez de solo el dropdown).
+      e.preventDefault();
+      e.stopPropagation();
       setIsOpen(false);
       setSearchTerm('');
+      triggerRef.current?.focus();
     }
   };
 
@@ -114,6 +156,7 @@ export default function SearchableSelect({
     <div ref={containerRef} className={`relative ${className}`}>
       {/* Trigger */}
       <div
+        ref={triggerRef}
         onClick={() => !disabled && setIsOpen(!isOpen)}
         onKeyDown={handleTriggerKeyDown}
         tabIndex={disabled ? -1 : 0}
@@ -163,6 +206,14 @@ export default function SearchableSelect({
                 }}
                 onKeyDown={handleKeyDown}
                 placeholder="Buscar..."
+                role="combobox"
+                aria-expanded
+                aria-controls={listboxId}
+                aria-activedescendant={
+                  highlightedIndex >= 0 && filteredOptions[highlightedIndex]
+                    ? `${listboxId}-opt-${highlightedIndex}`
+                    : undefined
+                }
                 className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
               />
             </div>
@@ -174,6 +225,7 @@ export default function SearchableSelect({
               filteredOptions.map((option, index) => (
                 <div
                   key={option.value}
+                  id={`${listboxId}-opt-${index}`}
                   role="option"
                   aria-selected={option.value === value}
                   onClick={() => handleSelect(option.value)}

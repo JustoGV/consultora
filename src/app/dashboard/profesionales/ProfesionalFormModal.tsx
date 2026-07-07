@@ -18,6 +18,7 @@ import { useFormKeyboard } from '@/hooks/useFormKeyboard';
 import { useContinuousCreate } from '@/hooks/useContinuousCreate';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import DigitCounter from '@/components/DigitCounter';
 
 function emptyForm(administradoraId: string): CreateProfesionalDto {
   return {
@@ -278,7 +279,11 @@ export default function ProfesionalFormModal({
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <Field label="CUIT" error={fieldErrors.cuit}>
+            <Field
+              label="CUIT"
+              error={fieldErrors.cuit}
+              counter={<DigitCounter value={formData.cuit || ''} max={11} hasError={!!fieldErrors.cuit} />}
+            >
               <Input
                 name="cuit"
                 value={formData.cuit}
@@ -291,7 +296,13 @@ export default function ProfesionalFormModal({
                 aria-invalid={!!fieldErrors.cuit}
               />
             </Field>
-            <Field label="Teléfono" error={fieldErrors.telefono}>
+            <Field
+              label="Teléfono"
+              error={fieldErrors.telefono}
+              counter={
+                <DigitCounter value={formData.telefono || ''} max={13} min={6} hasError={!!fieldErrors.telefono} />
+              }
+            >
               <Input
                 name="telefono"
                 value={formData.telefono}
@@ -379,11 +390,14 @@ function Field({
   label,
   required,
   error,
+  counter,
   children,
 }: {
   label: string;
   required?: boolean;
   error?: string;
+  /** UX-11 — contador de dígitos (DigitCounter), se alinea a la derecha junto al error. */
+  counter?: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
@@ -392,7 +406,12 @@ function Field({
         {label} {required && <span className="text-[var(--sev-critica)]">*</span>}
       </label>
       {children}
-      {error && <p className="mt-1 text-xs text-[var(--sev-critica-fg)]">{error}</p>}
+      {(error || counter) && (
+        <div className="mt-1 flex items-start justify-between gap-2">
+          <p className="text-xs text-[var(--sev-critica-fg)]">{error}</p>
+          {counter}
+        </div>
+      )}
     </div>
   );
 }

@@ -23,6 +23,7 @@ import { administradoraService } from '@/services/administradoraService';
 import { tipoDiscapacidadService } from '@/services/tipoDiscapacidadService';
 import { CheckCircle2, FilePlus2, Check, Loader2 } from 'lucide-react';
 import SearchableSelect from '@/components/SearchableSelect';
+import DigitCounter from '@/components/DigitCounter';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { mapServerErrors } from '@/lib/errorUtils';
@@ -527,7 +528,21 @@ export default function UploadPage() {
                   onChange={(v) => setPersonaData({ ...personaData, tipoDocumento: v as TipoDocumento })}
                 />
               </Field>
-              <Field label="Número de documento" required error={fieldErrors.numeroDocumento}>
+              <Field
+                label="Número de documento"
+                required
+                error={fieldErrors.numeroDocumento}
+                counter={
+                  (personaData.tipoDocumento === 'DNI' || personaData.tipoDocumento === 'CUIL') && (
+                    <DigitCounter
+                      value={personaData.numeroDocumento}
+                      max={personaData.tipoDocumento === 'DNI' ? 8 : 11}
+                      min={personaData.tipoDocumento === 'DNI' ? 7 : 11}
+                      hasError={!!fieldErrors.numeroDocumento}
+                    />
+                  )
+                }
+              >
                 <Input
                   name="numeroDocumento"
                   value={personaData.numeroDocumento}
@@ -549,7 +564,11 @@ export default function UploadPage() {
                   aria-invalid={!!fieldErrors.numeroDocumento}
                 />
               </Field>
-              <Field label="CUIL" error={fieldErrors.cuil}>
+              <Field
+                label="CUIL"
+                error={fieldErrors.cuil}
+                counter={<DigitCounter value={personaData.cuil || ''} max={11} hasError={!!fieldErrors.cuil} />}
+              >
                 <Input
                   name="cuil"
                   value={personaData.cuil}
@@ -599,7 +618,13 @@ export default function UploadPage() {
                   aria-invalid={!!fieldErrors.email}
                 />
               </Field>
-              <Field label="Teléfono" error={fieldErrors.telefono}>
+              <Field
+                label="Teléfono"
+                error={fieldErrors.telefono}
+                counter={
+                  <DigitCounter value={personaData.telefono || ''} max={13} min={6} hasError={!!fieldErrors.telefono} />
+                }
+              >
                 <Input
                   name="telefono"
                   value={personaData.telefono}
@@ -612,7 +637,13 @@ export default function UploadPage() {
                   aria-invalid={!!fieldErrors.telefono}
                 />
               </Field>
-              <Field label="Celular" error={fieldErrors.celular}>
+              <Field
+                label="Celular"
+                error={fieldErrors.celular}
+                counter={
+                  <DigitCounter value={personaData.celular || ''} max={13} min={6} hasError={!!fieldErrors.celular} />
+                }
+              >
                 <Input
                   name="celular"
                   value={personaData.celular}
@@ -846,11 +877,14 @@ function Field({
   label,
   required,
   error,
+  counter,
   children,
 }: {
   label: string;
   required?: boolean;
   error?: string;
+  /** UX-11 — contador de dígitos (DigitCounter), se alinea a la derecha junto al error. */
+  counter?: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
@@ -859,7 +893,12 @@ function Field({
         {label} {required && <span className="text-red-600">*</span>}
       </label>
       {children}
-      {error && <p className="text-xs text-red-600 mt-1">{error}</p>}
+      {(error || counter) && (
+        <div className="mt-1 flex items-start justify-between gap-2">
+          <p className="text-xs text-red-600">{error}</p>
+          {counter}
+        </div>
+      )}
     </div>
   );
 }

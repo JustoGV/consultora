@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef } from 'react';
-import { handleEnterAsTab } from '@/lib/formUtils';
+import { handleEnterAsTab, isAnyDropdownOpen } from '@/lib/formUtils';
 
 const FOCUSABLE_SELECTOR = 'input, select, [tabindex]';
 
@@ -72,6 +72,13 @@ export function useFormKeyboard({
   isDirtyRef.current = isDirty;
 
   const handleEscape = useCallback(() => {
+    // UX-11 — si hay un dropdown de SearchableSelect/Remote abierto, ESE Escape
+    // ya lo consumió el propio dropdown (cierra solo el dropdown, deja el foco
+    // en su trigger): el modal NO debe cerrarse en la misma pulsación. Ver
+    // `isAnyDropdownOpen` en formUtils.ts para el porqué (Radix intercepta
+    // Escape en captura sobre `document`, antes de que el dropdown pueda
+    // frenarlo con preventDefault/stopPropagation propio).
+    if (isAnyDropdownOpen()) return;
     if (isDirtyRef.current) {
       const confirmed = window.confirm('Hay cambios sin guardar. ¿Cerrar de todos modos?');
       if (!confirmed) return;

@@ -20,6 +20,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { useFormKeyboard } from '@/hooks/useFormKeyboard';
 import { useContinuousCreate } from '@/hooks/useContinuousCreate';
 import SearchableSelect from '@/components/SearchableSelect';
+import DigitCounter from '@/components/DigitCounter';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { AlertTriangle, ExternalLink, CheckCircle2, Loader2 } from 'lucide-react';
@@ -425,7 +426,21 @@ export default function PacienteFormModal({
               onChange={(v) => setField('tipoDocumento', v as TipoDocumento)}
             />
           </Field>
-          <Field label="Número de documento" required error={fieldErrors.numeroDocumento}>
+          <Field
+            label="Número de documento"
+            required
+            error={fieldErrors.numeroDocumento}
+            counter={
+              (formData.tipoDocumento === 'DNI' || formData.tipoDocumento === 'CUIL') && (
+                <DigitCounter
+                  value={formData.numeroDocumento}
+                  max={formData.tipoDocumento === 'DNI' ? 8 : 11}
+                  min={formData.tipoDocumento === 'DNI' ? 7 : 11}
+                  hasError={!!fieldErrors.numeroDocumento}
+                />
+              )
+            }
+          >
             <Input
               name="numeroDocumento"
               value={formData.numeroDocumento}
@@ -479,7 +494,11 @@ export default function PacienteFormModal({
         )}
 
         <div className="grid grid-cols-2 gap-3">
-          <Field label="CUIL" error={fieldErrors.cuil}>
+          <Field
+            label="CUIL"
+            error={fieldErrors.cuil}
+            counter={<DigitCounter value={formData.cuil || ''} max={11} hasError={!!fieldErrors.cuil} />}
+          >
             <Input
               name="cuil"
               value={formData.cuil}
@@ -536,7 +555,13 @@ export default function PacienteFormModal({
               aria-invalid={!!fieldErrors.email}
             />
           </Field>
-          <Field label="Teléfono" error={fieldErrors.telefono}>
+          <Field
+            label="Teléfono"
+            error={fieldErrors.telefono}
+            counter={
+              <DigitCounter value={formData.telefono || ''} max={13} min={6} hasError={!!fieldErrors.telefono} />
+            }
+          >
             <Input
               name="telefono"
               value={formData.telefono}
@@ -552,7 +577,13 @@ export default function PacienteFormModal({
         </div>
 
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Celular" error={fieldErrors.celular}>
+          <Field
+            label="Celular"
+            error={fieldErrors.celular}
+            counter={
+              <DigitCounter value={formData.celular || ''} max={13} min={6} hasError={!!fieldErrors.celular} />
+            }
+          >
             <Input
               name="celular"
               value={formData.celular}
@@ -663,11 +694,14 @@ function Field({
   label,
   required,
   error,
+  counter,
   children,
 }: {
   label: string;
   required?: boolean;
   error?: string;
+  /** UX-11 — contador de dígitos (DigitCounter), se alinea a la derecha junto al error. */
+  counter?: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
@@ -676,7 +710,12 @@ function Field({
         {label} {required && <span className="text-[var(--sev-critica)]">*</span>}
       </label>
       {children}
-      {error && <p className="mt-1 text-xs text-[var(--sev-critica-fg)]">{error}</p>}
+      {(error || counter) && (
+        <div className="mt-1 flex items-start justify-between gap-2">
+          <p className="text-xs text-[var(--sev-critica-fg)]">{error}</p>
+          {counter}
+        </div>
+      )}
     </div>
   );
 }
