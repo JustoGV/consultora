@@ -12,9 +12,17 @@ import {
   FileText,
   Bell as BellIcon,
   AlertTriangle,
+  Stethoscope,
 } from 'lucide-react';
 
-import { Persona, Afiliacion, AfiliacionVinculo, Alerta, CertificadoDiscapacidad } from '@/types';
+import {
+  Persona,
+  Afiliacion,
+  AfiliacionVinculo,
+  AfiliacionProfesional,
+  Alerta,
+  CertificadoDiscapacidad,
+} from '@/types';
 import { personasService } from '@/services/personasService';
 import { afiliacionesService } from '@/services/afiliacionesService';
 import { alertasService } from '@/services/alertasService';
@@ -30,6 +38,7 @@ import { Button } from '@/components/ui/button';
 
 import AfiliacionFormModal from './AfiliacionFormModal';
 import VincularPersonaModal from './VincularPersonaModal';
+import VincularProfesionalModal from './VincularProfesionalModal';
 
 /** Shape exacto de GET /afiliaciones/:id/grupo — ver afiliaciones.service.ts#getGrupo (backend). */
 type GrupoTitular = {
@@ -50,6 +59,9 @@ export default function AfiliadoDetallePage() {
   const [persona, setPersona] = useState<Persona | null>(null);
   const [afiliaciones, setAfiliaciones] = useState<Afiliacion[]>([]);
   const [grupos, setGrupos] = useState<Record<string, GrupoTitular | GrupoAdherente>>({});
+  const [profesionalesPorAfiliacion, setProfesionalesPorAfiliacion] = useState<
+    Record<string, AfiliacionProfesional[]>
+  >({});
   const [certificados, setCertificados] = useState<CertificadoDiscapacidad[]>([]);
   const [alertas, setAlertas] = useState<Alerta[]>([]);
   const [loading, setLoading] = useState(true);
@@ -58,6 +70,9 @@ export default function AfiliadoDetallePage() {
   const [afiliacionModalOpen, setAfiliacionModalOpen] = useState(false);
   const [vincularModalOpen, setVincularModalOpen] = useState(false);
   const [afiliacionParaVincular, setAfiliacionParaVincular] = useState<Afiliacion | null>(null);
+  const [vincularProfesionalModalOpen, setVincularProfesionalModalOpen] = useState(false);
+  const [afiliacionParaVincularProfesional, setAfiliacionParaVincularProfesional] =
+    useState<Afiliacion | null>(null);
 
   // Alerta 80 (RN-08): banner ámbar no bloqueante tras un vínculo exitoso.
   const [alerta80Banner, setAlerta80Banner] = useState<Alerta | null>(null);
@@ -80,6 +95,18 @@ export default function AfiliadoDetallePage() {
       })
     );
     setGrupos(Object.fromEntries(gruposEntries));
+
+    const profesionalesEntries = await Promise.all(
+      activas.map(async (a) => {
+        try {
+          const links = await afiliacionesService.getProfesionales(a.id);
+          return [a.id, links] as const;
+        } catch {
+          return [a.id, []] as const;
+        }
+      })
+    );
+    setProfesionalesPorAfiliacion(Object.fromEntries(profesionalesEntries));
   }, [personaId]);
 
   const loadCertificados = useCallback(async () => {
@@ -177,6 +204,23 @@ export default function AfiliadoDetallePage() {
       notify.success('Adherente quitado');
     } catch (err) {
       notify.error('No se pudo eliminar el vínculo', extractErrorMessage(err));
+    }
+  };
+
+  const handleEliminarTerceroVinculado = async (afiliacionId: string, linkId: string) => {
+    const ok = await confirm({
+      title: 'Quitar tercero vinculado',
+      description: 'Se quitará el vínculo con este profesional. ¿Querés continuar?',
+      confirmLabel: 'Quitar',
+      destructive: true,
+    });
+    if (!ok) return;
+    try {
+      await afiliacionesService.unlinkProfesional(afiliacionId, linkId);
+      await loadAfiliaciones();
+      notify.success('Tercero vinculado quitado');
+    } catch (err) {
+      notify.error('No se pudo quitar el tercero vinculado', extractErrorMessage(err));
     }
   };
 
@@ -307,12 +351,18 @@ export default function AfiliadoDetallePage() {
                 key={afiliacion.id}
                 afiliacion={afiliacion}
                 grupo={grupos[afiliacion.id]}
+                profesionales={profesionalesPorAfiliacion[afiliacion.id] || []}
                 onEliminar={() => handleEliminarAfiliacion(afiliacion)}
                 onVincular={() => {
                   setAfiliacionParaVincular(afiliacion);
                   setVincularModalOpen(true);
                 }}
                 onEliminarVinculo={handleEliminarVinculo}
+                onVincularProfesional={() => {
+                  setAfiliacionParaVincularProfesional(afiliacion);
+                  setVincularProfesionalModalOpen(true);
+                }}
+                onEliminarTerceroVinculado={handleEliminarTerceroVinculado}
               />
             ))}
           </div>
@@ -413,6 +463,18 @@ export default function AfiliadoDetallePage() {
           }}
         />
       )}
+
+      {afiliacionParaVincularProfesional && (
+        <VincularProfesionalModal
+          open={vincularProfesionalModalOpen}
+          onOpenChange={setVincularProfesionalModalOpen}
+          afiliacion={{ ...afiliacionParaVincularProfesional, persona }}
+          excludedProfesionalIds={(profesionalesPorAfiliacion[afiliacionParaVincularProfesional.id] || []).map(
+            (link) => link.profesionalId
+          )}
+          onVinculado={() => loadAfiliaciones()}
+        />
+      )}
     </div>
   );
 }
@@ -429,15 +491,21 @@ function InfoItem({ label, value, tabular }: { label: string; value?: string; ta
 function AfiliacionCard({
   afiliacion,
   grupo,
+  profesionales,
   onEliminar,
   onVincular,
   onEliminarVinculo,
+  onVincularProfesional,
+  onEliminarTerceroVinculado,
 }: {
   afiliacion: Afiliacion;
   grupo?: GrupoTitular | GrupoAdherente;
+  profesionales: AfiliacionProfesional[];
   onEliminar: () => void;
   onVincular: () => void;
   onEliminarVinculo: (afiliacionId: string, vinculoId: string) => void;
+  onVincularProfesional: () => void;
+  onEliminarTerceroVinculado: (afiliacionId: string, linkId: string) => void;
 }) {
   const esTitular = afiliacion.rol === 'TITULAR';
   const grupoTitular = esTitular ? (grupo as GrupoTitular | undefined) : undefined;
@@ -543,6 +611,46 @@ function AfiliacionCard({
           )}
         </div>
       )}
+
+      <div className="mt-3 border-t border-[var(--border)] pt-3">
+        <div className="mb-2 flex items-center justify-between">
+          <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-[var(--fg-subtle)]">
+            <Stethoscope className="size-3.5" />
+            Terceros Vinculados
+          </p>
+          <Button size="sm" variant="subtle" onClick={onVincularProfesional}>
+            <Plus className="size-3.5" />
+            Agregar
+          </Button>
+        </div>
+        {profesionales.length === 0 ? (
+          <p className="text-sm text-[var(--fg-subtle)]">Sin terceros vinculados.</p>
+        ) : (
+          <ul className="space-y-1.5">
+            {profesionales.map((link) => (
+              <li key={link.id} className="flex items-center justify-between gap-2 text-sm">
+                <span className="min-w-0">
+                  <span className="font-medium text-[var(--fg)]">
+                    {link.profesional?.apellido}, {link.profesional?.nombre}
+                  </span>
+                  {link.profesional && (
+                    <span className="ml-1.5 text-xs text-[var(--fg-muted)] tabular-nums">
+                      Mat. {link.profesional.matricula}
+                      {link.profesional.especialidad ? ` · ${link.profesional.especialidad}` : ''}
+                    </span>
+                  )}
+                </span>
+                <button
+                  onClick={() => onEliminarTerceroVinculado(afiliacion.id, link.id)}
+                  className="shrink-0 text-xs text-[var(--fg-subtle)] hover:text-[var(--sev-critica-fg)]"
+                >
+                  Quitar
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
     </div>
   );
 }

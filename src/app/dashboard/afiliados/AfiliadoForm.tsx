@@ -35,6 +35,7 @@ import {
   Info,
   Loader2,
   Pencil,
+  Stethoscope,
   Trash2,
   UserRound,
   Users,
@@ -47,6 +48,7 @@ import {
   validateIdentityField,
 } from './identityFields';
 import AdherenteSubForm, { PendingAdherente } from './AdherenteSubForm';
+import TerceroVinculadoSubForm, { PendingTerceroVinculado } from './TerceroVinculadoSubForm';
 
 /** Shape of GET /afiliaciones/:id/grupo for a TITULAR (see afiliaciones.service.ts). */
 type GrupoTitular = {
@@ -187,6 +189,13 @@ export default function AfiliadoForm({ persona = null }: AfiliadoFormProps) {
     { afiliacionAdherenteId: string; vinculoId: string }[]
   >([]);
 
+  // Section 4 — terceros vinculados (profesionales)
+  const [pendingTerceros, setPendingTerceros] = useState<PendingTerceroVinculado[]>([]);
+  const [editingTercero, setEditingTercero] = useState<PendingTerceroVinculado | null>(null);
+  const [showTerceroSubForm, setShowTerceroSubForm] = useState(false);
+  // Terceros removed while editing (existing links to soft-delete on save).
+  const [removedTerceroLinkIds, setRemovedTerceroLinkIds] = useState<string[]>([]);
+
   // Titular duplicate check (UX-3.1)
   const [duplicateMatch, setDuplicateMatch] = useState<DuplicateMatch | null>(null);
   const [duplicateIgnored, setDuplicateIgnored] = useState(false);
@@ -255,6 +264,24 @@ export default function AfiliadoForm({ persona = null }: AfiliadoFormProps) {
           existingAfiliacionAdherenteId: item.afiliacion.id,
         }));
         setPendingAdherentes(existing);
+
+        try {
+          const links = await afiliacionesService.getProfesionales(titularAf.id);
+          const existingTerceros: PendingTerceroVinculado[] = links.map((link) => ({
+            _key: `existing_link_${link.id}`,
+            profesionalId: link.profesionalId,
+            profesionalLabel: link.profesional
+              ? `${link.profesional.apellido}, ${link.profesional.nombre} — Mat. ${link.profesional.matricula}${
+                  link.profesional.especialidad ? ` (${link.profesional.especialidad})` : ''
+                }`
+              : 'Tercero vinculado',
+            observaciones: link.observaciones,
+            existingLinkId: link.id,
+          }));
+          setPendingTerceros(existingTerceros);
+        } catch (err) {
+          notify.error('No se pudieron cargar los terceros vinculados', extractErrorMessage(err));
+        }
       }
     } catch (err) {
       notify.error('No se pudieron cargar los adherentes', extractErrorMessage(err));
@@ -379,6 +406,45 @@ export default function AfiliadoForm({ persona = null }: AfiliadoFormProps) {
     if (editingAdherente?._key === adh._key) {
       setEditingAdherente(null);
       setShowSubForm(false);
+    }
+  };
+
+  // ---- Terceros vinculados (profesionales) list ops ----
+  const excludedProfesionalIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const t of pendingTerceros) ids.add(t.profesionalId);
+    if (editingTercero?.profesionalId) ids.delete(editingTercero.profesionalId);
+    return Array.from(ids);
+  }, [pendingTerceros, editingTercero]);
+
+  const handleAddTercero = (item: PendingTerceroVinculado) => {
+    setPendingTerceros((prev) => {
+      const idx = prev.findIndex((t) => t._key === item._key);
+      if (idx >= 0) {
+        const copy = [...prev];
+        copy[idx] = item;
+        return copy;
+      }
+      return [...prev, item];
+    });
+    setEditingTercero(null);
+    setShowTerceroSubForm(false);
+  };
+
+  const handleEditTercero = (item: PendingTerceroVinculado) => {
+    setEditingTercero(item);
+    setShowTerceroSubForm(true);
+  };
+
+  const handleRemoveTercero = (item: PendingTerceroVinculado) => {
+    setPendingTerceros((prev) => prev.filter((t) => t._key !== item._key));
+    // If it was an already-linked tercero (edit mode), schedule link removal.
+    if (item.existingLinkId) {
+      setRemovedTerceroLinkIds((prev) => [...prev, item.existingLinkId!]);
+    }
+    if (editingTercero?._key === item._key) {
+      setEditingTercero(null);
+      setShowTerceroSubForm(false);
     }
   };
 
@@ -562,6 +628,35 @@ export default function AfiliadoForm({ persona = null }: AfiliadoFormProps) {
         } catch (err) {
           // A hard failure creating an adherente/vínculo → rollback everything (alta).
           throw err;
+        }
+      }
+
+      // ---- 4. Terceros vinculados (profesionales) ----
+      // Best-effort: a failure linking/unlinking a tercero is surfaced via
+      // toast but never blocks the save nor triggers the alta rollback above
+      // (these are additional to the titular/adherentes, per UX-16b).
+      if (titularAfiliacionId) {
+        for (const linkId of removedTerceroLinkIds) {
+          try {
+            await afiliacionesService.unlinkProfesional(titularAfiliacionId, linkId);
+          } catch (err) {
+            notify.error('No se pudo quitar un tercero vinculado', extractErrorMessage(err));
+          }
+        }
+
+        const nuevosTerceros = pendingTerceros.filter((t) => !t.existingLinkId);
+        for (const item of nuevosTerceros) {
+          try {
+            await afiliacionesService.linkProfesional(titularAfiliacionId, {
+              profesionalId: item.profesionalId,
+              observaciones: item.observaciones,
+            });
+          } catch (err) {
+            notify.error(
+              `No se pudo vincular a ${item.profesionalLabel}`,
+              extractErrorMessage(err)
+            );
+          }
         }
       }
 
@@ -915,6 +1010,107 @@ export default function AfiliadoForm({ persona = null }: AfiliadoFormProps) {
                 pendingAdherentes.length === 0 && (
                   <p className="rounded-md border border-dashed border-[var(--border-strong)] px-3 py-4 text-center text-sm text-[var(--fg-subtle)]">
                     Sin adherentes. Usá “Agregar adherente”.
+                  </p>
+                )
+              )}
+            </>
+          )}
+        </section>
+
+        {/* SECTION 4 — Terceros Vinculados */}
+        <section className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[var(--shadow-sm)] space-y-4">
+          <div className="flex items-center justify-between gap-2 border-b border-[var(--border)] pb-3">
+            <div className="flex items-center gap-2">
+              <Stethoscope className="size-4 text-[var(--primary-600)]" />
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--fg)]">
+                Terceros Vinculados
+                {pendingTerceros.length > 0 && (
+                  <span className="ml-2 rounded-full bg-[var(--primary-50)] px-2 py-0.5 text-xs font-medium text-[var(--primary-700)]">
+                    {pendingTerceros.length}
+                  </span>
+                )}
+              </h2>
+            </div>
+            {!adherentesDisabled && !showTerceroSubForm && (
+              <Button
+                size="sm"
+                variant="subtle"
+                onClick={() => {
+                  setEditingTercero(null);
+                  setShowTerceroSubForm(true);
+                }}
+              >
+                Agregar tercero vinculado
+              </Button>
+            )}
+          </div>
+
+          {adherentesDisabled ? (
+            <div className="flex items-start gap-2 rounded-md border border-dashed border-[var(--border-strong)] px-3 py-4 text-sm text-[var(--fg-muted)]">
+              <Info className="mt-0.5 size-4 shrink-0" />
+              Elegí una obra social arriba para poder vincular terceros (el vínculo va sobre la afiliación del titular).
+            </div>
+          ) : (
+            <>
+              {/* Pending list */}
+              {pendingTerceros.length > 0 && (
+                <ul className="space-y-2">
+                  {pendingTerceros.map((item) => (
+                    <li
+                      key={item._key}
+                      className="flex items-center justify-between gap-3 rounded-md border border-[var(--border)] bg-[var(--surface-sunken)] px-3 py-2.5 text-sm"
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate font-medium text-[var(--fg)]">{item.profesionalLabel}</p>
+                        <p className="text-xs text-[var(--fg-muted)]">
+                          {item.observaciones && <span>{item.observaciones}</span>}
+                          {item.existingLinkId && (
+                            <span className="ml-1 text-[var(--fg-subtle)]">· ya vinculado</span>
+                          )}
+                          {!item.existingLinkId && (
+                            <span className="ml-1 text-[var(--primary-700)]">· nuevo</span>
+                          )}
+                        </p>
+                      </div>
+                      <div className="flex shrink-0 items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => handleEditTercero(item)}
+                          className="rounded-md p-1.5 text-[var(--fg-subtle)] hover:bg-[var(--primary-50)] hover:text-[var(--primary-700)]"
+                          title="Editar tercero vinculado"
+                        >
+                          <Pencil className="size-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveTercero(item)}
+                          className="rounded-md p-1.5 text-[var(--fg-subtle)] hover:bg-[var(--sev-critica-bg)] hover:text-[var(--sev-critica-fg)]"
+                          title="Quitar tercero vinculado"
+                        >
+                          <Trash2 className="size-4" />
+                        </button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+              {/* Sub-form */}
+              {showTerceroSubForm ? (
+                <TerceroVinculadoSubForm
+                  key={editingTercero?._key || 'nuevo-tercero'}
+                  excludedProfesionalIds={excludedProfesionalIds}
+                  editing={editingTercero}
+                  onAdd={handleAddTercero}
+                  onCancelEdit={() => {
+                    setEditingTercero(null);
+                    setShowTerceroSubForm(false);
+                  }}
+                />
+              ) : (
+                pendingTerceros.length === 0 && (
+                  <p className="rounded-md border border-dashed border-[var(--border-strong)] px-3 py-4 text-center text-sm text-[var(--fg-subtle)]">
+                    Sin terceros vinculados. Usá “Agregar tercero vinculado”.
                   </p>
                 )
               )}
