@@ -28,6 +28,7 @@ import { useFormKeyboard } from '@/hooks/useFormKeyboard';
 import SearchableSelect from '@/components/SearchableSelect';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { SuccessOverlay } from '@/components/ui/SuccessOverlay';
 import {
   AlertTriangle,
   ExternalLink,
@@ -564,16 +565,18 @@ export default function AfiliadoForm({ persona = null }: AfiliadoFormProps) {
         }
       }
 
-      // ---- Success feedback ----
+      // ---- Success feedback: centered animated confirmation (UX-14) ----
       const totalAdh = pendingAdherentes.length;
+      const nombreTitular = `${titular.nombre} ${titular.apellido}`.trim();
+      let successTitle: string;
+      let successSubtitle: string;
       if (isEditing) {
-        notify.success('Afiliado actualizado', `${totalAdh} adherente${totalAdh === 1 ? '' : 's'}.`);
+        successTitle = 'Afiliado actualizado';
+        successSubtitle = `${nombreTitular} · ${totalAdh} adherente${totalAdh === 1 ? '' : 's'}`;
       } else {
         const added = nuevos.length - skippedDuplicates;
-        notify.success(
-          'Afiliado creado',
-          `${added} adherente${added === 1 ? '' : 's'} agregado${added === 1 ? '' : 's'}.`
-        );
+        successTitle = 'Afiliado creado';
+        successSubtitle = `${nombreTitular} · ${added} adherente${added === 1 ? '' : 's'}`;
       }
       if (alerta80Count > 0) {
         notify.info(
@@ -584,7 +587,12 @@ export default function AfiliadoForm({ persona = null }: AfiliadoFormProps) {
         );
       }
 
-      router.push(`/dashboard/afiliados/${titularPersona.id}`);
+      // The centered overlay holds ~1.4s, then navigates to the ficha (onDone).
+      setSuccess({
+        title: successTitle,
+        subtitle: successSubtitle,
+        href: `/dashboard/afiliados/${titularPersona.id}`,
+      });
     } catch (error) {
       // ---- Rollback (alta only): undo created afiliaciones + personas ----
       if (!isEditing) {
@@ -647,6 +655,10 @@ export default function AfiliadoForm({ persona = null }: AfiliadoFormProps) {
     }
   };
 
+  const [success, setSuccess] = useState<
+    { title: string; subtitle?: string; href: string } | null
+  >(null);
+
   const isDirty = true; // page-level form: Esc/leave always confirms.
   const { onKeyDown, focusFirstError } = useFormKeyboard({
     formRef,
@@ -660,6 +672,14 @@ export default function AfiliadoForm({ persona = null }: AfiliadoFormProps) {
 
   return (
     <div className="mx-auto max-w-3xl space-y-6 pb-16">
+      {success && (
+        <SuccessOverlay
+          show
+          title={success.title}
+          subtitle={success.subtitle}
+          onDone={() => router.push(success.href)}
+        />
+      )}
       <div className="flex items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold text-[var(--fg)]">
