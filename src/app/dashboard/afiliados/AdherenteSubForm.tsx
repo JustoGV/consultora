@@ -61,14 +61,21 @@ export function emptyAdherenteIdentity(): IdentityData {
   };
 }
 
+/** The titular's address (4 fields) — offered to adherentes via the "heredar domicilio" chip. */
+export interface TitularDomicilio {
+  direccion?: string;
+  localidad?: string;
+  provincia?: string;
+  codigoPostal?: string;
+}
+
 interface AdherenteSubFormProps {
   /** Persona ids already used (titular + pending adherentes) — excluded from search. */
   excludedPersonaIds: string[];
   /** Documento pairs already pending, to warn on duplicates within the same submit. */
   pendingDocs: { tipoDocumento: TipoDocumento; numeroDocumento: string }[];
-  /** Titular address, to offer "heredar domicilio" for existing adherentes without one. */
-  titularDireccion?: string;
-  titularLocalidad?: string;
+  /** Titular's address (4 fields), to offer "heredar domicilio" (UX-13). */
+  titularDomicilio?: TitularDomicilio;
   /** When editing an existing adherente item, its draft is passed in to prefill. */
   editing?: PendingAdherente | null;
   onAdd: (adherente: PendingAdherente) => void;
@@ -85,8 +92,7 @@ interface AdherenteSubFormProps {
 export default function AdherenteSubForm({
   excludedPersonaIds,
   pendingDocs,
-  titularDireccion,
-  titularLocalidad,
+  titularDomicilio,
   editing,
   onAdd,
   onCancelEdit,
@@ -152,8 +158,36 @@ export default function AdherenteSubForm({
     }
   };
 
-  const puedeHeredarDomicilio =
-    mode === 'existente' && !!personaSel && !personaSel.direccion && !!titularDireccion;
+  const titularTieneDomicilio = !!(
+    titularDomicilio &&
+    (titularDomicilio.direccion || titularDomicilio.localidad || titularDomicilio.provincia || titularDomicilio.codigoPostal)
+  );
+  const domicilioTitularLabel = [titularDomicilio?.direccion, titularDomicilio?.localidad]
+    .filter(Boolean)
+    .join(', ');
+
+  // Modo 'existente': la persona ya vive en la base — el copiado de domicilio
+  // es un side-effect que el padre aplica recién al guardar (PATCH separado),
+  // por eso acá se ofrece como un checkbox diferido en vez de un botón directo.
+  const puedeHeredarDomicilioExistente =
+    mode === 'existente' && !!personaSel && !personaSel.direccion && titularTieneDomicilio;
+
+  // Modo 'nuevo': el adherente es un draft local todavía sin persistir — el
+  // chip puede aplicar el copiado de una sobre el `identity` state con un
+  // botón [Usar], sin esperar al submit.
+  const puedeHeredarDomicilioNuevo =
+    mode === 'nuevo' && titularTieneDomicilio && !identity.direccion;
+
+  const usarDomicilioTitular = () => {
+    if (!titularDomicilio) return;
+    setIdentity((prev) => ({
+      ...prev,
+      direccion: titularDomicilio.direccion || prev.direccion,
+      localidad: titularDomicilio.localidad || prev.localidad,
+      provincia: titularDomicilio.provincia || prev.provincia,
+      codigoPostal: titularDomicilio.codigoPostal || prev.codigoPostal,
+    }));
+  };
 
   const handleAdd = () => {
     const nextErrors: Record<string, string> = {};
@@ -196,8 +230,8 @@ export default function AdherenteSubForm({
         ...base,
         personaId,
         personaLabel,
-        personaSinDireccion: puedeHeredarDomicilio,
-        heredarDomicilio: puedeHeredarDomicilio ? heredarDomicilio : false,
+        personaSinDireccion: puedeHeredarDomicilioExistente,
+        heredarDomicilio: puedeHeredarDomicilioExistente ? heredarDomicilio : false,
       });
     }
     // The parent unmounts this sub-form after a successful add, so no in-place
@@ -242,6 +276,17 @@ export default function AdherenteSubForm({
 
       {mode === 'nuevo' ? (
         <div className="space-y-4">
+          {puedeHeredarDomicilioNuevo && (
+            <div className="flex items-center gap-2 rounded-md border border-[var(--border-strong)] bg-[var(--surface)] px-3 py-2 text-xs text-[var(--fg-muted)]">
+              <Home className="size-3.5 shrink-0" />
+              <span className="flex-1">
+                Usar domicilio del titular: {domicilioTitularLabel}
+              </span>
+              <Button type="button" size="sm" variant="subtle" onClick={usarDomicilioTitular}>
+                Usar
+              </Button>
+            </div>
+          )}
           <IdentityFields
             data={identity}
             errors={errors}
@@ -262,7 +307,7 @@ export default function AdherenteSubForm({
             />
           </Field>
 
-          {puedeHeredarDomicilio && (
+          {puedeHeredarDomicilioExistente && (
             <label className="flex items-center gap-2 rounded-md border border-[var(--border-strong)] bg-[var(--surface)] px-3 py-2 text-xs text-[var(--fg-muted)]">
               <input
                 type="checkbox"
@@ -271,8 +316,7 @@ export default function AdherenteSubForm({
                 className="size-4 rounded border-[var(--border-strong)]"
               />
               <Home className="size-3.5 shrink-0" />
-              Usar domicilio del titular: {titularDireccion}
-              {titularLocalidad ? `, ${titularLocalidad}` : ''}
+              Usar domicilio del titular: {domicilioTitularLabel}
             </label>
           )}
         </div>

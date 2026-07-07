@@ -38,7 +38,13 @@ import {
   UserRound,
   Users,
 } from 'lucide-react';
-import { IdentityData, IdentityFields, Field } from './identityFields';
+import {
+  IdentityData,
+  IdentityFields,
+  Field,
+  validateIdentity,
+  validateIdentityField,
+} from './identityFields';
 import AdherenteSubForm, { PendingAdherente } from './AdherenteSubForm';
 
 /** Shape of GET /afiliaciones/:id/grupo for a TITULAR (see afiliaciones.service.ts). */
@@ -150,7 +156,6 @@ interface AfiliadoFormProps {
 export default function AfiliadoForm({ persona = null }: AfiliadoFormProps) {
   const router = useRouter();
   const { user } = useAuth();
-  const administradoraId = user?.administradoraId || persona?.administradoraId || '';
   const isEditing = !!persona;
 
   const formRef = useRef<HTMLDivElement>(null);
@@ -190,17 +195,32 @@ export default function AfiliadoForm({ persona = null }: AfiliadoFormProps) {
   const [formError, setFormError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
+  // ---- administradoraId resolution (UX-13) ----
+  // The user's OWN administradora drives the RN-14 preset lookup (below) and is
+  // the direct source of truth for ADMIN users. For SUPERADMIN, `user.administradoraId`
+  // is null (they operate across all administradoras) — in that case the
+  // administradora is instead derived from whichever obra social was picked in
+  // Section 2 (every `ObraSocial` carries its own `administradoraId`). Falling
+  // back to `persona?.administradoraId` covers edición (the titular already has one).
+  const userAdministradoraId = user?.administradoraId || '';
+  const obraSocialSeleccionada = useMemo(
+    () => obrasSociales.find((o) => o.id === obraSocialId) || null,
+    [obrasSociales, obraSocialId]
+  );
+  const administradoraId =
+    userAdministradoraId || obraSocialSeleccionada?.administradoraId || persona?.administradoraId || '';
+
   // ---- Load catalogs + (edit) existing afiliación & adherentes ----
   useEffect(() => {
     estadoCivilService.getAll().then(setEstadosCiviles).catch(() => setEstadosCiviles([]));
     obrasSocialesService.getAll().then(setObrasSociales).catch(() => setObrasSociales([]));
-    if (administradoraId) {
+    if (userAdministradoraId) {
       administradoraService
-        .getById(administradoraId)
+        .getById(userAdministradoraId)
         .then(setAdministradora)
         .catch(() => setAdministradora(null));
     }
-  }, [administradoraId]);
+  }, [userAdministradoraId]);
 
   // Preset RN-14 (only in alta; edición loads the real afiliación below).
   useEffect(() => {
@@ -250,17 +270,15 @@ export default function AfiliadoForm({ persona = null }: AfiliadoFormProps) {
   };
 
   const onBlurTitular = (field: keyof IdentityData) => {
-    // Reuse identity validators inline (same rules as adherente sub-form).
-    let msg: string | null = null;
-    if (field === 'numeroDocumento' && titular.tipoDocumento === 'DNI' && titular.numeroDocumento) {
-      msg = /^\d{7,8}$/.test(titular.numeroDocumento) ? null : 'El DNI debe tener 7 u 8 dígitos';
-    } else if (field === 'cuil' && titular.cuil) {
-      msg = /^\d{11}$/.test(titular.cuil) ? null : 'CUIL inválido (11 dígitos + verificador)';
-    }
+    // Delegates to the same validators the adherente sub-form uses (identityFields.tsx)
+    // instead of reimplementing the regexes here — a prior inline copy of this
+    // logic diverged (its cuil check was a plain `/^\d{11}$/`, which breaks now
+    // that `cuil` is stored formatted with dashes, and it never validated
+    // numeroDocumento when tipoDocumento=CUIL).
+    const msg = validateIdentityField(field, titular);
     setTitularErrors((prev) => {
       const next = { ...prev };
       if (msg) next[field] = msg;
-      else if (field !== 'numeroDocumento' && field !== 'cuil') return prev;
       else delete next[field];
       return next;
     });
@@ -371,21 +389,26 @@ export default function AfiliadoForm({ persona = null }: AfiliadoFormProps) {
 
   // ---- Save orchestration ----
   const validateBeforeSave = (): boolean => {
-    const tErrors = { ...titularErrors };
-    // Full titular validation
-    if (!titular.nombre.trim()) tErrors.nombre = 'Requerido';
-    if (!titular.apellido.trim()) tErrors.apellido = 'Requerido';
-    if (!titular.numeroDocumento.trim()) tErrors.numeroDocumento = 'Requerido';
-    else if (titular.tipoDocumento === 'DNI' && !/^\d{7,8}$/.test(titular.numeroDocumento)) {
-      tErrors.numeroDocumento = 'El DNI debe tener 7 u 8 dígitos';
-    }
-    if (!titular.fechaNacimiento) tErrors.fechaNacimiento = 'Requerido';
+    // Full titular validation — reuse the same validator the adherente
+    // sub-form uses (identityFields.tsx) instead of a partial inline copy, so
+    // submit-time and blur-time agree and neither drifts (this previously
+    // missed cuil/email/telefono/celular/codigoPostal and the CUIL-as-documento
+    // case entirely).
+    const tErrors = validateIdentity(titular);
     setTitularErrors(tErrors);
 
     const aErrors: Record<string, string> = {};
     // If there are adherentes pending, obra social is mandatory (vínculo needs it).
     if (pendingAdherentes.some((a) => !a.existingVinculoId) && !obraSocialId) {
       aErrors.obraSocialId = 'Necesaria para agregar adherentes';
+    }
+    // Superadmin (no administradora propia) with no obra social picked and no
+    // fallback (edición) → there is no administradora to attach the persona/
+    // afiliación to. Block early with a clear message instead of letting the
+    // request hit the backend's "El ID de administradora es requerido".
+    if (!administradoraId) {
+      aErrors.obraSocialId = 'Seleccioná la obra social para definir la administradora.';
+      setFormError('Seleccioná la obra social para definir la administradora.');
     }
     setAfiliacionErrors(aErrors);
 
@@ -855,8 +878,12 @@ export default function AfiliadoForm({ persona = null }: AfiliadoFormProps) {
                   key={editingAdherente?._key || 'nuevo-adherente'}
                   excludedPersonaIds={excludedPersonaIds}
                   pendingDocs={pendingDocs}
-                  titularDireccion={titular.direccion}
-                  titularLocalidad={titular.localidad}
+                  titularDomicilio={{
+                    direccion: titular.direccion,
+                    localidad: titular.localidad,
+                    provincia: titular.provincia,
+                    codigoPostal: titular.codigoPostal,
+                  }}
                   editing={editingAdherente}
                   onAdd={handleAddAdherente}
                   onCancelEdit={() => {

@@ -240,13 +240,55 @@ export function sanitizeDigits(value: string, max: number): string {
 }
 
 /**
- * DNI argentino: 7 u 8 dígitos. Opcional en la mayoría de los formularios de
- * terceros (efectores/profesionales no siempre piden DNI) — el llamador
- * decide si es requerido; acá solo se valida el formato si hay contenido.
+ * Formatea progresivamente un CUIL/CUIT a medida que se tipea, insertando los
+ * guiones del formato estándar `XX-XXXXXXXX-X` (prefijo de 2 dígitos + DNI de
+ * 8 dígitos + verificador de 1 dígito = 11 dígitos, 13 caracteres con
+ * guiones). Acepta cualquier entrada (incluye guiones ya tipeados o pegados
+ * desde otro lado — ej. pegar `20447775884` o `20-44777588-4`), extrae solo
+ * los dígitos con `sanitizeDigits` y reconstruye el separador según cuántos
+ * dígitos hay cargados. Pensada para `onChange` (UX-13): el usuario nunca
+ * tipea el guion, aparece solo.
+ *
+ * @example
+ * formatCuil('20') // -> '20'
+ * formatCuil('2044777588') // -> '20-44777588'
+ * formatCuil('20447775884') // -> '20-44777588-4'
+ * formatCuil('20-44777588-4x') // -> '20-44777588-4' (basura no numérica descartada)
+ */
+export function formatCuil(value: string): string {
+  const digits = sanitizeDigits(value, 11);
+  if (digits.length <= 2) return digits;
+  if (digits.length <= 10) return `${digits.slice(0, 2)}-${digits.slice(2)}`;
+  return `${digits.slice(0, 2)}-${digits.slice(2, 10)}-${digits.slice(10)}`;
+}
+
+/**
+ * Extrae el DNI (8 dígitos del medio) de un CUIL de 11 dígitos ya completo y
+ * válido (prefijo(2) + DNI(8) + verificador(1)). Devuelve `null` si `value`
+ * (con o sin guiones) no tiene exactamente 11 dígitos — el llamador decide
+ * cuándo invocar esto (típicamente solo tras confirmar `isValidCuil`).
+ *
+ * @example
+ * extraerDniDeCuil('20-44777588-4') // -> '44777588'
+ * extraerDniDeCuil('20447775884')   // -> '44777588'
+ * extraerDniDeCuil('20-4477-4')     // -> null (no son 11 dígitos)
+ */
+export function extraerDniDeCuil(value: string): string | null {
+  const digits = value.trim().replace(/[-\s]/g, '');
+  if (!/^\d{11}$/.test(digits)) return null;
+  return digits.slice(2, 10);
+}
+
+/**
+ * DNI argentino: 7 u 8 dígitos (7 cubre documentos viejos de personas mayores
+ * — el sistema atiende tercera edad). Opcional en la mayoría de los
+ * formularios de terceros (efectores/profesionales no siempre piden DNI) —
+ * el llamador decide si es requerido; acá solo se valida el formato si hay
+ * contenido.
  */
 export function validateDniAR(value: string): string | null {
   if (!value.trim()) return null;
-  return /^\d{7,8}$/.test(value.trim()) ? null : 'DNI inválido (7 u 8 dígitos)';
+  return /^\d{7,8}$/.test(value.trim()) ? null : 'El DNI debe tener 7 u 8 dígitos';
 }
 
 /**

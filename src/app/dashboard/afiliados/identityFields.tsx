@@ -18,6 +18,8 @@ import {
   isValidEmailFormat,
   isValidFechaNacimiento,
   sanitizeDigits,
+  formatCuil,
+  extraerDniDeCuil,
   validateTelefonoAR,
   validateCodigoPostalAR,
 } from '@/lib/formUtils';
@@ -71,6 +73,9 @@ export function validateIdentityField(
       if (data.tipoDocumento === 'DNI' && data.numeroDocumento && !isValidDni(data.numeroDocumento)) {
         return 'El DNI debe tener 7 u 8 dígitos';
       }
+      if (data.tipoDocumento === 'CUIL' && data.numeroDocumento && !isValidCuil(data.numeroDocumento)) {
+        return 'CUIL inválido (11 dígitos + verificador)';
+      }
       return null;
     case 'cuil':
       if (data.cuil && !isValidCuil(data.cuil)) return 'CUIL inválido (11 dígitos + verificador)';
@@ -106,6 +111,8 @@ export function validateIdentity(data: IdentityData): Record<string, string> {
   if (!data.numeroDocumento.trim()) errors.numeroDocumento = 'Requerido';
   else if (data.tipoDocumento === 'DNI' && !isValidDni(data.numeroDocumento)) {
     errors.numeroDocumento = 'El DNI debe tener 7 u 8 dígitos';
+  } else if (data.tipoDocumento === 'CUIL' && !isValidCuil(data.numeroDocumento)) {
+    errors.numeroDocumento = 'CUIL inválido (11 dígitos + verificador)';
   }
   if (data.cuil && !isValidCuil(data.cuil)) errors.cuil = 'CUIL inválido (11 dígitos + verificador)';
   if (!data.fechaNacimiento) errors.fechaNacimiento = 'Requerido';
@@ -225,7 +232,11 @@ export function IdentityFields({
           counter={
             isDniOrCuil && (
               <DigitCounter
-                value={data.numeroDocumento}
+                value={
+                  data.tipoDocumento === 'CUIL'
+                    ? sanitizeDigits(data.numeroDocumento, 11)
+                    : data.numeroDocumento
+                }
                 max={data.tipoDocumento === 'DNI' ? 8 : 11}
                 min={data.tipoDocumento === 'DNI' ? 7 : 11}
                 hasError={!!errors.numeroDocumento}
@@ -242,7 +253,7 @@ export function IdentityFields({
                 data.tipoDocumento === 'DNI'
                   ? sanitizeDigits(raw, 8)
                   : data.tipoDocumento === 'CUIL'
-                    ? sanitizeDigits(raw, 11)
+                    ? formatCuil(raw)
                     : raw;
               setField('numeroDocumento', value);
             }}
@@ -251,7 +262,7 @@ export function IdentityFields({
               onDocumentoBlur?.();
             }}
             inputMode={isDniOrCuil ? 'numeric' : 'text'}
-            maxLength={data.tipoDocumento === 'DNI' ? 8 : data.tipoDocumento === 'CUIL' ? 11 : undefined}
+            maxLength={data.tipoDocumento === 'DNI' ? 8 : data.tipoDocumento === 'CUIL' ? 13 : undefined}
             className="tabular-nums"
             autoComplete="off"
             aria-invalid={!!errors.numeroDocumento}
@@ -265,15 +276,28 @@ export function IdentityFields({
         <Field
           label="CUIL"
           error={errors.cuil}
-          counter={<DigitCounter value={data.cuil || ''} max={11} hasError={!!errors.cuil} />}
+          counter={
+            <DigitCounter value={sanitizeDigits(data.cuil || '', 11)} max={11} hasError={!!errors.cuil} />
+          }
         >
           <Input
             name={n('cuil')}
             value={data.cuil || ''}
-            onChange={(e) => setField('cuil', sanitizeDigits(e.target.value, 11))}
+            onChange={(e) => {
+              const formatted = formatCuil(e.target.value);
+              setField('cuil', formatted);
+              // Derivar DNI del CUIL (UX-13): solo cuando el CUIL queda completo
+              // (11 dígitos) y válido (verificador módulo 11 ok), y solo si el
+              // campo Número de documento (tipoDocumento=DNI) está vacío — nunca
+              // pisa un DNI ya cargado.
+              if (data.tipoDocumento === 'DNI' && !data.numeroDocumento.trim() && isValidCuil(formatted)) {
+                const dni = extraerDniDeCuil(formatted);
+                if (dni) setField('numeroDocumento', dni);
+              }
+            }}
             onBlur={() => onBlurField('cuil')}
             inputMode="numeric"
-            maxLength={11}
+            maxLength={13}
             className="tabular-nums"
             autoComplete="off"
             aria-invalid={!!errors.cuil}
