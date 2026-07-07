@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
+import { ActiveAdministradoraProvider } from '@/contexts/ActiveAdministradoraContext';
 import Sidebar from '@/components/Sidebar';
 import Topbar from '@/components/shell/Topbar';
 import { Toaster } from '@/components/ui/sonner';
@@ -64,17 +65,19 @@ export default function DashboardLayout({
   }
 
   return (
-    <ConfirmProvider>
-      <div className="flex h-screen bg-[var(--bg)]">
-        <Sidebar collapsed={collapsed} />
-        <div className="flex min-w-0 flex-1 flex-col">
-          <Topbar onToggleSidebar={toggleSidebar} />
-          <main className="flex-1 overflow-y-auto">
-            <div className="p-6 lg:p-8">{children}</div>
-          </main>
+    <ActiveAdministradoraProvider>
+      <ConfirmProvider>
+        <div className="flex h-screen bg-[var(--bg)]">
+          <Sidebar collapsed={collapsed} />
+          <div className="flex min-w-0 flex-1 flex-col">
+            <Topbar onToggleSidebar={toggleSidebar} />
+            <main className="flex-1 overflow-y-auto">
+              <div className="p-6 lg:p-8">{children}</div>
+            </main>
+          </div>
+          <Toaster />
         </div>
-        <Toaster />
-      </div>
-    </ConfirmProvider>
+      </ConfirmProvider>
+    </ActiveAdministradoraProvider>
   );
 }

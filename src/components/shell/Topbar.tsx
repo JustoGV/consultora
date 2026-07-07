@@ -2,9 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Search, Menu, ChevronDown, Settings, LogOut } from "lucide-react";
+import { Search, Menu, ChevronDown, Settings, LogOut, Building2, Check } from "lucide-react";
 
 import { useAuth } from "@/contexts/AuthContext";
+import { useActiveAdministradora } from "@/contexts/ActiveAdministradoraContext";
 import { cn } from "@/lib/utils";
 import AlertBell from "@/components/shell/AlertBell";
 import {
@@ -31,7 +32,9 @@ export default function Topbar({
   onToggleSidebar?: () => void;
 }) {
   const router = useRouter();
-  const { user, logout } = useAuth();
+  const { user, isSuperAdmin, logout } = useAuth();
+  const { administradoras, activeAdministradoraId, setActiveAdministradoraId } =
+    useActiveAdministradora();
   const [query, setQuery] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -84,6 +87,9 @@ export default function Topbar({
         ? "Admin"
         : "Usuario";
 
+  const activeAdministradoraNombre =
+    administradoras.find((a) => a.id === activeAdministradoraId)?.nombre || "Elegir…";
+
   return (
     <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-3 border-b border-[var(--border)] bg-[var(--topbar-bg)] px-4">
       {onToggleSidebar && (
@@ -127,6 +133,58 @@ export default function Topbar({
       </form>
 
       <div className="ml-auto flex items-center gap-1.5">
+        {/* Selector de administradora activa (UX-15a) — solo superadmin. El
+            superadmin no tiene administradoraId propio; esta elección define
+            bajo qué administradora se crean los catálogos/entidades standalone
+            (ver useActiveAdministradoraId, ActiveAdministradoraContext.tsx). */}
+        {isSuperAdmin && (
+          <>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className={cn(
+                    "flex items-center gap-1.5 rounded-md border border-[var(--border)] py-1.5 pl-2.5 pr-2 text-sm text-[var(--fg-muted)] transition-colors duration-150",
+                    "hover:bg-[var(--surface-sunken)] hover:text-[var(--fg)]",
+                    "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)]"
+                  )}
+                  title="Administradora activa"
+                >
+                  <Building2 className="size-3.5 text-[var(--fg-subtle)]" aria-hidden />
+                  <span className="hidden max-w-32 truncate font-medium sm:block">
+                    {activeAdministradoraNombre}
+                  </span>
+                  <ChevronDown className="size-3.5 text-[var(--fg-subtle)]" aria-hidden />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="max-h-80 overflow-y-auto">
+                <DropdownMenuLabel className="normal-case tracking-normal text-[var(--fg-subtle)]">
+                  Administradora activa
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {administradoras.length === 0 ? (
+                  <div className="px-2 py-1.5 text-sm text-[var(--fg-subtle)]">Sin administradoras</div>
+                ) : (
+                  administradoras.map((a) => (
+                    <DropdownMenuItem
+                      key={a.id}
+                      onSelect={() => setActiveAdministradoraId(a.id)}
+                      className="justify-between gap-2"
+                    >
+                      <span className="truncate">{a.nombre}</span>
+                      {a.id === activeAdministradoraId && (
+                        <Check className="size-4 shrink-0 text-[var(--primary-600)]" aria-hidden />
+                      )}
+                    </DropdownMenuItem>
+                  ))
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            <div className="mx-1 h-6 w-px bg-[var(--border)]" aria-hidden />
+          </>
+        )}
+
         <AlertBell />
 
         <div className="mx-1 h-6 w-px bg-[var(--border)]" aria-hidden />
