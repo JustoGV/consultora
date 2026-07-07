@@ -364,7 +364,7 @@ export default function ReportesPage() {
           <ReportesSkeleton />
         ) : !hayDatos ? (
           <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-6 py-20 text-center">
-            <div className="flex size-12 items-center justify-center border border-[var(--border)] bg-[var(--surface-sunken)] text-[var(--fg-subtle)]">
+            <div className="flex size-12 items-center justify-center rounded-full bg-[var(--surface-sunken)] text-[var(--fg-subtle)]">
               <FileBarChart2 className="size-6" aria-hidden />
             </div>
             <p className="text-sm font-semibold text-[var(--fg)]">

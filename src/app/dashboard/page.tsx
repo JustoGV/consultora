@@ -121,10 +121,10 @@ export default function DashboardPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <p className="eyebrow mb-2 text-[var(--accent-ink)]">Panel · Lo urgente del día</p>
-          <h1 className="font-display text-[2rem] font-normal leading-none text-[var(--fg)]">
+          <h1 className="text-3xl font-semibold text-[var(--fg)]">
             Hola, {user?.nombre?.split(' ')[0] ?? ''}
           </h1>
+          <p className="mt-1 text-sm text-[var(--fg-muted)]">Lo urgente del día.</p>
         </div>
       </div>
 
@@ -355,7 +355,7 @@ function SemaforoCard({
         </p>
       </div>
       <span
-        className="flex size-11 shrink-0 items-center justify-center transition-transform duration-200 group-hover:scale-105"
+        className="flex size-11 shrink-0 items-center justify-center rounded-full transition-transform duration-200 group-hover:scale-105"
         style={{ backgroundColor: toneStyles.bg }}
       >
         <span className="size-3 rounded-full" style={{ backgroundColor: toneStyles.solid }} aria-hidden />

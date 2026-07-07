@@ -177,7 +177,7 @@ export default function AlertBell() {
               </ul>
             ) : alertas.length === 0 ? (
               <div className="flex flex-col items-center justify-center gap-2 px-6 py-16 text-center">
-                <div className="flex size-12 items-center justify-center border border-[var(--border)] bg-[var(--surface-sunken)] text-[var(--fg-subtle)]">
+                <div className="flex size-12 items-center justify-center rounded-full bg-[var(--surface-sunken)] text-[var(--fg-subtle)]">
                   <Bell className="size-6" />
                 </div>
                 <p className="text-sm text-[var(--fg-muted)]">

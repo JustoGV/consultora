@@ -2,12 +2,8 @@
 @import "tw-animate-css";
 
 /* ============================================================
-   GV-G CONSULTING — DESIGN SYSTEM (UX-7b)
-   Identidad editorial de marca: cyan de acento + tinta azul profunda.
-   Blanco de canvas, reglas de 1px, radius 0 en TODO, sombra editorial,
-   tipografía Fraunces (display) + Inter (UI) + JetBrains Mono (meta).
-   El cyan puro (#07b6d5) NO alcanza AA para texto sobre blanco: se reserva
-   para fills, líneas y hover; el texto/links usan accent-ink (--primary-600).
+   GV-G CONSULTING — DESIGN SYSTEM (UX-1)
+   Identidad sobria de salud: teal profundo + neutrales cálidos.
    Semáforo (rojo/ámbar/verde) reservado EXCLUSIVAMENTE a severidad.
    Regla madre: denso con jerarquía, desktop-first, teclado-first.
    Documentado en /DESIGN.md — no usar colores/espaciados fuera de tokens.
@@ -16,58 +12,47 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
-  /* --- PRIMARY — Cyan de marca → tinta azul (identidad GV-G) ---
-     El nombre de la escala --primary-N se conserva para que las páginas que la
-     referencian adopten la marca sin tocar su JSX. La escala drifta de cyan
-     brillante (fills/líneas) a tinta azul profunda (texto/botones AA).
-     600 = accent-ink: color de texto/link/botón principal (AA sobre blanco). */
-  --primary-50:  #eefafb;   /* accent-wash — fondos suaves, chips */
-  --primary-100: #d4f3f7;   /* accent-soft — hover de fondos suaves */
-  --primary-200: #aae5ee;   /* bordes teñidos */
-  --primary-300: #51d4ec;
-  --primary-400: #0dd0f2;   /* accent-bright — hover de fills */
-  --primary-500: #07b6d5;   /* CYAN puro — fills, líneas de acento, underline-grow */
-  --primary-600: #0d7791;   /* MAIN texto/link/botón — accent-ink (AA 5.17 sobre blanco) */
-  --primary-700: #145571;   /* hover de botón / texto acento intenso */
-  --primary-800: #193c57;   /* active de botón */
-  --primary-900: #243a52;   /* navy — tintas profundas */
-  --primary-950: #131d2a;
+  /* --- PRIMARY — Teal profundo de salud (identidad propia, NO azul admin) ---
+     Reemplaza el viejo "Admindek Blue". El nombre de la escala --primary-N se
+     conserva para que las ~20 páginas que la referencian adopten el teal sin
+     tocar su JSX. 600 = color principal. */
+  --primary-50:  #ecfdf9;
+  --primary-100: #d0faf0;
+  --primary-200: #a4f2e1;
+  --primary-300: #6ee3ce;
+  --primary-400: #34ccb4;
+  --primary-500: #16a394;   /* teal medio (acento vivo, hover claro) */
+  --primary-600: #0f766e;   /* MAIN — teal profundo de marca */
+  --primary-700: #115e57;
+  --primary-800: #134e49;
+  --primary-900: #134039;
+  --primary-950: #042f2a;
 
-  /* --- NEUTRALES — gris azulado frío de la marca (tinta/regla), no stone cálido.
-     Reemplazan los neutrales default. --- */
-  --neutral-50:  #f5f7fa;   /* fondo de página (paper) */
-  --neutral-100: #eef2f7;   /* superficie hundida, header de tabla */
-  --neutral-200: #d9e2ed;   /* rule — hairlines */
-  --neutral-300: #bccbdc;   /* rule-strong — bordes de inputs, scrollbar */
-  --neutral-400: #8298b0;   /* placeholder, íconos apagados */
-  --neutral-500: #607c9a;   /* dim — texto sutil */
-  --neutral-600: #334c66;   /* ink-soft — texto secundario (AA 8.87) */
-  --neutral-700: #25374b;
-  --neutral-800: #1b2736;   /* bordes del sidebar */
-  --neutral-900: #1a2532;   /* ink — texto primario */
-  --neutral-950: #0e1620;   /* ink-deep — fondo del sidebar */
-
-  /* --- ACENTO CYAN — alias semánticos de marca (paridad con el login) --- */
-  --accent:        #07b6d5;   /* cyan puro (fills, líneas) */
-  --accent-bright: #0dd0f2;   /* cyan claro (hover, glow) */
-  --accent-ink:    #0d7791;   /* cyan oscuro AA (texto/links/foco) */
-  --accent-soft:   #cbf0f6;   /* fondo teñido */
-  --accent-wash:   #e6f7fa;   /* fondo teñido muy suave */
+  /* --- NEUTRALES CÁLIDOS — piedra/stone con una pizca de temperatura
+     (no el gris muerto de slate). Reemplaza los --neutral-N fríos. --- */
+  --neutral-50:  #faf9f7;
+  --neutral-100: #f4f2ee;
+  --neutral-200: #e8e5df;
+  --neutral-300: #d6d1c7;
+  --neutral-400: #a8a196;
+  --neutral-500: #7c766b;
+  --neutral-600: #5c574e;
+  --neutral-700: #443f38;
+  --neutral-800: #2b2823;
+  --neutral-900: #1c1a16;
 
   /* --- SEMÁFORO DE SEVERIDAD (RN-11) — uso EXCLUSIVO para prioridad de alerta.
      CRITICA/ALTA = rojo · MEDIA = ámbar · BAJA/INFO = verde.
-     Tonos levemente enfriados para convivir con el cyan sin perder el código
-     inconfundible (rojo=crítico, ámbar=medio, verde=ok). Nunca decorativo.
-     Cada color trae su par -bg (fondo suave) y -fg (texto). --- */
-  --sev-critica:     #e0393b;   /* rojo crítico */
-  --sev-critica-bg:  #fef2f2;
-  --sev-critica-fg:  #9f1d1d;
-  --sev-media:       #d98324;   /* ámbar */
-  --sev-media-bg:    #fdf6ec;
-  --sev-media-fg:    #8a4d0f;
-  --sev-baja:        #1a9e6a;   /* verde (levemente teal, armoniza con cyan) */
-  --sev-baja-bg:     #eefaf3;
-  --sev-baja-fg:     #10603f;
+     Nunca decorativo. Cada color trae su par -bg (fondo suave) y -fg (texto). --- */
+  --sev-critica:     #dc2626;   /* red-600  */
+  --sev-critica-bg:  #fef2f2;   /* red-50   */
+  --sev-critica-fg:  #991b1b;   /* red-800  */
+  --sev-media:       #d97706;   /* amber-600 */
+  --sev-media-bg:    #fffbeb;   /* amber-50  */
+  --sev-media-fg:    #92400e;   /* amber-800 */
+  --sev-baja:        #16a34a;   /* green-600 */
+  --sev-baja-bg:     #f0fdf4;   /* green-50  */
+  --sev-baja-fg:     #166534;   /* green-800 */
 
   /* --- Colores semánticos legacy (se mantienen los nombres, retintados) --- */
   --success: var(--sev-baja);
@@ -93,54 +78,47 @@
   --bg: var(--surface-secondary);
   --surface: var(--surface-primary);
   --surface-sunken: var(--neutral-100);
-  --border: var(--neutral-200);        /* rule 1px */
+  --border: var(--neutral-200);
   --border-strong: var(--neutral-300);
   --fg: var(--text-primary);
   --fg-muted: var(--text-secondary);
   --fg-subtle: var(--text-tertiary);
-  --ring: var(--accent-ink);           /* anillo de foco cyan-ink (AA) */
+  --ring: var(--primary-600);
 
-  /* Shell — sidebar ink-deep (frame editorial oscuro), activo en cyan */
-  --sidebar-bg: var(--neutral-950);
-  --sidebar-fg: #a9bace;               /* texto de nav (AA sobre ink-deep) */
-  --sidebar-fg-muted: #64788f;         /* labels de sección */
-  --sidebar-active-bg: var(--accent-ink);
-  --sidebar-active-fg: #ffffff;
+  /* Shell */
+  --sidebar-bg: var(--neutral-900);
+  --sidebar-fg: var(--neutral-300);
+  --sidebar-fg-muted: var(--neutral-500);
+  --sidebar-active-bg: var(--primary-600);
   --sidebar-hover-bg: var(--neutral-800);
   --topbar-bg: var(--surface-primary);
 
-  /* --- Sombras EDITORIALES — plana suave + una elevación con profundidad --- */
-  --shadow-soft:  0 1px 2px hsl(213 31% 15% / 0.05);
-  --shadow-sm:    0 1px 2px hsl(213 31% 15% / 0.05);
-  --shadow-md:    0 2px 10px -3px hsl(213 31% 15% / 0.10);
-  --shadow-lg:    0 12px 30px -14px hsl(213 31% 15% / 0.16);
-  --shadow-xl:    0 18px 44px -20px hsl(213 31% 15% / 0.18);
-  --shadow-2xl:   0 24px 60px -30px hsl(213 31% 15% / 0.22);
-  /* Sombra editorial de marca (cards de énfasis, dialogs) */
-  --shadow-editorial: 0 24px 60px -30px hsl(213 31% 15% / 0.18);
+  /* --- Sombras — mayormente planas + una elevación considerada --- */
+  --shadow-sm: 0 1px 2px 0 rgba(28, 26, 22, 0.05);
+  --shadow-md: 0 2px 8px -2px rgba(28, 26, 22, 0.08);
+  --shadow-lg: 0 8px 24px -6px rgba(28, 26, 22, 0.10);
+  --shadow-xl: 0 12px 32px -8px rgba(28, 26, 22, 0.14);
+  --shadow-2xl: 0 20px 48px -12px rgba(28, 26, 22, 0.18);
 
-  /* --- Radios — RADIUS 0 en TODO (identidad editorial GV-G).
-     Los nombres se conservan; todos valen 0 para que ningún rounded-* del
-     design system redondee. Las pills genuinas usan rounded-full (aparte). --- */
-  --radius-sm: 0;
-  --radius-md: 0;
-  --radius-lg: 0;
-  --radius-xl: 0;
-  --radius: 0;   /* alias shadcn */
+  /* --- Radios — escala deliberada, crisp (no rounded-2xl en todo) --- */
+  --radius-sm: 0.25rem;   /* 4px  — chips, badges */
+  --radius-md: 0.375rem;  /* 6px  — inputs, botones, celdas */
+  --radius-lg: 0.5rem;    /* 8px  — cards, modales */
+  --radius-xl: 0.75rem;   /* 12px — superficies grandes */
+  --radius: var(--radius-md); /* alias shadcn */
 
-  /* --- Transiciones — easing editorial de marca (cubic-bezier 0.22,1,0.36,1) --- */
-  --ease-ed: cubic-bezier(0.22, 1, 0.36, 1);
-  --transition-fast: 250ms var(--ease-ed);
-  --transition-base: 350ms var(--ease-ed);
-  --transition-slow: 450ms var(--ease-ed);
+  /* --- Transiciones — sutiles 150-250ms, sin animación gratuita --- */
+  --transition-fast: 150ms cubic-bezier(0.16, 1, 0.3, 1);
+  --transition-base: 200ms cubic-bezier(0.16, 1, 0.3, 1);
+  --transition-slow: 250ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 /* ============================================================
    @theme — mapear tokens a utilidades Tailwind.
-   Punto clave para NO romper páginas: se re-mapea `blue-*` de Tailwind a la
-   escala de marca, de modo que los archivos con `bg-blue-600 / text-blue-600 /
-   ring-blue-500 / border-blue-*` hardcodeados adopten la identidad sin editar
-   su JSX.
+   Punto clave para NO romper páginas viejas: se re-mapea la paleta
+   built-in `blue-*` de Tailwind al teal de marca, de modo que los
+   ~27 archivos con `bg-blue-600 / text-blue-600 / ring-blue-500 / border-blue-*`
+   hardcodeados adoptan la identidad sin editar su JSX.
    ============================================================ */
 @theme inline {
   --color-background: var(--bg);
@@ -157,13 +135,6 @@
   --color-fg-subtle: var(--fg-subtle);
   --color-ring: var(--ring);
 
-  /* Acento cyan como utilidades (bg-accent, text-accent-ink, …) */
-  --color-accent: var(--accent);
-  --color-accent-bright: var(--accent-bright);
-  --color-accent-ink: var(--accent-ink);
-  --color-accent-soft: var(--accent-soft);
-  --color-accent-wash: var(--accent-wash);
-
   /* Semáforo de severidad como utilidades (text-sev-critica, bg-sev-critica-bg, …) */
   --color-sev-critica: var(--sev-critica);
   --color-sev-critica-bg: var(--sev-critica-bg);
@@ -175,13 +146,11 @@
   --color-sev-baja-bg: var(--sev-baja-bg);
   --color-sev-baja-fg: var(--sev-baja-fg);
 
-  /* Tipografía de marca (cargada en layout.tsx vía next/font).
-     Inter = UI/body · Fraunces = display · JetBrains Mono = meta/números. */
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
-  --font-display: var(--font-fraunces), Georgia, "Times New Roman", serif;
-  --font-mono: var(--font-jetbrains), ui-monospace, "SFMono-Regular", monospace;
+  /* Tipografía — Lexend humanista (self-hosted vía Fontsource). NO Inter/Geist. */
+  --font-sans: "Lexend Variable", var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, "SFMono-Regular", monospace;
 
-  /* Radios shadcn (todos 0 — radius 0 en TODO) */
+  /* Radios shadcn */
   --radius-sm: var(--radius-sm);
   --radius-md: var(--radius-md);
   --radius-lg: var(--radius-lg);
@@ -197,60 +166,50 @@
 
 /* ============================================================
    @theme (NO inline) — OVERRIDE de paletas built-in de Tailwind.
-   Con valores literales para reemplazar los defaults. Es lo que hace que
-   `bg-blue-600 / text-blue-600 / ring-blue-500` de las páginas viejas
-   rendericen en la marca SIN tocar su JSX, y que `neutral-*`/`primary-*` sean
-   los tokens de marca. Los radios built-in se anulan a 0.
+   Con valores literales para reemplazar los defaults (`blue-600: #155dfc`,
+   stone frío, etc.). Es lo que hace que `bg-blue-600 / text-blue-600 /
+   ring-blue-500` de las páginas viejas rendericen en teal SIN tocar su JSX,
+   y que `neutral-*`/`primary-*` sean los tokens de marca.
+   (En @theme inline el override de un color default no reemplaza al built-in.)
    ============================================================ */
 @theme {
-  /* Escala primary (cyan → tinta de marca) */
-  --color-primary-50:  #eefafb;
-  --color-primary-100: #d4f3f7;
-  --color-primary-200: #aae5ee;
-  --color-primary-300: #51d4ec;
-  --color-primary-400: #0dd0f2;
-  --color-primary-500: #07b6d5;
-  --color-primary-600: #0d7791;
-  --color-primary-700: #145571;
-  --color-primary-800: #193c57;
-  --color-primary-900: #243a52;
-  --color-primary-950: #131d2a;
+  /* Escala primary (teal de marca) */
+  --color-primary-50:  #ecfdf9;
+  --color-primary-100: #d0faf0;
+  --color-primary-200: #a4f2e1;
+  --color-primary-300: #6ee3ce;
+  --color-primary-400: #34ccb4;
+  --color-primary-500: #16a394;
+  --color-primary-600: #0f766e;
+  --color-primary-700: #115e57;
+  --color-primary-800: #134e49;
+  --color-primary-900: #134039;
+  --color-primary-950: #042f2a;
 
-  /* Neutrales fríos de marca (reemplazan el gris default) */
-  --color-neutral-50:  #f5f7fa;
-  --color-neutral-100: #eef2f7;
-  --color-neutral-200: #d9e2ed;
-  --color-neutral-300: #bccbdc;
-  --color-neutral-400: #8298b0;
-  --color-neutral-500: #607c9a;
-  --color-neutral-600: #334c66;
-  --color-neutral-700: #25374b;
-  --color-neutral-800: #1b2736;
-  --color-neutral-900: #1a2532;
-  --color-neutral-950: #0e1620;
+  /* Neutrales cálidos (reemplazan el gris frío default) */
+  --color-neutral-50:  #faf9f7;
+  --color-neutral-100: #f4f2ee;
+  --color-neutral-200: #e8e5df;
+  --color-neutral-300: #d6d1c7;
+  --color-neutral-400: #a8a196;
+  --color-neutral-500: #7c766b;
+  --color-neutral-600: #5c574e;
+  --color-neutral-700: #443f38;
+  --color-neutral-800: #2b2823;
+  --color-neutral-900: #1c1a16;
 
-  /* Re-map blue-* a la marca (compat: páginas con bg-blue/text-blue hardcodeados) */
-  --color-blue-50:  #eefafb;
-  --color-blue-100: #d4f3f7;
-  --color-blue-200: #aae5ee;
-  --color-blue-300: #51d4ec;
-  --color-blue-400: #0dd0f2;
-  --color-blue-500: #07b6d5;
-  --color-blue-600: #0d7791;
-  --color-blue-700: #145571;
-  --color-blue-800: #193c57;
-  --color-blue-900: #243a52;
-  --color-blue-950: #131d2a;
-
-  /* Radius global a 0 (identidad editorial GV-G) */
-  --radius-none: 0;
-  --radius-xs: 0;
-  --radius-sm: 0;
-  --radius-md: 0;
-  --radius-lg: 0;
-  --radius-xl: 0;
-  --radius-2xl: 0;
-  --radius-3xl: 0;
+  /* Re-map blue-* a teal (compat: paginas viejas con bg-blue y text-blue hardcodeados) */
+  --color-blue-50:  #ecfdf9;
+  --color-blue-100: #d0faf0;
+  --color-blue-200: #a4f2e1;
+  --color-blue-300: #6ee3ce;
+  --color-blue-400: #34ccb4;
+  --color-blue-500: #16a394;
+  --color-blue-600: #0f766e;
+  --color-blue-700: #115e57;
+  --color-blue-800: #134e49;
+  --color-blue-900: #134039;
+  --color-blue-950: #042f2a;
 }
 
 /* ============================================================
@@ -270,37 +229,27 @@ html {
 body {
   background: var(--bg);
   color: var(--fg);
-  font-family: var(--font-sans, ui-sans-serif, system-ui, sans-serif);
+  font-family: var(--font-sans, "Lexend Variable", system-ui, sans-serif);
   line-height: 1.5;
   font-size: 14px;
   font-weight: 400;
   text-rendering: optimizeLegibility;
 }
 
-/* Títulos → Fraunces (display de la marca). Peso ligero, tracking negativo,
-   como el login y la web pública. Los h1/h2 son la voz editorial. */
 h1, h2, h3, h4, h5, h6 {
-  font-family: var(--font-display, Georgia, serif);
-  font-weight: 400;
+  font-weight: 600;
   color: var(--fg);
-  line-height: 1.1;
-  letter-spacing: -0.02em;
+  line-height: 1.25;
+  letter-spacing: -0.011em; /* apretado sutil en titulares humanistas */
   text-wrap: balance;
 }
 
-h1 { font-size: 1.875rem; }
-h2 { font-size: 1.5rem; }
-h3 { font-size: 1.25rem; }
-h4 { font-size: 1.0625rem; font-weight: 500; }
-h5 { font-size: 0.9375rem; font-weight: 500; }
-h6 { font-size: 0.875rem; font-weight: 500; }
-
-/* Énfasis en itálica dentro de titulares → carácter Fraunces */
-h1 em, h2 em, h3 em {
-  font-style: italic;
-  font-weight: 400;
-  color: var(--accent-ink);
-}
+h1 { font-size: 1.75rem; }
+h2 { font-size: 1.375rem; }
+h3 { font-size: 1.125rem; }
+h4 { font-size: 1rem; }
+h5 { font-size: 0.9375rem; }
+h6 { font-size: 0.875rem; }
 
 p {
   font-size: 14px;
@@ -308,44 +257,19 @@ p {
   color: var(--fg-muted);
 }
 
-/* Foco visible SIEMPRE — accesibilidad AA, teclado-first. Radius 0. */
+/* Foco visible SIEMPRE — accesibilidad AA, teclado-first. */
 :focus-visible {
   outline: 2px solid var(--ring);
   outline-offset: 2px;
-  border-radius: 0;
+  border-radius: var(--radius-sm);
 }
 
 /* ============================================================
    UTILIDADES DEL DESIGN SYSTEM
    ============================================================ */
 
-/* Título editorial de página — Fraunces display. Usar en encabezados de pantalla
-   (h1 de cada página). Complementa el mapeo global de h1..h6 a Fraunces. */
-.font-display {
-  font-family: var(--font-display, Georgia, serif);
-  letter-spacing: -0.02em;
-}
-
-/* Eyebrow mono — etiqueta superior uppercase con tracking amplio (marca GV-G). */
-.eyebrow {
-  font-family: var(--font-mono, ui-monospace, monospace);
-  font-size: 0.6875rem;
-  font-weight: 500;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  line-height: 1;
-  color: var(--fg-subtle);
-}
-
-/* Metadata mono — números/etiquetas técnicas con tracking medio. */
-.mono-meta {
-  font-family: var(--font-mono, ui-monospace, monospace);
-  font-size: 0.6875rem;
-  letter-spacing: 0.08em;
-}
-
 /* Números tabulares — OBLIGATORIO en DNI, carnets, importes, contadores,
-   fechas y toda celda numérica de tabla (evita saltos de layout). Mono-adyacente. */
+   fechas y toda celda numérica de tabla (evita saltos de layout). */
 .tabular-nums {
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum" 1;
@@ -355,12 +279,12 @@ p {
 .text-light { color: var(--fg-subtle); }
 
 /* ============================================================
-   COMPONENTES LEGACY (se conservan los nombres — retintados a la marca)
-   Usados por páginas que se reconstruyen en la Ola 2. Radius 0.
+   COMPONENTES LEGACY (se conservan los nombres — retintados al teal)
+   Usados por páginas que se reconstruyen en la Ola 2.
    ============================================================ */
 .premium-card {
   background: var(--surface-elevated);
-  border-radius: 0;
+  border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
   border: 1px solid var(--border);
   transition: box-shadow var(--transition-base);
@@ -371,11 +295,11 @@ p {
   background: var(--primary-600);
   color: white;
   padding: 0.5rem 1.125rem;
-  border-radius: 0;
+  border-radius: var(--radius-md);
   font-weight: 500;
   font-size: 14px;
   box-shadow: var(--shadow-sm);
-  transition: background-color var(--transition-fast), box-shadow var(--transition-fast);
+  transition: background-color var(--transition-base), box-shadow var(--transition-base);
   border: none;
   cursor: pointer;
 }
@@ -386,59 +310,59 @@ p {
   background: white;
   color: var(--fg);
   padding: 0.5rem 1.125rem;
-  border-radius: 0;
+  border-radius: var(--radius-md);
   font-weight: 500;
   font-size: 14px;
   border: 1px solid var(--border-strong);
-  transition: background-color var(--transition-fast), border-color var(--transition-fast);
+  transition: background-color var(--transition-base), border-color var(--transition-base);
   cursor: pointer;
 }
 .btn-secondary:hover { background: var(--neutral-50); border-color: var(--neutral-400); }
 
 .input-premium {
   border: 1px solid var(--border-strong);
-  border-radius: 0;
+  border-radius: var(--radius-md);
   padding: 0.5rem 0.75rem;
   font-size: 14px;
-  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  transition: border-color var(--transition-base), box-shadow var(--transition-base);
   background: var(--surface-primary);
   color: var(--fg);
 }
 .input-premium:focus {
   outline: none;
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px hsl(189 94% 43% / 0.14);
+  border-color: var(--primary-600);
+  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.12);
 }
 .input-premium::placeholder { color: var(--fg-subtle); }
 
 /* ============================================================
-   ANIMACIONES (editoriales, easing de marca)
+   ANIMACIONES (sutiles, 150-250ms)
    ============================================================ */
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(6px); }
   to   { opacity: 1; transform: translateY(0); }
 }
-.fade-in { animation: fadeIn var(--transition-slow); }
+.fade-in { animation: fadeIn var(--transition-slow) ease-out; }
 
 @keyframes slideInRight {
   from { opacity: 0; transform: translateX(-12px); }
   to   { opacity: 1; transform: translateX(0); }
 }
-.slide-in-right { animation: slideInRight var(--transition-slow); }
+.slide-in-right { animation: slideInRight var(--transition-slow) ease-out; }
 
 @keyframes shake {
   0%, 100% { transform: translateX(0); }
   10%, 30%, 50%, 70%, 90% { transform: translateX(-4px); }
   20%, 40%, 60%, 80% { transform: translateX(4px); }
 }
-.animate-shake { animation: shake 0.4s var(--ease-ed); }
+.animate-shake { animation: shake 0.4s ease-in-out; }
 
 /* Sheet lateral (bandeja de alertas) */
 @keyframes sheetIn {
   from { transform: translateX(100%); }
   to   { transform: translateX(0); }
 }
-.animate-sheet-in { animation: sheetIn var(--transition-base) var(--ease-ed); }
+.animate-sheet-in { animation: sheetIn var(--transition-slow) cubic-bezier(0.16, 1, 0.3, 1); }
 
 @keyframes overlayIn {
   from { opacity: 0; }
@@ -455,7 +379,7 @@ p {
   background: linear-gradient(90deg, var(--neutral-100) 25%, var(--neutral-200) 37%, var(--neutral-100) 63%);
   background-size: 800px 100%;
   animation: shimmer 1.4s ease-in-out infinite;
-  border-radius: 0;
+  border-radius: var(--radius-sm);
 }
 
 /* Pulso único de la campana al subir la severidad máxima (moment de hand-craft) */
@@ -465,14 +389,14 @@ p {
   60%  { transform: scale(1.05) rotate(6deg); }
   100% { transform: scale(1) rotate(0); }
 }
-.animate-bell-ping { animation: bellPing 0.55s var(--ease-ed); }
+.animate-bell-ping { animation: bellPing 0.55s cubic-bezier(0.16, 1, 0.3, 1); }
 
 /* ============================================================
    SCROLLBAR minimalista
    ============================================================ */
 ::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--neutral-300); border-radius: 0; }
+::-webkit-scrollbar-thumb { background: var(--neutral-300); border-radius: 4px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--neutral-400); }
 
 /* ============================================================
@@ -553,3 +477,4 @@ p {
     margin-bottom: 10mm;
   }
 }
+

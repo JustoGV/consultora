@@ -156,9 +156,9 @@ export default function Sidebar({
             : "text-[var(--sidebar-fg)] hover:bg-[var(--sidebar-hover-bg)] hover:text-white"
         )}
       >
-        {/* Barra de estado activo a la izquierda — línea de acento cyan (marca) */}
+        {/* Barra de estado activo a la izquierda (grid-break sutil) */}
         {isActive && !collapsed && (
-          <span className="absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 bg-[var(--accent-bright)]" />
+          <span className="absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-full bg-white/80" />
         )}
         <span className="relative shrink-0">
           <Icon className="size-[18px]" />
@@ -188,7 +188,7 @@ export default function Sidebar({
         collapsed ? "w-16" : "w-64"
       )}
     >
-      {/* Marca GV-G — logo real (variante blanca para fondo ink-deep) */}
+      {/* Marca — logo real GV-G (variante blanca para el panel oscuro) */}
       <div
         className={cn(
           "flex h-16 shrink-0 items-center border-b border-[var(--neutral-800)]",
@@ -203,17 +203,11 @@ export default function Sidebar({
           width={512}
           height={512}
           priority
-          className={cn(
-            "w-auto object-contain",
-            collapsed ? "h-10" : "h-12"
-          )}
+          className={cn("w-auto object-contain", collapsed ? "h-10" : "h-12")}
         />
         {!collapsed && (
-          <p
-            className="text-[10px] uppercase tracking-[0.14em] text-[var(--sidebar-fg-muted)]"
-            style={{ fontFamily: "var(--font-mono)" }}
-          >
-            Gestión de discapacidad
+          <p className="text-[11px] text-[var(--sidebar-fg-muted)]">
+            Sistema de gestión
           </p>
         )}
       </div>

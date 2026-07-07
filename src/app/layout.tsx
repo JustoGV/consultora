@@ -1,35 +1,20 @@
 import type { Metadata } from "next";
-import { Fraunces, Inter, JetBrains_Mono } from "next/font/google";
+import { Geist, Geist_Mono } from "next/font/google";
+// Lexend Variable — sans humanista diseñada para legibilidad de datos (self-hosted, sin CDN).
+// Es la voz tipográfica del design system (UX-1). Ver /DESIGN.md.
+import "@fontsource-variable/lexend";
 import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
 
-/**
- * Tipografía de marca GV-G Consulting (UX-7b). Reemplaza a Lexend.
- * - Inter        → cuerpo / UI (voz por defecto, --font-sans).
- * - Fraunces     → títulos display de la marca (--font-display; 300-500, itálica para énfasis).
- * - JetBrains Mono → eyebrows, metadata, números tabulares y badges (--font-mono).
- * Cargadas con next/font (self-hosted, sin CDN). Ver /DESIGN.md.
- */
-const inter = Inter({
+// Geist se conserva solo como fallback de --font-geist-sans/mono (compat).
+const geistSans = Geist({
+  variable: "--font-geist-sans",
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-  variable: "--font-inter",
-  display: "swap",
 });
 
-const fraunces = Fraunces({
+const geistMono = Geist_Mono({
+  variable: "--font-geist-mono",
   subsets: ["latin"],
-  weight: ["300", "400", "500", "600"],
-  style: ["normal", "italic"],
-  variable: "--font-fraunces",
-  display: "swap",
-});
-
-const jetbrainsMono = JetBrains_Mono({
-  subsets: ["latin"],
-  weight: ["400", "500", "600"],
-  variable: "--font-jetbrains",
-  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -45,7 +30,7 @@ export default function RootLayout({
   return (
     <html lang="es">
       <body
-        className={`${inter.variable} ${fraunces.variable} ${jetbrainsMono.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
         suppressHydrationWarning
       >
         <AuthProvider>{children}</AuthProvider>
