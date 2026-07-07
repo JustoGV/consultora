@@ -21,7 +21,7 @@ import { estadoCivilService } from '@/services/estadoCivilService';
 import { obrasSocialesService } from '@/services/obrasSocialesService';
 import { administradoraService } from '@/services/administradoraService';
 import { tipoDiscapacidadService } from '@/services/tipoDiscapacidadService';
-import { CheckCircleIcon, DocumentPlusIcon } from '@heroicons/react/24/outline';
+import { CheckCircle2, FilePlus2, Check } from 'lucide-react';
 import SearchableSelect from '@/components/SearchableSelect';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -363,7 +363,7 @@ export default function UploadPage() {
     return (
       <div className="max-w-4xl mx-auto">
         <div className="bg-white rounded-xl shadow-md p-12 text-center">
-          <CheckCircleIcon className="w-20 h-20 text-green-600 mx-auto mb-4" />
+          <CheckCircle2 className="w-20 h-20 text-green-600 mx-auto mb-4" />
           <h2 className="text-2xl font-bold text-gray-900 mb-2">¡Registro Exitoso!</h2>
           <p className="text-gray-600 mb-4">
             El paciente y su certificado de discapacidad han sido creados correctamente.
@@ -378,7 +378,7 @@ export default function UploadPage() {
     <div className="max-w-4xl mx-auto space-y-6">
       <div>
         <h1 className="text-3xl font-bold bg-gradient-to-r from-primary-600 to-primary-800 bg-clip-text text-transparent flex items-center gap-3">
-          <DocumentPlusIcon className="w-8 h-8 text-primary-600" />
+          <FilePlus2 className="w-8 h-8 text-primary-600" />
           Nuevo Paciente con Certificado
         </h1>
         <p className="text-gray-600 mt-2">Completá los datos en tres pasos: paciente, afiliación y certificado.</p>
@@ -698,7 +698,7 @@ function StepBadge({ n, active, done, label }: { n: number; active: boolean; don
               : 'bg-neutral-100 text-neutral-500'
         }`}
       >
-        {done ? '✓' : n}
+        {done ? <Check className="size-4" strokeWidth={2.5} /> : n}
       </span>
       <span className={`text-sm font-medium ${active ? 'text-neutral-900' : 'text-neutral-500'}`}>{label}</span>
     </div>

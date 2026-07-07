@@ -19,7 +19,7 @@ import { useContinuousCreate } from '@/hooks/useContinuousCreate';
 import SearchableSelect from '@/components/SearchableSelect';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { AlertTriangle, ExternalLink } from 'lucide-react';
+import { AlertTriangle, ExternalLink, CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
 
 const TIPOS_DOCUMENTO: { value: TipoDocumento; label: string }[] = [
@@ -354,8 +354,9 @@ export default function PacienteFormModal({
           className="space-y-4 pt-2"
         >
         {showSavedBanner && (
-          <div className="rounded-md border border-[var(--sev-baja)] bg-[var(--sev-baja-bg)] px-3 py-2 text-sm text-[var(--sev-baja-fg)]">
-            ✓ Guardado — {formData.apellido}, {formData.nombre}
+          <div className="flex items-center gap-2 rounded-md border border-[var(--sev-baja)] bg-[var(--sev-baja-bg)] px-3 py-2 text-sm text-[var(--sev-baja-fg)]">
+            <CheckCircle2 className="size-4 shrink-0" />
+            Guardado — {formData.apellido}, {formData.nombre}
           </div>
         )}
 
@@ -407,7 +408,7 @@ export default function PacienteFormModal({
             <AlertTriangle className="mt-0.5 size-4 shrink-0" />
             <div className="flex-1 space-y-1.5">
               <p>
-                ⚠ Ya existe: <strong>{duplicateMatch.apellido}, {duplicateMatch.nombre}</strong> —{' '}
+                Ya existe: <strong>{duplicateMatch.apellido}, {duplicateMatch.nombre}</strong> —{' '}
                 {duplicateMatch.tipoDocumento} {duplicateMatch.numeroDocumento}
               </p>
               <div className="flex gap-2">

@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { DocumentTextIcon, BuildingOfficeIcon } from '@heroicons/react/24/outline';
+import { FileText, Building2, X } from 'lucide-react';
 import CertificateSearch, { SearchFilters } from '@/components/CertificateSearch';
 import { certificadosDiscapacidadService } from '@/services/certificadosDiscapacidadService';
 import { tipoDiscapacidadService } from '@/services/tipoDiscapacidadService';
@@ -158,14 +158,14 @@ export default function CertificatesPage() {
                 <div className="flex items-start justify-between">
                   <div className="flex items-start space-x-4 flex-1">
                     <div className="bg-blue-100 p-3 rounded-lg">
-                      <DocumentTextIcon className="w-6 h-6 text-blue-600" />
+                      <FileText className="w-6 h-6 text-blue-600" />
                     </div>
                     
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
                         <h3 className="text-lg font-bold text-gray-900">{certificate.afiliadoNombre}</h3>
                         <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs">
-                          <BuildingOfficeIcon className="w-3 h-3" />
+                          <Building2 className="w-3 h-3" />
                           {user?.rol === 'admin' ? 'Admin' : 'Usuario'}
                         </span>
                       </div>
@@ -230,7 +230,7 @@ export default function CertificatesPage() {
 
           {filteredCertificates.length === 0 && (
             <div className="bg-white rounded-xl shadow-md p-12 text-center">
-              <DocumentTextIcon className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+              <FileText className="w-16 h-16 text-gray-300 mx-auto mb-4" />
               <p className="text-gray-500">
                 {userCertificates.length === 0 
                   ? 'No hay certificados cargados para esta administradora'
@@ -249,9 +249,10 @@ export default function CertificatesPage() {
               <h3 className="text-xl font-semibold text-neutral-900">Detalle del Certificado</h3>
               <button
                 onClick={handleCloseDetail}
+                aria-label="Cerrar"
                 className="text-neutral-400 hover:text-neutral-600 cursor-pointer"
               >
-                ✕
+                <X className="w-5 h-5" />
               </button>
             </div>
 
