@@ -213,7 +213,7 @@ export default function ProfesionalFormModal({
         }}
       >
         <DialogHeader>
-          <DialogTitle>{isEditing ? 'Editar profesional' : 'Nuevo profesional'}</DialogTitle>
+          <DialogTitle>{isEditing ? 'Editar tercero vinculado' : 'Nuevo tercero vinculado'}</DialogTitle>
           <DialogDescription>Datos de identidad y matrícula de quien ejecuta la prestación.</DialogDescription>
         </DialogHeader>
         <form

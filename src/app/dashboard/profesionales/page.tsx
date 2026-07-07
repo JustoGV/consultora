@@ -67,7 +67,7 @@ export default function ProfesionalesPage() {
 
   const handleDelete = async (p: Profesional) => {
     const ok = await confirm({
-      title: 'Eliminar profesional',
+      title: 'Eliminar tercero vinculado',
       description: `Se dará de baja a ${p.apellido}, ${p.nombre}. Podés reactivarlo luego.`,
       confirmLabel: 'Eliminar',
       destructive: true,
@@ -76,7 +76,7 @@ export default function ProfesionalesPage() {
     try {
       await profesionalesService.delete(p.id);
       await load();
-      notify.success('Profesional dado de baja');
+      notify.success('Tercero vinculado dado de baja');
     } catch (error) {
       notify.error('No se pudo eliminar', extractErrorMessage(error));
     }
@@ -86,7 +86,7 @@ export default function ProfesionalesPage() {
     try {
       await profesionalesService.restore(p.id);
       await load();
-      notify.success('Profesional reactivado');
+      notify.success('Tercero vinculado reactivado');
     } catch (error) {
       notify.error('No se pudo reactivar', extractErrorMessage(error));
     }
@@ -179,14 +179,14 @@ export default function ProfesionalesPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-semibold text-[var(--fg)]">Profesionales</h1>
+          <h1 className="text-3xl font-semibold text-[var(--fg)]">Terceros Vinculados</h1>
           <p className="mt-1 text-sm text-[var(--fg-muted)]">
-            Quienes ejecutan las prestaciones: matrícula, especialidad y contacto.
+            Kinesiólogos, médicos y demás profesionales prestadores: matrícula, especialidad y contacto.
           </p>
         </div>
         <Button onClick={openNew}>
           <UserPlus className="size-4" />
-          Nuevo profesional
+          Nuevo tercero vinculado
         </Button>
       </div>
 
@@ -216,9 +216,9 @@ export default function ProfesionalesPage() {
             }}
           />
         }
-        emptyTitle="Sin profesionales"
+        emptyTitle="Sin terceros vinculados"
         emptyDescription="Cargá el primero para empezar."
-        emptyAction={<Button onClick={openNew}>Nuevo profesional</Button>}
+        emptyAction={<Button onClick={openNew}>Nuevo tercero vinculado</Button>}
       />
 
       <ProfesionalFormModal

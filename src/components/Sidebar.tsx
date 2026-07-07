@@ -112,7 +112,7 @@ export default function Sidebar({
 
     { name: "Afiliados", href: "/dashboard/afiliados", icon: UserRound, section: "gestion" },
     { name: "Adherentes", href: "/dashboard/adherentes", icon: UsersRound, section: "gestion" },
-    { name: "Profesionales", href: "/dashboard/profesionales", icon: Stethoscope, section: "gestion" },
+    { name: "Terceros Vinculados", href: "/dashboard/profesionales", icon: Stethoscope, section: "gestion" },
 
     { name: "Certificados Discapacidad", href: "/dashboard/certificados-discapacidad", icon: FileText, section: "certificados" },
     { name: "Certificados", href: "/dashboard/certificates", icon: FolderOpen, section: "certificados" },
@@ -137,7 +137,7 @@ export default function Sidebar({
 
     { name: "Afiliados", href: "/dashboard/afiliados", icon: UserRound, section: "gestion" },
     { name: "Adherentes", href: "/dashboard/adherentes", icon: UsersRound, section: "gestion" },
-    { name: "Profesionales", href: "/dashboard/profesionales", icon: Stethoscope, section: "gestion" },
+    { name: "Terceros Vinculados", href: "/dashboard/profesionales", icon: Stethoscope, section: "gestion" },
 
     { name: "Certificados Discapacidad", href: "/dashboard/certificados-discapacidad", icon: FileText, section: "certificados" },
     { name: "Certificados", href: "/dashboard/certificates", icon: FolderOpen, section: "certificados" },
