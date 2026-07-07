@@ -129,6 +129,23 @@ export default function AfiliadoDetallePage() {
     }
   };
 
+  const handleEliminarAfiliado = async () => {
+    const ok = await confirm({
+      title: 'Eliminar afiliado',
+      description: `Se dará de baja a ${persona?.apellido}, ${persona?.nombre} junto con sus afiliaciones. Se puede reactivar más adelante. ¿Continuar?`,
+      confirmLabel: 'Eliminar',
+      destructive: true,
+    });
+    if (!ok) return;
+    try {
+      await personasService.delete(personaId);
+      notify.success('Afiliado eliminado');
+      router.push('/dashboard/afiliados');
+    } catch (err) {
+      notify.error('No se pudo eliminar el afiliado', extractErrorMessage(err));
+    }
+  };
+
   const handleEliminarAfiliacion = async (afiliacion: Afiliacion) => {
     const ok = await confirm({
       title: 'Eliminar afiliación',
@@ -240,10 +257,20 @@ export default function AfiliadoDetallePage() {
               )}
             </div>
           </div>
-          <Button variant="outline" onClick={() => router.push(`/dashboard/afiliados/${personaId}/editar`)}>
-            <Pencil className="size-4" />
-            Editar
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={() => router.push(`/dashboard/afiliados/${personaId}/editar`)}>
+              <Pencil className="size-4" />
+              Editar
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleEliminarAfiliado}
+              className="text-[var(--sev-critica-fg)] hover:bg-[var(--sev-critica-bg)]"
+            >
+              <Trash2 className="size-4" />
+              Eliminar
+            </Button>
+          </div>
         </div>
 
         <dl className="mt-5 grid grid-cols-2 gap-x-6 gap-y-2 border-t border-[var(--border)] pt-4 text-sm sm:grid-cols-3">
