@@ -849,3 +849,28 @@ export type UpdateProfesionalDto = Partial<CreateProfesionalDto>;
 export interface FindProfesionalesQuery {
   search?: string;
 }
+
+/**
+ * AfiliacionProfesional — vínculo Afiliación ↔ Profesional (B-9). Representa
+ * qué profesional (quien EJECUTA la prestación) atiende a una afiliación
+ * puntual; la obra social queda implícita en `afiliacion.obraSocialId`.
+ * Mismo patrón que `AfiliacionVinculo` (sub-recurso "profesionales").
+ */
+export interface AfiliacionProfesional {
+  id: string;
+  afiliacionId: string;
+  afiliacion?: Afiliacion;
+  profesionalId: string;
+  profesional?: Profesional;
+  observaciones?: string;
+  activo: boolean;
+  administradoraId: string;
+  administradora?: Administradora;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateAfiliacionProfesionalDto {
+  profesionalId: string;
+  observaciones?: string;
+}

@@ -7,6 +7,8 @@ import {
   FindAfiliacionesQuery,
   AfiliacionVinculo,
   CreateVinculoDto,
+  AfiliacionProfesional,
+  CreateAfiliacionProfesionalDto,
 } from '@/types';
 
 /**
@@ -44,6 +46,23 @@ class AfiliacionesService {
 
   async deleteVinculo(id: string, vinculoId: string): Promise<void> {
     await api.delete(`/afiliaciones/${id}/vinculos/${vinculoId}`);
+  }
+
+  /** GET /afiliaciones/:id/profesionales — vínculos activos, cada uno con `profesional` cargado. */
+  async getProfesionales(id: string): Promise<AfiliacionProfesional[]> {
+    const response = await api.get<AfiliacionProfesional[]>(`/afiliaciones/${id}/profesionales`);
+    return response.data;
+  }
+
+  /** POST /afiliaciones/:id/profesionales — 409 si ya está vinculado, 400 si distinta administradora. */
+  async linkProfesional(id: string, dto: CreateAfiliacionProfesionalDto): Promise<AfiliacionProfesional> {
+    const response = await api.post<AfiliacionProfesional>(`/afiliaciones/${id}/profesionales`, dto);
+    return response.data;
+  }
+
+  /** DELETE /afiliaciones/:id/profesionales/:linkId — desvincula (soft-delete). */
+  async unlinkProfesional(id: string, linkId: string): Promise<void> {
+    await api.delete(`/afiliaciones/${id}/profesionales/${linkId}`);
   }
 
   async getGrupo(id: string): Promise<GrupoAfiliacion> {
