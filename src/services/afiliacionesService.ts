@@ -7,8 +7,6 @@ import {
   FindAfiliacionesQuery,
   AfiliacionVinculo,
   CreateVinculoDto,
-  AfiliacionProfesional,
-  CreateAfiliacionProfesionalDto,
 } from '@/types';
 
 /**
@@ -48,22 +46,11 @@ class AfiliacionesService {
     await api.delete(`/afiliaciones/${id}/vinculos/${vinculoId}`);
   }
 
-  /** GET /afiliaciones/:id/profesionales — vínculos activos, cada uno con `profesional` cargado. */
-  async getProfesionales(id: string): Promise<AfiliacionProfesional[]> {
-    const response = await api.get<AfiliacionProfesional[]>(`/afiliaciones/${id}/profesionales`);
-    return response.data;
-  }
-
-  /** POST /afiliaciones/:id/profesionales — 409 si ya está vinculado, 400 si distinta administradora. */
-  async linkProfesional(id: string, dto: CreateAfiliacionProfesionalDto): Promise<AfiliacionProfesional> {
-    const response = await api.post<AfiliacionProfesional>(`/afiliaciones/${id}/profesionales`, dto);
-    return response.data;
-  }
-
-  /** DELETE /afiliaciones/:id/profesionales/:linkId — desvincula (soft-delete). */
-  async unlinkProfesional(id: string, linkId: string): Promise<void> {
-    await api.delete(`/afiliaciones/${id}/profesionales/${linkId}`);
-  }
+  // NOTA (UX-17): los terceros vinculados (profesionales) se movieron a nivel
+  // PERSONA — ver personasService.getTercerosVinculados/linkTerceroVinculado/
+  // unlinkTerceroVinculado (POST/GET/DELETE /personas/:id/profesionales). Los
+  // endpoints /afiliaciones/:id/profesionales siguen existiendo en el backend
+  // pero ya no se usan desde el frontend.
 
   async getGrupo(id: string): Promise<GrupoAfiliacion> {
     const response = await api.get<GrupoAfiliacion>(`/afiliaciones/${id}/grupo`);

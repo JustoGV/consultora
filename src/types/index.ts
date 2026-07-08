@@ -851,26 +851,26 @@ export interface FindProfesionalesQuery {
 }
 
 /**
- * AfiliacionProfesional — vínculo Afiliación ↔ Profesional (B-9). Representa
- * qué profesional (quien EJECUTA la prestación) atiende a una afiliación
- * puntual; la obra social queda implícita en `afiliacion.obraSocialId`.
- * Mismo patrón que `AfiliacionVinculo` (sub-recurso "profesionales").
+ * PersonaProfesional — vínculo Persona ↔ Profesional (B-9, reformado UX-17).
+ * Representa qué profesional (quien EJECUTA la prestación) atiende a una
+ * persona directamente, SIN depender de que tenga afiliación con una obra
+ * social — funciona igual para particulares/pacientes de hospital. Mismo
+ * patrón que `AfiliacionVinculo` (sub-recurso "profesionales"), pero colgado
+ * de `Persona` en vez de `Afiliacion`.
  */
-export interface AfiliacionProfesional {
+export interface PersonaProfesional {
   id: string;
-  afiliacionId: string;
-  afiliacion?: Afiliacion;
+  personaId: string;
   profesionalId: string;
   profesional?: Profesional;
   observaciones?: string;
   activo: boolean;
   administradoraId: string;
-  administradora?: Administradora;
   createdAt: string;
   updatedAt: string;
 }
 
-export interface CreateAfiliacionProfesionalDto {
+export interface CreatePersonaProfesionalDto {
   profesionalId: string;
   observaciones?: string;
 }

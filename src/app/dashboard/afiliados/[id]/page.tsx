@@ -12,14 +12,13 @@ import {
   FileText,
   Bell as BellIcon,
   AlertTriangle,
-  Stethoscope,
 } from 'lucide-react';
 
 import {
   Persona,
   Afiliacion,
   AfiliacionVinculo,
-  AfiliacionProfesional,
+  PersonaProfesional,
   Alerta,
   CertificadoDiscapacidad,
 } from '@/types';
@@ -59,9 +58,7 @@ export default function AfiliadoDetallePage() {
   const [persona, setPersona] = useState<Persona | null>(null);
   const [afiliaciones, setAfiliaciones] = useState<Afiliacion[]>([]);
   const [grupos, setGrupos] = useState<Record<string, GrupoTitular | GrupoAdherente>>({});
-  const [profesionalesPorAfiliacion, setProfesionalesPorAfiliacion] = useState<
-    Record<string, AfiliacionProfesional[]>
-  >({});
+  const [terceros, setTerceros] = useState<PersonaProfesional[]>([]);
   const [certificados, setCertificados] = useState<CertificadoDiscapacidad[]>([]);
   const [alertas, setAlertas] = useState<Alerta[]>([]);
   const [loading, setLoading] = useState(true);
@@ -71,8 +68,6 @@ export default function AfiliadoDetallePage() {
   const [vincularModalOpen, setVincularModalOpen] = useState(false);
   const [afiliacionParaVincular, setAfiliacionParaVincular] = useState<Afiliacion | null>(null);
   const [vincularProfesionalModalOpen, setVincularProfesionalModalOpen] = useState(false);
-  const [afiliacionParaVincularProfesional, setAfiliacionParaVincularProfesional] =
-    useState<Afiliacion | null>(null);
 
   // Alerta 80 (RN-08): banner ámbar no bloqueante tras un vínculo exitoso.
   const [alerta80Banner, setAlerta80Banner] = useState<Alerta | null>(null);
@@ -95,18 +90,16 @@ export default function AfiliadoDetallePage() {
       })
     );
     setGrupos(Object.fromEntries(gruposEntries));
+  }, [personaId]);
 
-    const profesionalesEntries = await Promise.all(
-      activas.map(async (a) => {
-        try {
-          const links = await afiliacionesService.getProfesionales(a.id);
-          return [a.id, links] as const;
-        } catch {
-          return [a.id, []] as const;
-        }
-      })
-    );
-    setProfesionalesPorAfiliacion(Object.fromEntries(profesionalesEntries));
+  /** Terceros vinculados (UX-17): a nivel PERSONA — no depende de afiliaciones/obra social. */
+  const loadTerceros = useCallback(async () => {
+    try {
+      const links = await personasService.getTercerosVinculados(personaId);
+      setTerceros(links);
+    } catch {
+      setTerceros([]);
+    }
   }, [personaId]);
 
   const loadCertificados = useCallback(async () => {
@@ -125,13 +118,13 @@ export default function AfiliadoDetallePage() {
     try {
       setLoading(true);
       setError(null);
-      await Promise.all([loadPersona(), loadAfiliaciones(), loadCertificados(), loadAlertas()]);
+      await Promise.all([loadPersona(), loadAfiliaciones(), loadCertificados(), loadAlertas(), loadTerceros()]);
     } catch (err) {
       setError(extractErrorMessage(err));
     } finally {
       setLoading(false);
     }
-  }, [loadPersona, loadAfiliaciones, loadCertificados, loadAlertas]);
+  }, [loadPersona, loadAfiliaciones, loadCertificados, loadAlertas, loadTerceros]);
 
   useEffect(() => {
     loadAll();
@@ -207,7 +200,7 @@ export default function AfiliadoDetallePage() {
     }
   };
 
-  const handleEliminarTerceroVinculado = async (afiliacionId: string, linkId: string) => {
+  const handleEliminarTerceroVinculado = async (linkId: string) => {
     const ok = await confirm({
       title: 'Quitar tercero vinculado',
       description: 'Se quitará el vínculo con este profesional. ¿Querés continuar?',
@@ -216,8 +209,8 @@ export default function AfiliadoDetallePage() {
     });
     if (!ok) return;
     try {
-      await afiliacionesService.unlinkProfesional(afiliacionId, linkId);
-      await loadAfiliaciones();
+      await personasService.unlinkTerceroVinculado(personaId, linkId);
+      await loadTerceros();
       notify.success('Tercero vinculado quitado');
     } catch (err) {
       notify.error('No se pudo quitar el tercero vinculado', extractErrorMessage(err));
@@ -351,25 +344,64 @@ export default function AfiliadoDetallePage() {
                 key={afiliacion.id}
                 afiliacion={afiliacion}
                 grupo={grupos[afiliacion.id]}
-                profesionales={profesionalesPorAfiliacion[afiliacion.id] || []}
                 onEliminar={() => handleEliminarAfiliacion(afiliacion)}
                 onVincular={() => {
                   setAfiliacionParaVincular(afiliacion);
                   setVincularModalOpen(true);
                 }}
                 onEliminarVinculo={handleEliminarVinculo}
-                onVincularProfesional={() => {
-                  setAfiliacionParaVincularProfesional(afiliacion);
-                  setVincularProfesionalModalOpen(true);
-                }}
-                onEliminarTerceroVinculado={handleEliminarTerceroVinculado}
               />
             ))}
           </div>
         )}
       </section>
 
-      {/* 4. Certificados CUD */}
+      {/* 4. Terceros Vinculados (persona) — UX-17: no depende de obra social */}
+      <section className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-[var(--fg)]">Terceros Vinculados</h2>
+          <Button size="sm" onClick={() => setVincularProfesionalModalOpen(true)}>
+            <Plus className="size-4" />
+            Agregar
+          </Button>
+        </div>
+        {terceros.length === 0 ? (
+          <p className="rounded-lg border border-dashed border-[var(--border-strong)] px-4 py-6 text-center text-sm text-[var(--fg-muted)]">
+            Sin terceros vinculados.
+          </p>
+        ) : (
+          <div className="overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--surface)]">
+            <ul className="divide-y divide-[var(--border)]">
+              {terceros.map((link) => (
+                <li key={link.id} className="flex items-center justify-between gap-3 px-4 py-3 text-sm">
+                  <div className="min-w-0">
+                    <p className="font-medium text-[var(--fg)]">
+                      {link.profesional?.apellido}, {link.profesional?.nombre}
+                    </p>
+                    {link.profesional && (
+                      <p className="text-xs text-[var(--fg-muted)] tabular-nums">
+                        Mat. {link.profesional.matricula}
+                        {link.profesional.especialidad ? ` · ${link.profesional.especialidad}` : ''}
+                      </p>
+                    )}
+                    {link.observaciones && (
+                      <p className="mt-0.5 text-xs text-[var(--fg-subtle)]">{link.observaciones}</p>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => handleEliminarTerceroVinculado(link.id)}
+                    className="shrink-0 text-xs text-[var(--fg-subtle)] hover:text-[var(--sev-critica-fg)]"
+                  >
+                    Quitar
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </section>
+
+      {/* 5. Certificados CUD */}
       <section className="space-y-3">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold text-[var(--fg)]">Certificados CUD</h2>
@@ -404,7 +436,7 @@ export default function AfiliadoDetallePage() {
         )}
       </section>
 
-      {/* 5. Alertas de la persona */}
+      {/* 6. Alertas de la persona */}
       <section className="space-y-3">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold text-[var(--fg)]">Alertas</h2>
@@ -464,17 +496,13 @@ export default function AfiliadoDetallePage() {
         />
       )}
 
-      {afiliacionParaVincularProfesional && (
-        <VincularProfesionalModal
-          open={vincularProfesionalModalOpen}
-          onOpenChange={setVincularProfesionalModalOpen}
-          afiliacion={{ ...afiliacionParaVincularProfesional, persona }}
-          excludedProfesionalIds={(profesionalesPorAfiliacion[afiliacionParaVincularProfesional.id] || []).map(
-            (link) => link.profesionalId
-          )}
-          onVinculado={() => loadAfiliaciones()}
-        />
-      )}
+      <VincularProfesionalModal
+        open={vincularProfesionalModalOpen}
+        onOpenChange={setVincularProfesionalModalOpen}
+        persona={persona}
+        excludedProfesionalIds={terceros.map((link) => link.profesionalId)}
+        onVinculado={() => loadTerceros()}
+      />
     </div>
   );
 }
@@ -491,21 +519,15 @@ function InfoItem({ label, value, tabular }: { label: string; value?: string; ta
 function AfiliacionCard({
   afiliacion,
   grupo,
-  profesionales,
   onEliminar,
   onVincular,
   onEliminarVinculo,
-  onVincularProfesional,
-  onEliminarTerceroVinculado,
 }: {
   afiliacion: Afiliacion;
   grupo?: GrupoTitular | GrupoAdherente;
-  profesionales: AfiliacionProfesional[];
   onEliminar: () => void;
   onVincular: () => void;
   onEliminarVinculo: (afiliacionId: string, vinculoId: string) => void;
-  onVincularProfesional: () => void;
-  onEliminarTerceroVinculado: (afiliacionId: string, linkId: string) => void;
 }) {
   const esTitular = afiliacion.rol === 'TITULAR';
   const grupoTitular = esTitular ? (grupo as GrupoTitular | undefined) : undefined;
@@ -611,46 +633,6 @@ function AfiliacionCard({
           )}
         </div>
       )}
-
-      <div className="mt-3 border-t border-[var(--border)] pt-3">
-        <div className="mb-2 flex items-center justify-between">
-          <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-[var(--fg-subtle)]">
-            <Stethoscope className="size-3.5" />
-            Terceros Vinculados
-          </p>
-          <Button size="sm" variant="subtle" onClick={onVincularProfesional}>
-            <Plus className="size-3.5" />
-            Agregar
-          </Button>
-        </div>
-        {profesionales.length === 0 ? (
-          <p className="text-sm text-[var(--fg-subtle)]">Sin terceros vinculados.</p>
-        ) : (
-          <ul className="space-y-1.5">
-            {profesionales.map((link) => (
-              <li key={link.id} className="flex items-center justify-between gap-2 text-sm">
-                <span className="min-w-0">
-                  <span className="font-medium text-[var(--fg)]">
-                    {link.profesional?.apellido}, {link.profesional?.nombre}
-                  </span>
-                  {link.profesional && (
-                    <span className="ml-1.5 text-xs text-[var(--fg-muted)] tabular-nums">
-                      Mat. {link.profesional.matricula}
-                      {link.profesional.especialidad ? ` · ${link.profesional.especialidad}` : ''}
-                    </span>
-                  )}
-                </span>
-                <button
-                  onClick={() => onEliminarTerceroVinculado(afiliacion.id, link.id)}
-                  className="shrink-0 text-xs text-[var(--fg-subtle)] hover:text-[var(--sev-critica-fg)]"
-                >
-                  Quitar
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
     </div>
   );
 }

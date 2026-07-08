@@ -1,9 +1,9 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Afiliacion, AfiliacionProfesional, Profesional } from '@/types';
+import { Persona, PersonaProfesional, Profesional } from '@/types';
 import { profesionalesService } from '@/services/profesionalesService';
-import { afiliacionesService } from '@/services/afiliacionesService';
+import { personasService } from '@/services/personasService';
 import { mapServerErrors } from '@/lib/errorUtils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { useFormKeyboard } from '@/hooks/useFormKeyboard';
@@ -13,24 +13,25 @@ import { Button } from '@/components/ui/button';
 interface VincularProfesionalModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /** Afiliación (titular o adherente) sobre la que se vincula el profesional. */
-  afiliacion: Afiliacion;
-  /** Profesional ids ya vinculados a esta afiliación (excluidos del buscador). */
+  /** Persona (afiliado) sobre la que se vincula el profesional. */
+  persona: Persona;
+  /** Profesional ids ya vinculados a esta persona (excluidos del buscador). */
   excludedProfesionalIds: string[];
-  onVinculado: (link: AfiliacionProfesional) => void;
+  onVinculado: (link: PersonaProfesional) => void;
 }
 
 /**
- * Modal "Vincular tercero vinculado" (UX-16b) — análogo a VincularPersonaModal
+ * Modal "Vincular tercero vinculado" (UX-17) — análogo a VincularPersonaModal
  * pero simplificado: los profesionales SIEMPRE existen de antemano (se crean
  * en /dashboard/profesionales), así que no hay sub-paso de alta inline. Solo
  * busca con SearchableSelectRemote + observaciones opcional y llama a
- * POST /afiliaciones/:id/profesionales.
+ * POST /personas/:id/profesionales — el vínculo es a nivel PERSONA, así que
+ * funciona con o sin obra social (particular/paciente de hospital).
  */
 export default function VincularProfesionalModal({
   open,
   onOpenChange,
-  afiliacion,
+  persona,
   excludedProfesionalIds,
   onVinculado,
 }: VincularProfesionalModalProps) {
@@ -76,7 +77,7 @@ export default function VincularProfesionalModal({
 
     try {
       setSaving(true);
-      const link = await afiliacionesService.linkProfesional(afiliacion.id, {
+      const link = await personasService.linkTerceroVinculado(persona.id, {
         profesionalId,
         observaciones: observaciones.trim() || undefined,
       });
@@ -88,7 +89,7 @@ export default function VincularProfesionalModal({
       const { fieldErrors: fe, formError: gf } = mapServerErrors(error, ['profesionalId', 'observaciones']);
       setFieldErrors((prev) => ({ ...prev, ...fe }));
       if (conflict) {
-        setFormError('Este profesional ya está vinculado a esta afiliación.');
+        setFormError('Este profesional ya está vinculado a este afiliado.');
       } else if (gf) {
         setFormError(gf);
       }
@@ -115,8 +116,7 @@ export default function VincularProfesionalModal({
         <DialogHeader>
           <DialogTitle>Vincular tercero vinculado</DialogTitle>
           <DialogDescription>
-            Profesional que atiende a {afiliacion.persona?.apellido}, {afiliacion.persona?.nombre} en{' '}
-            {afiliacion.obraSocial?.nombre}.
+            Profesional que atiende a {persona.apellido}, {persona.nombre}.
           </DialogDescription>
         </DialogHeader>
         <form
