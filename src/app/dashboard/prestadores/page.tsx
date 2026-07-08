@@ -20,12 +20,14 @@ import api from '@/lib/axios';
 import { handleEnterAsTab } from '@/lib/formUtils';
 import { notify } from '@/lib/toast';
 import { useConfirm } from '@/components/ui/confirm-dialog';
+import { useSuccessConfirm } from '@/components/ui/success-confirm';
 
 export default function PrestadoresPage() {
   const { isSuperAdmin, isAdmin } = useAuth();
   const administradoraId = useActiveAdministradoraId();
   const { administradoras } = useActiveAdministradora();
   const confirm = useConfirm();
+  const confirmSuccess = useSuccessConfirm();
   const [prestadores, setPrestadores] = useState<Prestador[]>([]);
   const [efectores, setEfectores] = useState<Efector[]>([]);
   const [loading, setLoading] = useState(true);
@@ -116,7 +118,7 @@ export default function PrestadoresPage() {
     try {
       await prestadorService.delete(id);
       await loadData();
-      notify.success('Prestador dado de baja');
+      confirmSuccess('Prestador dado de baja');
     } catch (error) {
       console.error('Error al eliminar:', error);
       notify.error('No se pudo dar de baja el prestador');
@@ -127,7 +129,7 @@ export default function PrestadoresPage() {
     try {
       await prestadorService.restore(id);
       await loadData();
-      notify.success('Prestador reactivado');
+      confirmSuccess('Prestador reactivado');
     } catch (error) {
       console.error('Error al restaurar:', error);
       notify.error('No se pudo reactivar el prestador');

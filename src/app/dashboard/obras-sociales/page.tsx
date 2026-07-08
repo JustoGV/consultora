@@ -11,10 +11,12 @@ import { extractErrorMessage, mapServerErrors } from '@/lib/errorUtils';
 import { handleEnterAsTab } from '@/lib/formUtils';
 import { notify } from '@/lib/toast';
 import { useConfirm } from '@/components/ui/confirm-dialog';
+import { useSuccessConfirm } from '@/components/ui/success-confirm';
 
 export default function ObrasSocialesPage() {
   const administradoraId = useActiveAdministradoraId();
   const confirm = useConfirm();
+  const confirmSuccess = useSuccessConfirm();
   const [obrasSociales, setObrasSociales] = useState<ObraSocial[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -148,7 +150,7 @@ export default function ObrasSocialesPage() {
     try {
       await obrasSocialesService.delete(id);
       await loadObrasSociales();
-      notify.success('Obra social eliminada');
+      confirmSuccess('Obra social eliminada');
     } catch (error) {
       console.error('Error al eliminar:', error);
       notify.error('No se pudo eliminar', extractErrorMessage(error));

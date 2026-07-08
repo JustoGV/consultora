@@ -26,12 +26,14 @@ import { mapServerErrors } from '@/lib/errorUtils';
 import { handleEnterAsTab } from '@/lib/formUtils';
 import { notify } from '@/lib/toast';
 import { useConfirm } from '@/components/ui/confirm-dialog';
+import { useSuccessConfirm } from '@/components/ui/success-confirm';
 
 export default function ServiciosNoNomencladosPage() {
   const { isSuperAdmin, isAdmin } = useAuth();
   const administradoraId = useActiveAdministradoraId();
   const { administradoras } = useActiveAdministradora();
   const confirm = useConfirm();
+  const confirmSuccess = useSuccessConfirm();
   const [servicios, setServicios] = useState<ServicioNoNomenclado[]>([]);
   const [prestadores, setPrestadores] = useState<Prestador[]>([]);
   const [loading, setLoading] = useState(true);
@@ -146,7 +148,7 @@ export default function ServiciosNoNomencladosPage() {
     try {
       await serviciosNoNomencladosService.delete(id);
       await loadData();
-      notify.success('Servicio dado de baja');
+      confirmSuccess('Servicio dado de baja');
     } catch (error) {
       console.error('Error al eliminar:', error);
       notify.error('No se pudo dar de baja el servicio');
@@ -157,7 +159,7 @@ export default function ServiciosNoNomencladosPage() {
     try {
       await serviciosNoNomencladosService.restore(id);
       await loadData();
-      notify.success('Servicio reactivado');
+      confirmSuccess('Servicio reactivado');
     } catch (error) {
       console.error('Error al restaurar:', error);
       notify.error('No se pudo reactivar el servicio');

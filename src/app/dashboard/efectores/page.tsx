@@ -27,6 +27,7 @@ import {
 } from '@/lib/formUtils';
 import { notify } from '@/lib/toast';
 import { useConfirm } from '@/components/ui/confirm-dialog';
+import { useSuccessConfirm } from '@/components/ui/success-confirm';
 import DigitCounter from '@/components/DigitCounter';
 
 type FormData = CreateEfectorDto;
@@ -46,6 +47,7 @@ export default function EfectoresPage() {
   const administradoraId = useActiveAdministradoraId();
   const { administradoras } = useActiveAdministradora();
   const confirm = useConfirm();
+  const confirmSuccess = useSuccessConfirm();
   const [efectores, setEfectores] = useState<Efector[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -186,7 +188,7 @@ export default function EfectoresPage() {
     try {
       await efectoresService.delete(id);
       await loadData();
-      notify.success('Efector dado de baja');
+      confirmSuccess('Efector dado de baja');
     } catch (error) {
       console.error('Error al eliminar:', error);
       notify.error('No se pudo dar de baja el efector');
@@ -197,7 +199,7 @@ export default function EfectoresPage() {
     try {
       await efectoresService.restore(id);
       await loadData();
-      notify.success('Efector reactivado');
+      confirmSuccess('Efector reactivado');
     } catch (error) {
       console.error('Error al restaurar:', error);
       notify.error('No se pudo reactivar el efector');

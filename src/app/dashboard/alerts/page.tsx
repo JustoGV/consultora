@@ -15,6 +15,7 @@ import { alertasService } from '@/services/alertasService';
 import { extractErrorMessage } from '@/lib/errorUtils';
 import { timeAgo } from '@/lib/timeAgo';
 import { notify } from '@/lib/toast';
+import { useSuccessConfirm } from '@/components/ui/success-confirm';
 import { priorityToTone, TONE_VARS, type SeverityTone } from '@/lib/severity';
 import { cn } from '@/lib/utils';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
@@ -92,6 +93,7 @@ function tonesForFilter(f: SemaforoFiltro): PrioridadAlerta[] | null {
 export default function AlertsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const confirmSuccess = useSuccessConfirm();
 
   const [dashboard, setDashboard] = useState<DashboardAlertas | null>(null);
   const [alertas, setAlertas] = useState<Alerta[]>([]);
@@ -219,7 +221,7 @@ export default function AlertsPage() {
   const handleVista = (id: string) =>
     runAction(id, async () => {
       await alertasService.marcarVista(id);
-      notify.success('Alerta marcada como vista');
+      confirmSuccess('Alerta marcada como vista');
     });
 
   const handleConfirmModal = () => {
@@ -228,7 +230,7 @@ export default function AlertsPage() {
     runAction(id, async () => {
       if (tipo === 'resolver') {
         await alertasService.resolver(id, notas.trim() || undefined);
-        notify.success('Alerta resuelta', 'Quedó registrada con sus notas.');
+        confirmSuccess('Alerta resuelta', 'Quedó registrada con sus notas.');
       } else {
         await alertasService.descartar(id, notas.trim() || undefined);
         notify.info('Alerta descartada');

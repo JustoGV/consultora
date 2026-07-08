@@ -11,10 +11,12 @@ import { extractErrorMessage, mapServerErrors } from '@/lib/errorUtils';
 import { handleEnterAsTab } from '@/lib/formUtils';
 import { notify } from '@/lib/toast';
 import { useConfirm } from '@/components/ui/confirm-dialog';
+import { useSuccessConfirm } from '@/components/ui/success-confirm';
 
 export default function EstadoCivilPage() {
   const administradoraId = useActiveAdministradoraId();
   const confirm = useConfirm();
+  const confirmSuccess = useSuccessConfirm();
   const [estadosCiviles, setEstadosCiviles] = useState<EstadoCivil[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -132,7 +134,7 @@ export default function EstadoCivilPage() {
     try {
       await estadoCivilService.delete(id);
       await loadEstadosCiviles();
-      notify.success('Estado civil eliminado');
+      confirmSuccess('Estado civil eliminado');
     } catch (error) {
       console.error('Error al eliminar:', error);
       notify.error('No se pudo eliminar', extractErrorMessage(error));

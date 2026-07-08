@@ -16,11 +16,13 @@ import { mapServerErrors } from '@/lib/errorUtils';
 import { handleEnterAsTab } from '@/lib/formUtils';
 import { notify } from '@/lib/toast';
 import { useConfirm } from '@/components/ui/confirm-dialog';
+import { useSuccessConfirm } from '@/components/ui/success-confirm';
 
 export default function NomenclatorsPage() {
   const { isSuperAdmin, isAdmin } = useAuth();
   const administradoraId = useActiveAdministradoraId();
   const confirm = useConfirm();
+  const confirmSuccess = useSuccessConfirm();
   const [nomencladores, setNomencladores] = useState<Nomenclador[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -73,7 +75,7 @@ export default function NomenclatorsPage() {
     try {
       await nomencladorService.delete(id);
       await loadData();
-      notify.success('Nomenclador eliminado');
+      confirmSuccess('Nomenclador eliminado');
     } catch (err) {
       console.error('Error al eliminar nomenclador:', err);
       notify.error('No se pudo eliminar el nomenclador');

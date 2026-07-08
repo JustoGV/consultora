@@ -14,10 +14,12 @@ import { mapServerErrors } from '@/lib/errorUtils';
 import { handleEnterAsTab } from '@/lib/formUtils';
 import { notify } from '@/lib/toast';
 import { useConfirm } from '@/components/ui/confirm-dialog';
+import { useSuccessConfirm } from '@/components/ui/success-confirm';
 
 export default function ServiciosPage() {
   const { isSuperAdmin, isAdmin } = useAuth();
   const confirm = useConfirm();
+  const confirmSuccess = useSuccessConfirm();
   const [servicios, setServicios] = useState<Servicio[]>([]);
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [nomencladores, setNomencladores] = useState<Nomenclador[]>([]);
@@ -133,7 +135,7 @@ export default function ServiciosPage() {
     try {
       await serviciosService.delete(id);
       await loadData();
-      notify.success('Servicio eliminado');
+      confirmSuccess('Servicio eliminado');
     } catch (error) {
       console.error('Error al eliminar:', error);
       notify.error('No se pudo eliminar el servicio');

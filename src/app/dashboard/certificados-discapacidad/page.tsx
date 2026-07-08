@@ -24,12 +24,14 @@ import { extractErrorMessage, mapServerErrors } from '@/lib/errorUtils';
 import { handleEnterAsTab, validarFechasCertificadoAR } from '@/lib/formUtils';
 import { notify } from '@/lib/toast';
 import { useConfirm } from '@/components/ui/confirm-dialog';
+import { useSuccessConfirm } from '@/components/ui/success-confirm';
 
 export default function CertificadosDiscapacidadPage() {
   const { user } = useAuth();
   const activeAdministradoraId = useActiveAdministradoraId();
   const searchParams = useSearchParams();
   const confirm = useConfirm();
+  const confirmSuccess = useSuccessConfirm();
   const [certificados, setCertificados] = useState<CertificadoDiscapacidad[]>([]);
   const [personasCache, setPersonasCache] = useState<Record<string, Persona>>({});
   const [tiposDiscapacidad, setTiposDiscapacidad] = useState<TipoDiscapacidad[]>([]);
@@ -316,7 +318,7 @@ export default function CertificadosDiscapacidadPage() {
     try {
       await certificadosDiscapacidadService.delete(id);
       await loadData();
-      notify.success('Certificado eliminado');
+      confirmSuccess('Certificado eliminado');
     } catch (error) {
       console.error('Error al eliminar:', error);
       notify.error('No se pudo eliminar', extractErrorMessage(error));

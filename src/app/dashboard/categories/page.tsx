@@ -8,10 +8,12 @@ import { PlusIcon, PencilIcon, TrashIcon, MagnifyingGlassIcon, XMarkIcon } from 
 import { handleEnterAsTab } from '@/lib/formUtils';
 import { notify } from '@/lib/toast';
 import { useConfirm } from '@/components/ui/confirm-dialog';
+import { useSuccessConfirm } from '@/components/ui/success-confirm';
 
 export default function CategoriesPage() {
   const { isSuperAdmin } = useAuth();
   const confirm = useConfirm();
+  const confirmSuccess = useSuccessConfirm();
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -57,7 +59,7 @@ export default function CategoriesPage() {
     try {
       await categoriaService.delete(id);
       await loadCategorias();
-      notify.success('Categoría eliminada');
+      confirmSuccess('Categoría eliminada');
     } catch (err) {
       console.error('Error al eliminar categoría:', err);
       notify.error('No se pudo eliminar la categoría');

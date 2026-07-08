@@ -28,7 +28,7 @@ import { useFormKeyboard } from '@/hooks/useFormKeyboard';
 import SearchableSelect from '@/components/SearchableSelect';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { SuccessOverlay } from '@/components/ui/SuccessOverlay';
+import { useSuccessConfirm } from '@/components/ui/success-confirm';
 import {
   AlertTriangle,
   ExternalLink,
@@ -166,6 +166,7 @@ interface AfiliadoFormProps {
 export default function AfiliadoForm({ persona = null }: AfiliadoFormProps) {
   const router = useRouter();
   const { user } = useAuth();
+  const confirmSuccess = useSuccessConfirm();
   const isEditing = !!persona;
 
   const formRef = useRef<HTMLDivElement>(null);
@@ -692,10 +693,8 @@ export default function AfiliadoForm({ persona = null }: AfiliadoFormProps) {
       }
 
       // The centered overlay holds ~1.4s, then navigates to the ficha (onDone).
-      setSuccess({
-        title: successTitle,
-        subtitle: successSubtitle,
-        href: `/dashboard/afiliados/${titularPersona.id}`,
+      confirmSuccess(successTitle, successSubtitle, {
+        onDone: () => router.push(`/dashboard/afiliados/${titularPersona.id}`),
       });
     } catch (error) {
       // ---- Rollback (alta only): undo created afiliaciones + personas ----
@@ -759,10 +758,6 @@ export default function AfiliadoForm({ persona = null }: AfiliadoFormProps) {
     }
   };
 
-  const [success, setSuccess] = useState<
-    { title: string; subtitle?: string; href: string } | null
-  >(null);
-
   const isDirty = true; // page-level form: Esc/leave always confirms.
   const { onKeyDown, focusFirstError } = useFormKeyboard({
     formRef,
@@ -776,14 +771,6 @@ export default function AfiliadoForm({ persona = null }: AfiliadoFormProps) {
 
   return (
     <div className="mx-auto max-w-3xl space-y-6 pb-16">
-      {success && (
-        <SuccessOverlay
-          show
-          title={success.title}
-          subtitle={success.subtitle}
-          onDone={() => router.push(success.href)}
-        />
-      )}
       <div className="flex items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold text-[var(--fg)]">

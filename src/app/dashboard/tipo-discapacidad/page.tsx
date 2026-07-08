@@ -11,10 +11,12 @@ import { extractErrorMessage, mapServerErrors } from '@/lib/errorUtils';
 import { handleEnterAsTab } from '@/lib/formUtils';
 import { notify } from '@/lib/toast';
 import { useConfirm } from '@/components/ui/confirm-dialog';
+import { useSuccessConfirm } from '@/components/ui/success-confirm';
 
 export default function TipoDiscapacidadPage() {
   const administradoraId = useActiveAdministradoraId();
   const confirm = useConfirm();
+  const confirmSuccess = useSuccessConfirm();
   const [tiposDiscapacidad, setTiposDiscapacidad] = useState<TipoDiscapacidad[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -124,7 +126,7 @@ export default function TipoDiscapacidadPage() {
     try {
       await tipoDiscapacidadService.delete(id);
       await loadTiposDiscapacidad();
-      notify.success('Tipo de discapacidad eliminado');
+      confirmSuccess('Tipo de discapacidad eliminado');
     } catch (error) {
       console.error('Error al eliminar:', error);
       notify.error('No se pudo eliminar', extractErrorMessage(error));

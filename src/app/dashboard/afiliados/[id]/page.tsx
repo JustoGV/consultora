@@ -29,6 +29,7 @@ import { certificadosDiscapacidadService } from '@/services/certificadosDiscapac
 import { extractErrorMessage } from '@/lib/errorUtils';
 import { notify } from '@/lib/toast';
 import { useConfirm } from '@/components/ui/confirm-dialog';
+import { useSuccessConfirm } from '@/components/ui/success-confirm';
 import { calcularEdad } from '@/lib/age';
 import { priorityToTone, TONE_VARS } from '@/lib/severity';
 import { timeAgo } from '@/lib/timeAgo';
@@ -53,6 +54,7 @@ export default function AfiliadoDetallePage() {
   const params = useParams();
   const router = useRouter();
   const confirm = useConfirm();
+  const confirmSuccess = useSuccessConfirm();
   const personaId = params.id as string;
 
   const [persona, setPersona] = useState<Persona | null>(null);
@@ -159,8 +161,9 @@ export default function AfiliadoDetallePage() {
     if (!ok) return;
     try {
       await personasService.delete(personaId);
-      notify.success('Afiliado eliminado');
-      router.push('/dashboard/afiliados');
+      confirmSuccess('Afiliado eliminado', undefined, {
+        onDone: () => router.push('/dashboard/afiliados'),
+      });
     } catch (err) {
       notify.error('No se pudo eliminar el afiliado', extractErrorMessage(err));
     }
@@ -177,7 +180,7 @@ export default function AfiliadoDetallePage() {
     try {
       await afiliacionesService.delete(afiliacion.id);
       await loadAfiliaciones();
-      notify.success('Afiliación eliminada');
+      confirmSuccess('Afiliación eliminada');
     } catch (err) {
       notify.error('No se pudo eliminar la afiliación', extractErrorMessage(err));
     }
@@ -194,7 +197,7 @@ export default function AfiliadoDetallePage() {
     try {
       await afiliacionesService.deleteVinculo(afiliacionId, vinculoId);
       await loadAfiliaciones();
-      notify.success('Adherente quitado');
+      confirmSuccess('Adherente quitado');
     } catch (err) {
       notify.error('No se pudo eliminar el vínculo', extractErrorMessage(err));
     }
@@ -211,7 +214,7 @@ export default function AfiliadoDetallePage() {
     try {
       await personasService.unlinkTerceroVinculado(personaId, linkId);
       await loadTerceros();
-      notify.success('Tercero vinculado quitado');
+      confirmSuccess('Tercero vinculado quitado');
     } catch (err) {
       notify.error('No se pudo quitar el tercero vinculado', extractErrorMessage(err));
     }
