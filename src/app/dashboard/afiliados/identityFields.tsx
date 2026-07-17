@@ -29,7 +29,7 @@ import { Input } from '@/components/ui/input';
 
 export const TIPOS_DOCUMENTO: { value: TipoDocumento; label: string }[] = [
   { value: 'DNI', label: 'DNI' },
-  { value: 'CUIL', label: 'CUIL' },
+  { value: 'CUIL', label: 'CUIL/CUIT' },
   { value: 'PASAPORTE', label: 'Pasaporte' },
   { value: 'OTRO', label: 'Otro' },
 ];
@@ -66,7 +66,8 @@ export interface IdentityData {
  */
 export function validateIdentityField(
   field: keyof IdentityData,
-  data: IdentityData
+  data: IdentityData,
+  requireEmail?: boolean
 ): string | null {
   switch (field) {
     case 'numeroDocumento':
@@ -86,6 +87,7 @@ export function validateIdentityField(
       }
       return null;
     case 'email':
+      if (requireEmail && !data.email?.trim()) return 'El email es obligatorio';
       if (data.email && !isValidEmailFormat(data.email)) return 'Email con formato inválido';
       return null;
     case 'telefono':
@@ -104,7 +106,7 @@ export function validateIdentityField(
  * mandatory: titular and adherente both require nombre/apellido/documento/
  * fechaNacimiento. Returns a map of field -> message (empty = valid).
  */
-export function validateIdentity(data: IdentityData): Record<string, string> {
+export function validateIdentity(data: IdentityData, requireEmail?: boolean): Record<string, string> {
   const errors: Record<string, string> = {};
   if (!data.nombre.trim()) errors.nombre = 'Requerido';
   if (!data.apellido.trim()) errors.apellido = 'Requerido';
@@ -119,7 +121,8 @@ export function validateIdentity(data: IdentityData): Record<string, string> {
   else if (!isValidFechaNacimiento(data.fechaNacimiento)) {
     errors.fechaNacimiento = 'Fecha inválida (no futura, no > 120 años)';
   }
-  if (data.email && !isValidEmailFormat(data.email)) errors.email = 'Email con formato inválido';
+  if (requireEmail && !data.email?.trim()) errors.email = 'El email es obligatorio';
+  else if (data.email && !isValidEmailFormat(data.email)) errors.email = 'Email con formato inválido';
   const errTel = validateTelefonoAR(data.telefono || '');
   if (errTel) errors.telefono = errTel;
   const errCel = validateTelefonoAR(data.celular || '');
@@ -173,6 +176,8 @@ interface IdentityFieldsProps {
   onDocumentoBlur?: () => void;
   /** Optional extra content rendered right after the documento row (e.g. duplicate banner). */
   afterDocumento?: React.ReactNode;
+  /** Marks Email as required (asterisk + "obligatorio" validation). Default false. */
+  requireEmail?: boolean;
 }
 
 /**
@@ -190,6 +195,7 @@ export function IdentityFields({
   estadoCivilOptions = [],
   onDocumentoBlur,
   afterDocumento,
+  requireEmail = false,
 }: IdentityFieldsProps) {
   const n = (name: string) => (namePrefix ? `${namePrefix}.${name}` : name);
   const isDniOrCuil = data.tipoDocumento === 'DNI' || data.tipoDocumento === 'CUIL';
@@ -274,7 +280,7 @@ export function IdentityFields({
 
       <div className="grid grid-cols-2 gap-3">
         <Field
-          label="CUIL"
+          label="CUIL/CUIT"
           error={errors.cuil}
           counter={
             <DigitCounter value={sanitizeDigits(data.cuil || '', 11)} max={11} hasError={!!errors.cuil} />
@@ -340,7 +346,7 @@ export function IdentityFields({
       </div>
 
       <div className="grid grid-cols-2 gap-3">
-        <Field label="Email" error={errors.email}>
+        <Field label="Email" required={requireEmail} error={errors.email}>
           <Input
             type="email"
             name={n('email')}

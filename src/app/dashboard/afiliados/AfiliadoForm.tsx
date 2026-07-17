@@ -25,10 +25,12 @@ import { mapServerErrors, extractErrorMessage } from '@/lib/errorUtils';
 import { notify } from '@/lib/toast';
 import { sortByFrequency, bumpFrequency, OBRA_SOCIAL_FREQUENCY_NS } from '@/lib/frequency';
 import { useFormKeyboard } from '@/hooks/useFormKeyboard';
+import { useUnsavedChangesGuard } from '@/hooks/useUnsavedChangesGuard';
 import SearchableSelect from '@/components/SearchableSelect';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useSuccessConfirm } from '@/components/ui/success-confirm';
+import { useConfirm } from '@/components/ui/confirm-dialog';
 import {
   AlertTriangle,
   ExternalLink,
@@ -213,6 +215,58 @@ export default function AfiliadoForm({ persona = null }: AfiliadoFormProps) {
   const [formError, setFormError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
+  // ---- Unsaved-changes tracking (FIX-1) ----
+  // Snapshot of every data field the user can edit (titular identity,
+  // afiliación, adherentes, terceros — excludes UI-only state like errors/
+  // showSubForm/saving). initialSnapshotRef is set once: at mount for alta,
+  // or right after loadExisting finishes populating for edición.
+  const [initialDataLoaded, setInitialDataLoaded] = useState(false);
+  const initialSnapshotRef = useRef<string | null>(null);
+  const bypassGuardRef = useRef(false);
+  const currentSnapshot = JSON.stringify({
+    titular,
+    obraSocialId,
+    numeroAfiliado,
+    plan,
+    pendingAdherentes,
+    pendingTerceros,
+    removedVinculos,
+    removedTerceroLinkIds,
+  });
+
+  useEffect(() => {
+    if (!isEditing) initialSnapshotRef.current = currentSnapshot;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (isEditing && initialDataLoaded) initialSnapshotRef.current = currentSnapshot;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialDataLoaded]);
+
+  const isDirty =
+    !bypassGuardRef.current &&
+    initialSnapshotRef.current !== null &&
+    currentSnapshot !== initialSnapshotRef.current;
+
+  const confirm = useConfirm();
+  const confirmUnsavedExit = useCallback(
+    () =>
+      confirm({
+        title: 'Hay cambios sin guardar',
+        description: 'Si salís sin guardar, se perderán los datos cargados. ¿Seguro que querés salir?',
+        confirmLabel: 'Salir sin guardar',
+        cancelLabel: 'Seguir editando',
+        destructive: true,
+      }),
+    [confirm]
+  );
+  const { guardedNavigate } = useUnsavedChangesGuard({
+    when: isDirty,
+    confirm: confirmUnsavedExit,
+    onNavigate: (href) => router.push(href),
+  });
+
   // ---- administradoraId resolution (UX-13) ----
   // The user's OWN administradora drives the RN-14 preset lookup (below) and is
   // the direct source of truth for ADMIN users. For SUPERADMIN, `user.administradoraId`
@@ -296,6 +350,8 @@ export default function AfiliadoForm({ persona = null }: AfiliadoFormProps) {
     } catch (err) {
       notify.error('No se pudieron cargar los terceros vinculados', extractErrorMessage(err));
     }
+
+    setInitialDataLoaded(true);
   }, [persona]);
 
   useEffect(() => {
@@ -313,7 +369,7 @@ export default function AfiliadoForm({ persona = null }: AfiliadoFormProps) {
     // logic diverged (its cuil check was a plain `/^\d{11}$/`, which breaks now
     // that `cuil` is stored formatted with dashes, and it never validated
     // numeroDocumento when tipoDocumento=CUIL).
-    const msg = validateIdentityField(field, titular);
+    const msg = validateIdentityField(field, titular, true);
     setTitularErrors((prev) => {
       const next = { ...prev };
       if (msg) next[field] = msg;
@@ -471,7 +527,7 @@ export default function AfiliadoForm({ persona = null }: AfiliadoFormProps) {
     // submit-time and blur-time agree and neither drifts (this previously
     // missed cuil/email/telefono/celular/codigoPostal and the CUIL-as-documento
     // case entirely).
-    const tErrors = validateIdentity(titular);
+    const tErrors = validateIdentity(titular, true);
     setTitularErrors(tErrors);
 
     const aErrors: Record<string, string> = {};
@@ -525,6 +581,7 @@ export default function AfiliadoForm({ persona = null }: AfiliadoFormProps) {
         if (isEditing && titularAfiliacion) {
           // Update N° afiliado / plan on the existing titular afiliación.
           await afiliacionesService.update(titularAfiliacion.id, {
+            obraSocialId,
             numeroAfiliado: numeroAfiliado || undefined,
             plan: plan || undefined,
           });
@@ -693,6 +750,7 @@ export default function AfiliadoForm({ persona = null }: AfiliadoFormProps) {
       }
 
       // The centered overlay holds ~1.4s, then navigates to the ficha (onDone).
+      bypassGuardRef.current = true;
       confirmSuccess(successTitle, successSubtitle, {
         onDone: () => router.push(`/dashboard/afiliados/${titularPersona.id}`),
       });
@@ -758,12 +816,11 @@ export default function AfiliadoForm({ persona = null }: AfiliadoFormProps) {
     }
   };
 
-  const isDirty = true; // page-level form: Esc/leave always confirms.
   const { onKeyDown, focusFirstError } = useFormKeyboard({
     formRef,
     onSubmit: handleSubmit,
-    onClose: () => router.push('/dashboard/afiliados'),
-    isDirty,
+    onClose: () => guardedNavigate('/dashboard/afiliados'),
+    isDirty: false,
     autofocus: false,
   });
 
@@ -780,7 +837,7 @@ export default function AfiliadoForm({ persona = null }: AfiliadoFormProps) {
             Datos del titular, su afiliación y los adherentes a cargo.
           </p>
         </div>
-        <Button variant="outline" onClick={() => router.push('/dashboard/afiliados')} disabled={saving}>
+        <Button variant="outline" onClick={() => guardedNavigate('/dashboard/afiliados')} disabled={saving}>
           Volver
         </Button>
       </div>
@@ -803,6 +860,7 @@ export default function AfiliadoForm({ persona = null }: AfiliadoFormProps) {
             onBlurField={onBlurTitular}
             showEstadoCivil
             estadoCivilOptions={estadoCivilOptions}
+            requireEmail
             onDocumentoBlur={checkTitularDuplicate}
             afterDocumento={
               duplicateMatch && !duplicateIgnored ? (
@@ -1116,7 +1174,7 @@ export default function AfiliadoForm({ persona = null }: AfiliadoFormProps) {
           <Button
             type="button"
             variant="outline"
-            onClick={() => router.push('/dashboard/afiliados')}
+            onClick={() => guardedNavigate('/dashboard/afiliados')}
             disabled={saving}
           >
             Cancelar
