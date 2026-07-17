@@ -303,7 +303,7 @@ export default function AdherenteSubForm({
               value={personaId}
               onChange={handleSelectPersona}
               fetcher={fetcher}
-              placeholder="Buscar por nombre, apellido, documento o CUIL…"
+              placeholder="Buscar por nombre, apellido, documento o CUIL/CUIT…"
             />
           </Field>
 

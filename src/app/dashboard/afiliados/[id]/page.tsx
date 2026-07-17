@@ -322,7 +322,7 @@ export default function AfiliadoDetallePage() {
           <InfoItem label="Provincia" value={persona.provincia} />
           <InfoItem label="Código postal" value={persona.codigoPostal} tabular />
           <InfoItem label="Estado civil" value={persona.estadoCivil?.nombre} />
-          <InfoItem label="CUIL" value={persona.cuil} tabular />
+          <InfoItem label="CUIL/CUIT" value={persona.cuil} tabular />
         </dl>
       </section>
 

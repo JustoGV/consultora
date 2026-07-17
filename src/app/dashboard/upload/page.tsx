@@ -41,7 +41,7 @@ import { useFormKeyboard } from '@/hooks/useFormKeyboard';
 
 const TIPOS_DOCUMENTO: { value: TipoDocumento; label: string }[] = [
   { value: 'DNI', label: 'DNI' },
-  { value: 'CUIL', label: 'CUIL' },
+  { value: 'CUIL', label: 'CUIL/CUIT' },
   { value: 'PASAPORTE', label: 'Pasaporte' },
   { value: 'OTRO', label: 'Otro' },
 ];
@@ -565,7 +565,7 @@ export default function UploadPage() {
                 />
               </Field>
               <Field
-                label="CUIL"
+                label="CUIL/CUIT"
                 error={fieldErrors.cuil}
                 counter={<DigitCounter value={personaData.cuil || ''} max={11} hasError={!!fieldErrors.cuil} />}
               >

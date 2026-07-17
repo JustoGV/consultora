@@ -196,10 +196,12 @@ export default function VincularPersonaModal({
         }}
       >
         <DialogHeader>
-          <DialogTitle>Vincular persona a cargo</DialogTitle>
+          <DialogTitle>Agregar adherente</DialogTitle>
           <DialogDescription>
-            Grupo familiar de {afiliacionTitular.persona?.apellido}, {afiliacionTitular.persona?.nombre} en{' '}
-            {afiliacionTitular.obraSocial?.nombre}.
+            Vinculá una persona ya cargada como adherente del grupo familiar de{' '}
+            {afiliacionTitular.persona?.apellido}, {afiliacionTitular.persona?.nombre} en{' '}
+            {afiliacionTitular.obraSocial?.nombre}. Si la persona todavía no está en el sistema, cargala desde
+            Editar afiliado → Adherentes.
           </DialogDescription>
         </DialogHeader>
         <form
@@ -220,7 +222,7 @@ export default function VincularPersonaModal({
               value={personaId}
               onChange={handleSelectPersona}
               fetcher={fetcher}
-              placeholder="Buscar por nombre, apellido, documento o CUIL…"
+              placeholder="Buscar por nombre, apellido, documento o CUIL/CUIT…"
             />
             {fieldErrors.personaId && (
               <p className="mt-1 text-xs text-[var(--sev-critica-fg)]">{fieldErrors.personaId}</p>
