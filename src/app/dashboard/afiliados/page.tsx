@@ -41,10 +41,9 @@ export default function AfiliadosPage() {
   const [obraSocialFiltro, setObraSocialFiltro] = useState('');
   const [obrasSociales, setObrasSociales] = useState<ObraSocial[]>([]);
 
-  // Afiliaciones indexadas por personaId, para armar badges y aplicar el
-  // filtro de rol/obra social client-side: el backend todavía NO implementa
-  // esos filtros en GET /personas (TODO(B-5) en personas.service.ts) — ver
-  // desvío documentado en el reporte final.
+  // Afiliaciones indexadas por personaId, usado solo para armar los badges
+  // de la columna Afiliaciones. El filtro de rol/obra social se aplica
+  // server-side en GET /personas (rol, obraSocialId).
   const [afiliacionesPorPersona, setAfiliacionesPorPersona] = useState<Record<string, Afiliacion[]>>({});
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -73,7 +72,13 @@ export default function AfiliadosPage() {
   const load = useCallback(async () => {
     try {
       setLoading(true);
-      const result = await personasService.getPaginated({ search: search || undefined, page, limit });
+      const result = await personasService.getPaginated({
+        search: search || undefined,
+        page,
+        limit,
+        rol: rolFiltro || undefined,
+        obraSocialId: obraSocialFiltro || undefined,
+      });
       setPersonas(result.data);
       setTotalItems(result.total);
       setTotalPages(result.totalPages);
@@ -82,7 +87,7 @@ export default function AfiliadosPage() {
     } finally {
       setLoading(false);
     }
-  }, [search, page, limit]);
+  }, [search, page, limit, rolFiltro, obraSocialFiltro]);
 
   useEffect(() => {
     load();
@@ -109,16 +114,6 @@ export default function AfiliadosPage() {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [router]);
-
-  const filteredPersonas = personas.filter((p) => {
-    if (!rolFiltro) return true;
-    const afiliaciones = (afiliacionesPorPersona[p.id] || []).filter((a) => a.activo);
-    if (rolFiltro === 'SIN_AFILIACION') return afiliaciones.length === 0;
-    const hasRol = afiliaciones.some((a) => a.rol === rolFiltro);
-    if (!hasRol) return false;
-    if (obraSocialFiltro) return afiliaciones.some((a) => a.obraSocialId === obraSocialFiltro && a.rol === rolFiltro);
-    return true;
-  });
 
   const columns: DataTableColumn<Persona>[] = [
     {
@@ -202,7 +197,10 @@ export default function AfiliadosPage() {
           <SearchableSelect
             options={ROL_OPTIONS}
             value={rolFiltro}
-            onChange={(v) => setRolFiltro(v as RolFiltro)}
+            onChange={(v) => {
+              setRolFiltro(v as RolFiltro);
+              setPage(1);
+            }}
             placeholder="Rol"
           />
         </div>
@@ -210,7 +208,10 @@ export default function AfiliadosPage() {
           <SearchableSelect
             options={[{ value: '', label: 'Todas las obras sociales' }, ...obrasSociales.map((o) => ({ value: o.id, label: o.nombre }))]}
             value={obraSocialFiltro}
-            onChange={setObraSocialFiltro}
+            onChange={(v) => {
+              setObraSocialFiltro(v);
+              setPage(1);
+            }}
             placeholder="Obra social"
           />
         </div>
@@ -218,13 +219,13 @@ export default function AfiliadosPage() {
 
       <DataTable
         columns={columns}
-        data={filteredPersonas}
+        data={personas}
         getRowId={(p) => p.id}
         loading={loading}
         searchable
         searchValue={search}
         onSearchChange={handleSearchChange}
-        searchPlaceholder="Buscar por nombre, apellido, documento o CUIL…"
+        searchPlaceholder="Buscar por nombre, apellido, documento o CUIL/CUIT…"
         onRowClick={(p) => router.push(`/dashboard/afiliados/${p.id}`)}
         pagination={
           <Pagination
