@@ -112,6 +112,7 @@ export default function EstadoCivilPage() {
 
       await loadEstadosCiviles();
       handleCloseModal();
+      confirmSuccess(editingEstadoCivil ? 'Estado civil actualizado' : 'Estado civil creado');
     } catch (error) {
       console.error('Error al guardar:', error);
       const { fieldErrors: fe, formError: gf } = mapServerErrors(error, Object.keys(formData));

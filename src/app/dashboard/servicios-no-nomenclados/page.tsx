@@ -127,6 +127,7 @@ export default function ServiciosNoNomencladosPage() {
       }
       await loadData();
       handleCloseModal();
+      confirmSuccess(editingServicio ? 'Servicio no nomenclado actualizado' : 'Servicio no nomenclado creado');
     } catch (error) {
       console.error('Error al guardar:', error);
       const { fieldErrors: fe, formError: gf } = mapServerErrors(error, Object.keys(formData));

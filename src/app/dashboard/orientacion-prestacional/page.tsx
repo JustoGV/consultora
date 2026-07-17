@@ -140,6 +140,7 @@ export default function OrientacionPrestacionalPage() {
       }
       await loadData();
       handleCloseModal();
+      confirmSuccess(editingOrientacion ? 'Orientación actualizada' : 'Orientación creada');
     } catch (error) {
       console.error('Error al guardar orientación:', error);
       const { fieldErrors: fe, formError: gf } = mapServerErrors(error, Object.keys(formData));
@@ -176,7 +177,7 @@ export default function OrientacionPrestacionalPage() {
       await orientacionPrestacionalService.addServicio(editingOrientacion.id, { servicioId: selectedServicioId });
       await loadData();
       setSelectedServicioId('');
-      confirmSuccess('Servicio agregado');
+      notify.success('Servicio agregado');
     } catch (error) {
       console.error('Error al agregar servicio:', error);
       notify.error('No se pudo agregar el servicio');
@@ -190,7 +191,7 @@ export default function OrientacionPrestacionalPage() {
       await orientacionPrestacionalService.addServicioNoNomenclado(editingOrientacion.id, { servicioNoNomencladoId: selectedServicioNoNomId });
       await loadData();
       setSelectedServicioNoNomId('');
-      confirmSuccess('Servicio no nomenclado agregado');
+      notify.success('Servicio no nomenclado agregado');
     } catch (error) {
       console.error('Error al agregar servicio no nomenclado:', error);
       notify.error('No se pudo agregar el servicio no nomenclado');
@@ -203,7 +204,7 @@ export default function OrientacionPrestacionalPage() {
     try {
       await orientacionPrestacionalService.removeServicio(editingOrientacion.id, servicioId);
       await loadData();
-      confirmSuccess('Servicio quitado');
+      notify.success('Servicio quitado');
     } catch (error) {
       console.error('Error al remover servicio:', error);
       notify.error('No se pudo quitar el servicio');
@@ -216,7 +217,7 @@ export default function OrientacionPrestacionalPage() {
     try {
       await orientacionPrestacionalService.removeServicioNoNomenclado(editingOrientacion.id, servicioId);
       await loadData();
-      confirmSuccess('Servicio no nomenclado quitado');
+      notify.success('Servicio no nomenclado quitado');
     } catch (error) {
       console.error('Error al remover servicio no nomenclado:', error);
       notify.error('No se pudo quitar el servicio no nomenclado');

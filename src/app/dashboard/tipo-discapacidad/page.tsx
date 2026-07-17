@@ -104,6 +104,7 @@ export default function TipoDiscapacidadPage() {
 
       await loadTiposDiscapacidad();
       handleCloseModal();
+      confirmSuccess(editingTipo ? 'Tipo de discapacidad actualizado' : 'Tipo de discapacidad creado');
     } catch (error) {
       console.error('Error al guardar:', error);
       const { fieldErrors: fe, formError: gf } = mapServerErrors(error, Object.keys(formData));

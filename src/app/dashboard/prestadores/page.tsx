@@ -94,6 +94,7 @@ export default function PrestadoresPage() {
       await prestadorService.create(formData);
       await loadData();
       handleCloseModal();
+      confirmSuccess('Prestador creado');
     } catch (error: unknown) {
       console.error('Error al crear prestador:', error);
       const err = error as { response?: { status?: number } };

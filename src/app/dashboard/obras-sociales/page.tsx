@@ -122,6 +122,7 @@ export default function ObrasSocialesPage() {
 
       await loadObrasSociales();
       handleCloseModal();
+      confirmSuccess(editingObraSocial ? 'Obra social actualizada' : 'Obra social creada');
     } catch (error) {
       console.error('Error al guardar:', error);
       const { fieldErrors: fe, formError: gf } = mapServerErrors(error, Object.keys(formData));

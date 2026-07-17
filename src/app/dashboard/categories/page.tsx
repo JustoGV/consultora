@@ -103,6 +103,7 @@ export default function CategoriesPage() {
       }
       await loadCategorias();
       handleCloseModal();
+      confirmSuccess(editingCategoria ? 'Categoría actualizada' : 'Categoría creada');
     } catch (err) {
       console.error('Error al guardar categoría:', err);
       setFormError(err instanceof Error ? err.message : 'Error al guardar la categoría');

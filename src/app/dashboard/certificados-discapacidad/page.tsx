@@ -296,6 +296,7 @@ export default function CertificadosDiscapacidadPage() {
 
       await loadData();
       handleCloseModal();
+      confirmSuccess(editingCertificado ? 'Certificado actualizado' : 'Certificado cargado');
     } catch (error) {
       console.error('Error al guardar:', error);
       const { fieldErrors: fe, formError: gf } = mapServerErrors(error, Object.keys(formData));

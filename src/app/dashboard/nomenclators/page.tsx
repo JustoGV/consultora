@@ -146,6 +146,7 @@ export default function NomenclatorsPage() {
       }
       await loadData();
       handleCloseModal();
+      confirmSuccess(editingNomenclador ? 'Nomenclador actualizado' : 'Nomenclador creado');
     } catch (err) {
       console.error('Error al guardar nomenclador:', err);
       const { formError: gf } = mapServerErrors(err, Object.keys(formData));

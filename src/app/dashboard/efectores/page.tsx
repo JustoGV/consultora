@@ -167,6 +167,7 @@ export default function EfectoresPage() {
       }
       await loadData();
       handleCloseModal();
+      confirmSuccess(editingEfector ? 'Efector actualizado' : 'Efector creado');
     } catch (error) {
       console.error('Error al guardar efector:', error);
       const { fieldErrors: fe, formError: gf } = mapServerErrors(error, Object.keys(formData));

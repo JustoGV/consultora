@@ -113,6 +113,7 @@ export default function ServiciosPage() {
       }
       await loadData();
       handleCloseModal();
+      confirmSuccess(editingServicio ? 'Servicio actualizado' : 'Servicio creado');
     } catch (error) {
       console.error('Error al guardar servicio:', error);
       const { fieldErrors: fe, formError: gf } = mapServerErrors(error, Object.keys(formData));
