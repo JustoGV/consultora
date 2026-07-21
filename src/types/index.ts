@@ -874,3 +874,39 @@ export interface CreatePersonaProfesionalDto {
   profesionalId: string;
   observaciones?: string;
 }
+
+// ============================================
+// MÓDULO DE AUDITORÍA
+// ============================================
+
+export type AccionAuditoria =
+  | 'CREACION'
+  | 'ACTUALIZACION'
+  | 'ELIMINACION'
+  | 'RESTAURACION'
+  | 'LOGIN'
+  | 'LOGIN_FALLIDO';
+
+export interface RegistroAuditoria {
+  id: string;
+  usuarioId?: string | null;
+  usuarioEmail?: string | null;
+  usuarioRol?: string | null;
+  administradoraId?: string | null;
+  accion: AccionAuditoria;
+  entidad: string;
+  entidadId?: string | null;
+  cambios?: Record<string, { antes?: unknown; despues?: unknown } | unknown> | null;
+  ip?: string | null;
+  createdAt: string;
+}
+
+export interface FindAuditoriaQuery {
+  usuario?: string;
+  entidad?: string;
+  accion?: AccionAuditoria;
+  desde?: string;
+  hasta?: string;
+  page?: number;
+  limit?: number;
+}
