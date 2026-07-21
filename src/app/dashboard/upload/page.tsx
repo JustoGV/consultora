@@ -224,7 +224,9 @@ export default function UploadPage() {
       errors.cuil = 'CUIL inválido (11 dígitos + verificador)';
     }
     if (!personaData.fechaNacimiento) errors.fechaNacimiento = 'Requerido';
-    if (personaData.email && !isValidEmailFormat(personaData.email)) {
+    if (!personaData.email?.trim()) {
+      errors.email = 'El email es obligatorio';
+    } else if (!isValidEmailFormat(personaData.email)) {
       errors.email = 'Email con formato inválido';
     }
     const errorTelefono = validateTelefonoAR(personaData.telefono || '');
@@ -263,7 +265,9 @@ export default function UploadPage() {
         }
         break;
       case 'email': {
-        const errorEmail = validateEmailLive(personaData.email || '');
+        const errorEmail = !personaData.email?.trim()
+          ? 'El email es obligatorio'
+          : validateEmailLive(personaData.email);
         if (errorEmail) setFieldErrors((prev) => ({ ...prev, email: errorEmail }));
         else clearFieldError('email');
         break;
@@ -607,7 +611,7 @@ export default function UploadPage() {
                   emptyMessage="Sin estados civiles cargados"
                 />
               </Field>
-              <Field label="Email" error={fieldErrors.email}>
+              <Field label="Email" required error={fieldErrors.email}>
                 <Input
                   type="email"
                   name="email"

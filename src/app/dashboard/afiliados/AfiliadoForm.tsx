@@ -643,17 +643,24 @@ export default function AfiliadoForm({ persona = null }: AfiliadoFormProps) {
             }
           }
 
-          // (b) heredar domicilio (existing persona, explicit opt-in)
-          if (adh.mode === 'existente' && adh.heredarDomicilio && adherentePersonaId) {
+          // (b) heredar domicilio / email (existing persona, explicit opt-in)
+          if (
+            adh.mode === 'existente' &&
+            (adh.heredarDomicilio || adh.heredarEmail) &&
+            adherentePersonaId
+          ) {
             try {
               await personasService.update(adherentePersonaId, {
-                direccion: titular.direccion || undefined,
-                localidad: titular.localidad || undefined,
-                provincia: titular.provincia || undefined,
-                codigoPostal: titular.codigoPostal || undefined,
+                ...(adh.heredarDomicilio && {
+                  direccion: titular.direccion || undefined,
+                  localidad: titular.localidad || undefined,
+                  provincia: titular.provincia || undefined,
+                  codigoPostal: titular.codigoPostal || undefined,
+                }),
+                ...(adh.heredarEmail && { email: titular.email || undefined }),
               });
             } catch {
-              /* domicilio inheritance is best-effort, never blocks the link */
+              /* domicilio/email inheritance is best-effort, never blocks the link */
             }
           }
 
@@ -1053,6 +1060,7 @@ export default function AfiliadoForm({ persona = null }: AfiliadoFormProps) {
                     provincia: titular.provincia,
                     codigoPostal: titular.codigoPostal,
                   }}
+                  titularEmail={titular.email}
                   editing={editingAdherente}
                   onAdd={handleAddAdherente}
                   onCancelEdit={() => {

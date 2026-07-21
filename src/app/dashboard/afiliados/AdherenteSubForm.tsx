@@ -7,7 +7,7 @@ import { parentescosService } from '@/services/parentescosService';
 import SearchableSelect from '@/components/SearchableSelect';
 import SearchableSelectRemote from '@/components/SearchableSelectRemote';
 import { Button } from '@/components/ui/button';
-import { Home, Plus, X } from 'lucide-react';
+import { Home, Mail, Plus, X } from 'lucide-react';
 import {
   IdentityData,
   IdentityFields,
@@ -37,6 +37,10 @@ export interface PendingAdherente {
   personaSinDireccion?: boolean;
   /** Whether to copy the titular address into this existing person on save. */
   heredarDomicilio?: boolean;
+  /** Existing person's current email emptiness — drives the "heredar email" checkbox. */
+  personaSinEmail?: boolean;
+  /** Whether to copy the titular email into this existing person on save. */
+  heredarEmail?: boolean;
   // edit-mode bookkeeping (adherentes already linked when editing an afiliado)
   existingVinculoId?: string;
   existingAfiliacionAdherenteId?: string;
@@ -76,6 +80,8 @@ interface AdherenteSubFormProps {
   pendingDocs: { tipoDocumento: TipoDocumento; numeroDocumento: string }[];
   /** Titular's address (4 fields), to offer "heredar domicilio" (UX-13). */
   titularDomicilio?: TitularDomicilio;
+  /** Titular's email, to offer "usar email del titular". */
+  titularEmail?: string;
   /** When editing an existing adherente item, its draft is passed in to prefill. */
   editing?: PendingAdherente | null;
   onAdd: (adherente: PendingAdherente) => void;
@@ -93,6 +99,7 @@ export default function AdherenteSubForm({
   excludedPersonaIds,
   pendingDocs,
   titularDomicilio,
+  titularEmail,
   editing,
   onAdd,
   onCancelEdit,
@@ -110,6 +117,7 @@ export default function AdherenteSubForm({
   const [personaLabel, setPersonaLabel] = useState(editing?.personaLabel || '');
   const [personaSel, setPersonaSel] = useState<Persona | null>(null);
   const [heredarDomicilio, setHeredarDomicilio] = useState(!!editing?.heredarDomicilio);
+  const [heredarEmail, setHeredarEmail] = useState(!!editing?.heredarEmail);
   const [parentescoId, setParentescoId] = useState(editing?.parentescoId || '');
   const [parentescos, setParentescos] = useState<Parentesco[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -123,7 +131,7 @@ export default function AdherenteSubForm({
   };
 
   const onBlurField = (field: keyof IdentityData) => {
-    const msg = validateIdentityField(field, identity);
+    const msg = validateIdentityField(field, identity, true);
     setErrors((prev) => {
       const next = { ...prev };
       if (msg) next[field] = msg;
@@ -148,6 +156,7 @@ export default function AdherenteSubForm({
     setPersonaId(id);
     setPersonaSel(null);
     setHeredarDomicilio(false);
+    setHeredarEmail(false);
     if (!id) return;
     try {
       const persona = await personasService.getById(id);
@@ -189,13 +198,29 @@ export default function AdherenteSubForm({
     }));
   };
 
+  const puedeHeredarEmailNuevo = mode === 'nuevo' && !!titularEmail && !identity.email;
+
+  const usarEmailTitular = () => {
+    if (!titularEmail) return;
+    setField('email', titularEmail);
+    setErrors((prev) => {
+      const next = { ...prev };
+      delete next.email;
+      return next;
+    });
+  };
+
+  // Modo 'existente': la persona sin email propio ofrece heredar el del titular
+  // (checkbox diferido, aplicado por el padre con PATCH al guardar).
+  const personaSinEmailExistente = mode === 'existente' && !!personaSel && !personaSel.email;
+
   const handleAdd = () => {
     const nextErrors: Record<string, string> = {};
 
     if (!parentescoId) nextErrors.parentescoId = 'Requerido';
 
     if (mode === 'nuevo') {
-      Object.assign(nextErrors, validateIdentity(identity));
+      Object.assign(nextErrors, validateIdentity(identity, true));
       // Duplicate within the same submit (same tipo+numero already pending).
       const dup = pendingDocs.some(
         (d) =>
@@ -207,6 +232,11 @@ export default function AdherenteSubForm({
       }
     } else {
       if (!personaId) nextErrors.personaId = 'Requerido';
+      if (personaSinEmailExistente && !heredarEmail) {
+        nextErrors.personaId =
+          nextErrors.personaId ||
+          'El adherente necesita un email: usá el del titular o cargale uno propio';
+      }
     }
 
     if (Object.keys(nextErrors).length > 0) {
@@ -232,6 +262,8 @@ export default function AdherenteSubForm({
         personaLabel,
         personaSinDireccion: puedeHeredarDomicilioExistente,
         heredarDomicilio: puedeHeredarDomicilioExistente ? heredarDomicilio : false,
+        personaSinEmail: personaSinEmailExistente,
+        heredarEmail: personaSinEmailExistente ? heredarEmail : false,
       });
     }
     // The parent unmounts this sub-form after a successful add, so no in-place
@@ -287,6 +319,17 @@ export default function AdherenteSubForm({
               </Button>
             </div>
           )}
+          {puedeHeredarEmailNuevo && (
+            <div className="flex items-center gap-2 rounded-md border border-[var(--border-strong)] bg-[var(--surface)] px-3 py-2 text-xs text-[var(--fg-muted)]">
+              <Mail className="size-3.5 shrink-0" />
+              <span className="flex-1">
+                Usar email del titular: ({titularEmail})
+              </span>
+              <Button type="button" size="sm" variant="subtle" onClick={usarEmailTitular}>
+                Usar
+              </Button>
+            </div>
+          )}
           <IdentityFields
             data={identity}
             errors={errors}
@@ -294,6 +337,7 @@ export default function AdherenteSubForm({
             setField={setField}
             onBlurField={onBlurField}
             showEstadoCivil={false}
+            requireEmail
           />
         </div>
       ) : (
@@ -306,6 +350,22 @@ export default function AdherenteSubForm({
               placeholder="Buscar por nombre, apellido, documento o CUIL/CUIT…"
             />
           </Field>
+
+          {personaSinEmailExistente && (
+            <label className="flex items-center gap-2 rounded-md border border-[var(--border-strong)] bg-[var(--surface)] px-3 py-2 text-xs text-[var(--fg-muted)]">
+              <input
+                type="checkbox"
+                checked={heredarEmail}
+                disabled={!titularEmail}
+                onChange={(e) => setHeredarEmail(e.target.checked)}
+                className="size-4 rounded border-[var(--border-strong)]"
+              />
+              <Mail className="size-3.5 shrink-0" />
+              {titularEmail
+                ? `Usar email del titular: ${titularEmail}`
+                : 'El titular tampoco tiene email cargado'}
+            </label>
+          )}
 
           {puedeHeredarDomicilioExistente && (
             <label className="flex items-center gap-2 rounded-md border border-[var(--border-strong)] bg-[var(--surface)] px-3 py-2 text-xs text-[var(--fg-muted)]">

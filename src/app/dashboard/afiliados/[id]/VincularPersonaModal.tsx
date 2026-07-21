@@ -12,7 +12,7 @@ import SearchableSelect from '@/components/SearchableSelect';
 import SearchableSelectRemote from '@/components/SearchableSelectRemote';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Home } from 'lucide-react';
+import { Home, Mail } from 'lucide-react';
 
 interface VincularPersonaModalProps {
   open: boolean;
@@ -58,6 +58,7 @@ export default function VincularPersonaModal({
   const [checkingAfiliacion, setCheckingAfiliacion] = useState(false);
   const [numeroAfiliadoNuevo, setNumeroAfiliadoNuevo] = useState('');
   const [heredarDomicilio, setHeredarDomicilio] = useState(false);
+  const [heredarEmail, setHeredarEmail] = useState(false);
 
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
@@ -77,6 +78,7 @@ export default function VincularPersonaModal({
       setAfiliacionAdherenteExistente(null);
       setNumeroAfiliadoNuevo('');
       setHeredarDomicilio(false);
+      setHeredarEmail(false);
       setFieldErrors({});
       setFormError(null);
     }
@@ -101,6 +103,7 @@ export default function VincularPersonaModal({
     setAfiliacionAdherenteExistente(null);
     setPersonaSeleccionada(null);
     setNumeroAfiliadoNuevo('');
+    setHeredarEmail(false);
     if (!id) return;
 
     setCheckingAfiliacion(true);
@@ -124,10 +127,17 @@ export default function VincularPersonaModal({
     !personaSeleccionada.direccion &&
     !!afiliacionTitular.persona?.direccion;
 
+  const personaSinEmail = !!personaSeleccionada && !personaSeleccionada.email;
+  const titularSinEmail = !afiliacionTitular.persona?.email;
+
   const handleSubmit = async () => {
     const errors: Record<string, string> = {};
     if (!personaId) errors.personaId = 'Requerido';
     if (!parentescoId) errors.parentescoId = 'Requerido';
+    if (personaSinEmail && !heredarEmail) {
+      errors.personaId =
+        errors.personaId || 'La persona necesita un email: usá el del titular o cargale uno desde su ficha';
+    }
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors);
       return;
@@ -146,6 +156,13 @@ export default function VincularPersonaModal({
           localidad: afiliacionTitular.persona?.localidad,
           provincia: afiliacionTitular.persona?.provincia,
           codigoPostal: afiliacionTitular.persona?.codigoPostal,
+        });
+      }
+
+      // Heredar email — mismo patrón, aplicado recién al confirmar.
+      if (heredarEmail && personaSinEmail && personaSeleccionada) {
+        await personasService.update(personaSeleccionada.id, {
+          email: afiliacionTitular.persona?.email,
         });
       }
 
@@ -247,6 +264,23 @@ export default function VincularPersonaModal({
                 />
               </div>
             </div>
+          )}
+
+          {/* UX-3.2 — chip heredar email, click explícito */}
+          {personaSinEmail && (
+            <label className="flex items-center gap-2 rounded-md border border-[var(--border-strong)] bg-[var(--surface-sunken)] px-3 py-2 text-xs text-[var(--fg-muted)]">
+              <input
+                type="checkbox"
+                checked={heredarEmail}
+                disabled={titularSinEmail}
+                onChange={(e) => setHeredarEmail(e.target.checked)}
+                className="size-4 rounded border-[var(--border-strong)]"
+              />
+              <Mail className="size-3.5 shrink-0" />
+              {titularSinEmail
+                ? 'El titular tampoco tiene email cargado'
+                : `Usar email del titular: ${afiliacionTitular.persona?.email}`}
+            </label>
           )}
 
           {/* UX-3.2 — chip heredar domicilio, click explícito */}
