@@ -12,11 +12,12 @@ import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import Pagination from '@/components/Pagination';
 import SearchableSelect from '@/components/SearchableSelect';
 import type { AccionAuditoria, RegistroAuditoria } from '@/types';
+import { AuditoriaDetailSheet } from './AuditoriaDetailSheet';
 
 const DEBOUNCE_MS = 300;
 
 /** Mapeo entidad (tabla SQL) → label legible, en el orden que expone el filtro. */
-const ENTIDAD_OPTIONS: { value: string; label: string }[] = [
+export const ENTIDAD_OPTIONS: { value: string; label: string }[] = [
   { value: '', label: 'Todas' },
   { value: 'personas', label: 'Personas' },
   { value: 'afiliaciones', label: 'Afiliaciones' },
@@ -39,7 +40,7 @@ const ENTIDAD_OPTIONS: { value: string; label: string }[] = [
   { value: 'afiliacion_vinculos', label: 'Vínculos' },
 ];
 
-const ENTIDAD_LABEL: Record<string, string> = Object.fromEntries(
+export const ENTIDAD_LABEL: Record<string, string> = Object.fromEntries(
   ENTIDAD_OPTIONS.filter((o) => o.value).map((o) => [o.value, o.label])
 );
 
@@ -53,7 +54,7 @@ const ACCION_OPTIONS: { value: AccionAuditoria | ''; label: string }[] = [
   { value: 'LOGIN_FALLIDO', label: 'Ingreso fallido' },
 ];
 
-const ACCION_LABEL: Record<AccionAuditoria, string> = {
+export const ACCION_LABEL: Record<AccionAuditoria, string> = {
   CREACION: 'Creación',
   ACTUALIZACION: 'Actualización',
   ELIMINACION: 'Eliminación',
@@ -63,7 +64,7 @@ const ACCION_LABEL: Record<AccionAuditoria, string> = {
 };
 
 /** Tokens del design system (mismo patrón que estadoBadge en /dashboard/alerts). */
-const ACCION_BADGE_CLASS: Record<AccionAuditoria, string> = {
+export const ACCION_BADGE_CLASS: Record<AccionAuditoria, string> = {
   CREACION: 'text-[var(--sev-baja-fg)] border-transparent bg-[var(--sev-baja-bg)]',
   RESTAURACION: 'text-[var(--sev-baja-fg)] border-transparent bg-[var(--sev-baja-bg)]',
   ACTUALIZACION: 'text-[var(--primary-700)] border-[var(--primary-200)] bg-[var(--primary-50)]',
@@ -78,7 +79,7 @@ const inputClass =
   'focus-visible:border-[var(--primary-600)] focus-visible:ring-[3px] focus-visible:ring-[color-mix(in_srgb,var(--primary-600)_18%,transparent)]';
 
 /** dd/mm/aaaa HH:mm:ss en zona local. */
-function formatFechaHora(value: string): string {
+export function formatFechaHora(value: string): string {
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return '—';
   const pad = (n: number) => String(n).padStart(2, '0');
@@ -136,6 +137,9 @@ export default function AuditoriaPage() {
   const [hasta, setHasta] = useState('');
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(20);
+
+  const [registroSeleccionado, setRegistroSeleccionado] = useState<string | null>(null);
+  const [sheetOpen, setSheetOpen] = useState(false);
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -340,6 +344,10 @@ export default function AuditoriaPage() {
         data={registros}
         getRowId={(r) => r.id}
         loading={loading}
+        onRowClick={(r) => {
+          setRegistroSeleccionado(r.id);
+          setSheetOpen(true);
+        }}
         pagination={
           <Pagination
             currentPage={page}
@@ -355,6 +363,12 @@ export default function AuditoriaPage() {
         }
         emptyTitle="Sin registros"
         emptyDescription="No hay movimientos con los filtros actuales."
+      />
+
+      <AuditoriaDetailSheet
+        registroId={registroSeleccionado}
+        open={sheetOpen}
+        onOpenChange={setSheetOpen}
       />
     </div>
   );

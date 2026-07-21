@@ -910,3 +910,8 @@ export interface FindAuditoriaQuery {
   page?: number;
   limit?: number;
 }
+
+/** GET /auditoria/:id — registro completo + diccionario uuid→label resuelto best-effort. */
+export type RegistroAuditoriaDetalle = RegistroAuditoria & {
+  referencias: Record<string, string>;
+};
